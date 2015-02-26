@@ -131,7 +131,7 @@ class B4WPreferences(AddonPreferences):
         layout = self.layout
         layout.prop(self, "b4w_src_path", text="Path to Blend4Web SDK")
         layout.prop(self, "b4w_port_number", text="Server port")
-
+from . import node_tree
 def register():
     nla_script.register()
 
@@ -160,6 +160,7 @@ def register():
     bpy.app.handlers.load_post.append(add_asset_file)
     bpy.app.handlers.load_post.append(add_node_tree)
 
+    node_tree.register()
 
 def unregister():
     nla_script.unregister()
