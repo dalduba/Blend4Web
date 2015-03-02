@@ -173,8 +173,17 @@ class TargetSocket(NodeSocket):
 
 
 class TargetNode(Node, B4WLogicNode):
+    def updateNode(self, context):
+        self.process_node(context)
+
     bl_idname = 'TargetNode'
     bl_label = 'Target'
+    obj_name = bpy.props.StringProperty(
+        default='',
+        description='stores the name of the obj this node references',
+        update=updateNode)
+    input_text = bpy.props.StringProperty(
+        default='', update=updateNode)
 
     def init(self, context):
         self.outputs.new('TargetSocketType', "")
@@ -183,6 +192,11 @@ class TargetNode(Node, B4WLogicNode):
         print("Copying from node ", node)
 
     def draw_buttons(self, context, layout):
+        col = layout.column()
+        # col.prop(self, "activate", text="Update")
+        col.prop_search(self, 'obj_name', bpy.data, 'objects', text='', icon='HAND')
+        if self.show_string_box:
+            col.prop(self, 'input_text', text='')
         layout.label("Node settings")
 
     def draw_label(self):
