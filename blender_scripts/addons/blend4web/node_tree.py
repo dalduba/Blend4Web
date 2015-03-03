@@ -155,12 +155,6 @@ class SensorNode(Node, B4WLogicNode):
 class TargetSocket(NodeSocket):
     bl_idname = 'TargetSocketType'
     bl_label = 'Target Node Socket'
-    my_items = []
-    ObjectsProperty = 0
-    def init(self, context):
-        my_items = bpy.data.objects
-        ObjectsProperty = bpy.props.PointerProperty(name="TargetType", description="Target Type", items=my_items)
-
     def draw(self, context, layout, node, text):
         if self.is_output or self.is_linked:
             # layout.prop(self, "ObjectsProperty", text=text)
@@ -195,13 +189,70 @@ class TargetNode(Node, B4WLogicNode):
         col = layout.column()
         # col.prop(self, "activate", text="Update")
         col.prop_search(self, 'obj_name', bpy.data, 'objects', text='', icon='HAND')
-        if self.show_string_box:
-            col.prop(self, 'input_text', text='')
+        # col.prop(self, 'input_text', text='')
         layout.label("Node settings")
 
     def draw_label(self):
         return "Target node"
 #--------------------------------
+class FunctionSocket(NodeSocket):
+    bl_idname = 'FunctionSocketType'
+    bl_label = 'Function Node Socket'
+    def draw(self, context, layout, node, text):
+        if self.is_output or self.is_linked:
+            # layout.prop(self, "ObjectsProperty", text=text)
+            pass
+        else:
+            layout.label(text)
+
+    def draw_color(self, context, node):
+        return (0.0, 1.0, 0.216, 0.5)
+
+
+class FunctionNode(Node, B4WLogicNode):
+    my_items = [
+        ("Delay", "Delay", "---"),
+        ("SetVisible", "SetVisible", "---"),
+    ]
+    true_false = [
+        ("True", "True", "---"),
+        ("False", "False", "---"),
+    ]
+    delay = bpy.props.FloatProperty(name="DelayType", default = 0)
+    setvisible = bpy.props.EnumProperty(name="SetVisibleType",items=true_false)
+    def updateNode(self, context):
+        pass
+    FunctionEnumProperty = bpy.props.EnumProperty(name="FunctionType", description="Function Type", items=my_items, default='Delay', update=updateNode)
+    bl_idname = 'FunctionNode'
+    bl_label = 'Function'
+
+
+
+    def init(self, context):
+        self.outputs.new('FunctionSocketType', "")
+        self.inputs.new('TargetSocketType', "")
+        self.inputs.new('SensorSocketType', "")
+
+    def copy(self, node):
+        print("Copying from node ", node)
+
+    def draw_buttons(self, context, layout):
+        # col = layout.column()
+        # # col.prop(self, "activate", text="Update")
+        # col.prop_search(self, 'obj_name', bpy.data, 'objects', text='', icon='HAND')
+        # if self.show_string_box:
+        #     col.prop(self, 'input_text', text='')
+        # layout.label("Node settings")
+        layout.prop(self, "FunctionEnumProperty", text='')
+        if self.FunctionEnumProperty == "Delay":
+            layout.prop(self, "delay", text='')
+
+        if self.FunctionEnumProperty == "SetVisible":
+            layout.prop(self, "setvisible", text='')
+
+    def draw_label(self):
+        return "Function node"
+#-------------------------------
 
 ### Node Categories ###
 # Node categories are a python system for automatically
@@ -246,7 +297,7 @@ node_categories = [
         ]),
     MyNodeCategory("Callbacks", "Callbacks", items=[
         # our basic node
-        NodeItem("CustomNodeType"),
+        NodeItem("FunctionNode", label="Function",),
         ]),
     ]
 
@@ -259,6 +310,8 @@ def register():
     bpy.utils.register_class(SensorNode)
     bpy.utils.register_class(TargetNode)
     bpy.utils.register_class(TargetSocket)
+    bpy.utils.register_class(FunctionNode)
+    bpy.utils.register_class(FunctionSocket)
 
     nodeitems_utils.register_node_categories("CUSTOM_NODES", node_categories)
 
@@ -272,6 +325,8 @@ def unregister():
     bpy.utils.unregister_class(MyCustomNode)
     bpy.utils.unregister_class(TargetNode)
     bpy.utils.unregister_class(TargetSocket)
+    bpy.utils.unregister_class(FunctionNode)
+    bpy.utils.unregister_class(FunctionSocket)
 
 
 if __name__ == "__main__":
