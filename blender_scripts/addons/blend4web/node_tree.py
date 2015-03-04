@@ -1,6 +1,7 @@
 __author__ = 'dal'
 import bpy
 from bpy.types import NodeTree, Node, NodeSocket
+from bpy.props import StringProperty
 
 # Implementation of custom nodes from Python
 
@@ -253,6 +254,71 @@ class FunctionNode(Node, B4WLogicNode):
     def draw_label(self):
         return "Function node"
 #-------------------------------
+class ManifoldSocket(NodeSocket):
+    bl_idname = 'ManifoldSocketType'
+    bl_label = 'Manifold Node Socket'
+    def draw(self, context, layout, node, text):
+        if self.is_output or self.is_linked:
+            # layout.prop(self, "ObjectsProperty", text=text)
+            pass
+        else:
+            layout.label(text)
+
+    def draw_color(self, context, node):
+        return (0.0, 1.0, 0.216, 0.5)
+
+class AddSocket(bpy.types.Operator):
+    bl_idname = "node.add_socket"
+    bl_label = "add socket"
+    bl_options = {'REGISTER', 'UNDO'}
+    node_name = StringProperty(name='name node', description='it is name of node',
+                               default='')
+    tree_name = StringProperty(name='name tree', description='it is name of tree',
+                               default='')
+    # node_name = ""
+    # node = 0
+    def execute(self, context):
+        # self.node.inputs.new('ManifoldSocketType', "")
+        # handle = handle_read(name_no+name_tr)
+        bpy.data.node_groups[self.tree_name].nodes[self.node_name].inputs.new('ManifoldSocketType', "")
+        print (self)
+        return {'FINISHED'}
+
+class ManifoldNode(Node, B4WLogicNode):
+
+    def updateNode(self, context):
+        pass
+
+    bl_idname = 'ManifoldNode'
+    bl_label = 'Manifold'
+
+    logic_enum = [
+    ("AND", "AND", "---"),
+    ("OR", "OR", "---"),
+    ("NOT", "NOT", "---"),
+    ]
+    logic_operation = bpy.props.EnumProperty(name="LogicOperationType",items=logic_enum)
+    def init(self, context):
+        self.inputs.new('ManifoldSocketType', "")
+        self.outputs.new('ManifoldSocketType', "")
+
+    def copy(self, node):
+        print("Copying from node ", node)
+
+    def draw_buttons(self, context, layout):
+        row = layout.row()
+        row.scale_y = 1
+        opera = row.operator('node.add_socket', text="Add input")
+        opera.node_name = self.name
+        opera.tree_name = self.id_data.name
+        row = layout.row()
+        row.prop(self, "logic_operation", text='')
+        # opera.tree_name = self.id_data.name
+        # opera.grup_name = self.groupname
+        # opera.sort = self.sort
+    def draw_label(self):
+        return "Manifold node"
+#-------------------------------
 
 ### Node Categories ###
 # Node categories are a python system for automatically
@@ -279,6 +345,7 @@ node_categories = [
             "myStringProperty": repr("Lorem ipsum dolor sit amet"),
             "myFloatProperty": repr(1.0),
             }),
+        NodeItem("ManifoldNode", label="Manifold",),
         ]),
     MyNodeCategory("Targets", "Targets", items=[
         NodeItem("TargetNode", label="Target",),
@@ -312,6 +379,9 @@ def register():
     bpy.utils.register_class(TargetSocket)
     bpy.utils.register_class(FunctionNode)
     bpy.utils.register_class(FunctionSocket)
+    bpy.utils.register_class(ManifoldNode)
+    bpy.utils.register_class(ManifoldSocket)
+    bpy.utils.register_class(AddSocket)
 
     nodeitems_utils.register_node_categories("CUSTOM_NODES", node_categories)
 
@@ -327,7 +397,9 @@ def unregister():
     bpy.utils.unregister_class(TargetSocket)
     bpy.utils.unregister_class(FunctionNode)
     bpy.utils.unregister_class(FunctionSocket)
-
+    bpy.utils.unregister_class(ManifoldNode)
+    bpy.utils.unregister_class(ManifoldSocket)
+    bpy.utils.unregister_class(AddSocket)
 
 if __name__ == "__main__":
     register()
