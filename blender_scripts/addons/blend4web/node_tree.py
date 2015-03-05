@@ -254,15 +254,47 @@ class FunctionNode(Node, B4WLogicNode):
     def draw_label(self):
         return "Function node"
 #-------------------------------
-class ManifoldSocket(NodeSocket):
-    bl_idname = 'ManifoldSocketType'
-    bl_label = 'Manifold Node Socket'
+
+class RemoveSocket(bpy.types.Operator):
+    bl_idname = "node.remove_socket"
+    bl_label = "remove socket"
+    bl_options = {'REGISTER', 'UNDO'}
+    node_name = StringProperty(name='name node', description='it is name of node',
+                               default='')
+    socket_name = StringProperty(name='name socket', description='it is name of node',
+                               default='')
+    tree_name = StringProperty(name='name tree', description='it is name of tree',
+                               default='')
+    def execute(self, context):
+        s = bpy.data.node_groups[self.tree_name].nodes[self.node_name].inputs
+        s.remove(s[self.socket_name])
+            # .remove(self.socket_name)
+        # bpy.data.node_groups[self.tree_name].nodes[self.node_name].inputs.remove('LogicOperatorSocketType', "")
+        return {'FINISHED'}
+
+class LogicOperatorSocketInput(NodeSocket):
+    bl_idname = 'LogicOperatorSocketInputType'
+    bl_label = 'LogicOperator Node Socket'
+    node_name = StringProperty(name='name node', description='it is name of node',
+                               default='')
+    tree_name = StringProperty(name='name tree', description='it is name of tree',
+                               default='')
     def draw(self, context, layout, node, text):
-        if self.is_output or self.is_linked:
-            # layout.prop(self, "ObjectsProperty", text=text)
-            pass
-        else:
-            layout.label(text)
+        row = layout.row()
+        row.scale_y = 1
+        opera = row.operator('node.remove_socket', text="X")
+        opera.node_name = self.node_name
+        opera.socket_name = self.name
+        opera.tree_name = self.tree_name
+
+    def draw_color(self, context, node):
+        return (0.0, 1.0, 0.216, 0.5)
+
+class LogicOperatorSocketOutput(NodeSocket):
+    bl_idname = 'LogicOperatorSocketOutputType'
+    bl_label = 'LogicOperator Node Socket'
+    def draw(self, context, layout, node, text):
+        pass
 
     def draw_color(self, context, node):
         return (0.0, 1.0, 0.216, 0.5)
@@ -275,22 +307,21 @@ class AddSocket(bpy.types.Operator):
                                default='')
     tree_name = StringProperty(name='name tree', description='it is name of tree',
                                default='')
-    # node_name = ""
-    # node = 0
     def execute(self, context):
-        # self.node.inputs.new('ManifoldSocketType', "")
-        # handle = handle_read(name_no+name_tr)
-        bpy.data.node_groups[self.tree_name].nodes[self.node_name].inputs.new('ManifoldSocketType', "")
-        print (self)
+        s = bpy.data.node_groups[self.tree_name].nodes[self.node_name].inputs.new('LogicOperatorSocketInputType', "")
+        s.node_name = self.node_name
+        s.tree_name = self.tree_name
         return {'FINISHED'}
 
-class ManifoldNode(Node, B4WLogicNode):
+
+
+class LogicOperatorNode(Node, B4WLogicNode):
 
     def updateNode(self, context):
         pass
 
-    bl_idname = 'ManifoldNode'
-    bl_label = 'Manifold'
+    bl_idname = 'LogicOperatorNode'
+    bl_label = 'LogicOperator'
 
     logic_enum = [
     ("AND", "AND", "---"),
@@ -299,25 +330,34 @@ class ManifoldNode(Node, B4WLogicNode):
     ]
     logic_operation = bpy.props.EnumProperty(name="LogicOperationType",items=logic_enum)
     def init(self, context):
-        self.inputs.new('ManifoldSocketType', "")
-        self.outputs.new('ManifoldSocketType', "")
+        s = self.inputs.new('LogicOperatorSocketInputType', "")
+        s.node_name = self.name
+        s.tree_name = self.id_data.name
+        self.outputs.new('LogicOperatorSocketOutputType', "")
 
     def copy(self, node):
         print("Copying from node ", node)
 
     def draw_buttons(self, context, layout):
         row = layout.row()
-        row.scale_y = 1
-        opera = row.operator('node.add_socket', text="Add input")
-        opera.node_name = self.name
-        opera.tree_name = self.id_data.name
-        row = layout.row()
         row.prop(self, "logic_operation", text='')
         # opera.tree_name = self.id_data.name
         # opera.grup_name = self.groupname
         # opera.sort = self.sort
+
+        if self.logic_operation in ["AND", "OR"]:
+            row = layout.row()
+            row.scale_y = 1
+            opera = row.operator('node.add_socket', text="Add input")
+            opera.node_name = self.name
+            opera.tree_name = self.id_data.name
+        else:
+            self.inputs.clear()
+            s = self.inputs.new('LogicOperatorSocketInputType', "")
+            s.node_name = self.name
+            s.tree_name = self.id_data.name
     def draw_label(self):
-        return "Manifold node"
+        return "LogicOperator node"
 #-------------------------------
 
 ### Node Categories ###
@@ -345,7 +385,7 @@ node_categories = [
             "myStringProperty": repr("Lorem ipsum dolor sit amet"),
             "myFloatProperty": repr(1.0),
             }),
-        NodeItem("ManifoldNode", label="Manifold",),
+        NodeItem("LogicOperatorNode", label="LogicOperator",),
         ]),
     MyNodeCategory("Targets", "Targets", items=[
         NodeItem("TargetNode", label="Target",),
@@ -379,9 +419,11 @@ def register():
     bpy.utils.register_class(TargetSocket)
     bpy.utils.register_class(FunctionNode)
     bpy.utils.register_class(FunctionSocket)
-    bpy.utils.register_class(ManifoldNode)
-    bpy.utils.register_class(ManifoldSocket)
+    bpy.utils.register_class(LogicOperatorNode)
+    bpy.utils.register_class(LogicOperatorSocketInput)
+    bpy.utils.register_class(LogicOperatorSocketOutput)
     bpy.utils.register_class(AddSocket)
+    bpy.utils.register_class(RemoveSocket)
 
     nodeitems_utils.register_node_categories("CUSTOM_NODES", node_categories)
 
@@ -397,9 +439,11 @@ def unregister():
     bpy.utils.unregister_class(TargetSocket)
     bpy.utils.unregister_class(FunctionNode)
     bpy.utils.unregister_class(FunctionSocket)
-    bpy.utils.unregister_class(ManifoldNode)
-    bpy.utils.unregister_class(ManifoldSocket)
+    bpy.utils.unregister_class(LogicOperatorNode)
+    bpy.utils.unregister_class(LogicOperatorSocketInput)
+    bpy.utils.unregister_class(LogicOperatorSocketOutput)
     bpy.utils.unregister_class(AddSocket)
+    bpy.utils.unregister_class(RemoveSocket)
 
 if __name__ == "__main__":
     register()
