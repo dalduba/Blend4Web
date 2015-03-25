@@ -279,24 +279,18 @@ class LogicOperatorSocketInput(NodeSocket):
                                default='')
     tree_name = StringProperty(name='name tree', description='it is name of tree',
                                default='')
+    logic_operation = StringProperty(name='logic operation', description='it is name of logic operation')
     def draw(self, context, layout, node, text):
         row = layout.row()
         row.scale_y = 1
-        opera = row.operator('node.remove_socket', text="X")
-        opera.node_name = self.node_name
-        opera.socket_name = self.name
-        opera.tree_name = self.tree_name
+        if not self.logic_operation in "NOT":
+            opera = row.operator('node.remove_socket', text="X")
+            opera.node_name = self.node_name
+            opera.socket_name = self.name
+            opera.tree_name = self.tree_name
 
     def draw_color(self, context, node):
         return (0.0, 1.0, 0.216, 0.5)
-
-class LogicOperatorSocketInputStatic(NodeSocket):
-    bl_idname = 'LogicOperatorSocketInputStaticType'
-    bl_label = 'LogicOperator Node Socket Static'
-    def draw(self, context, layout, node, text):
-        pass
-    def draw_color(self, context, node):
-        return (1.0, 1.0, 0.216, 0.5)
 
 class LogicOperatorSocketOutput(NodeSocket):
     bl_idname = 'LogicOperatorSocketOutputType'
@@ -306,7 +300,8 @@ class LogicOperatorSocketOutput(NodeSocket):
 
     def draw_color(self, context, node):
         return (0.0, 1.0, 0.216, 0.5)
-
+global ID
+ID=0
 class AddSocket(bpy.types.Operator):
     bl_idname = "node.add_socket"
     bl_label = "add socket"
@@ -316,9 +311,13 @@ class AddSocket(bpy.types.Operator):
     tree_name = StringProperty(name='name tree', description='it is name of tree',
                                default='')
     def execute(self, context):
-        s = bpy.data.node_groups[self.tree_name].nodes[self.node_name].inputs.new('LogicOperatorSocketInputType', "")
+        global ID
+        inputs = bpy.data.node_groups[self.tree_name].nodes[self.node_name].inputs
+        s = inputs.new('LogicOperatorSocketInputType', "socket_%s" % ID)
+        ID += 1
         s.node_name = self.node_name
         s.tree_name = self.tree_name
+        s.logic_operation = bpy.data.node_groups[self.tree_name].nodes[self.node_name].logic_operation
         return {'FINISHED'}
 
 
@@ -341,7 +340,8 @@ class LogicOperatorNode(Node, B4WLogicNode):
         s = self.inputs.new('LogicOperatorSocketInputType', "")
         s.node_name = self.name
         s.tree_name = self.id_data.name
-        self.inputs.new('LogicOperatorSocketInputStatic', "")
+        self.inputs.new('LogicOperatorSocketInputType', "")
+        self.inputs.new[-1].logic_operation = self.logic_operation
         self.outputs.new('LogicOperatorSocketOutputType', "")
 
     def copy(self, node):
@@ -356,10 +356,10 @@ class LogicOperatorNode(Node, B4WLogicNode):
 
         if self.logic_operation in ["AND", "OR"]:
 
-            for inp in self.inputs:
-                if "LogicOperatorSocketInputStaticType".__eq__(inp.bl_idname):
-                    self.inputs.remove(inp)
-
+            # for inp in self.inputs:
+            #     if "LogicOperatorSocketInputStaticType".__eq__(inp.bl_idname):
+            #         self.inputs.remove(inp)
+            # self.inputs[-1].logic_operation = self.logic_operation
             row = layout.row()
             row.scale_y = 1
             opera = row.operator('node.add_socket', text="Add input")
@@ -370,9 +370,9 @@ class LogicOperatorNode(Node, B4WLogicNode):
                 self.inputs.remove(self.inputs[-1])
 
             # print (dir(self.inputs[0]))
-            if not "LogicOperatorSocketInputStaticType".__eq__(self.inputs[0].bl_idname):
-                self.inputs.clear()
-                s = self.inputs.new('LogicOperatorSocketInputStaticType', "")
+            # if not "LogicOperatorSocketInputStaticType".__eq__(self.inputs[0].bl_idname):
+            #     self.inputs.clear()
+            #     s = self.inputs.new('LogicOperatorSocketInputStaticType', "")
 
     def draw_label(self):
         return "LogicOperator node"
@@ -439,7 +439,6 @@ def register():
     bpy.utils.register_class(FunctionSocket)
     bpy.utils.register_class(LogicOperatorNode)
     bpy.utils.register_class(LogicOperatorSocketInput)
-    bpy.utils.register_class(LogicOperatorSocketInputStatic)
     bpy.utils.register_class(LogicOperatorSocketOutput)
     bpy.utils.register_class(AddSocket)
     bpy.utils.register_class(RemoveSocket)
@@ -460,7 +459,6 @@ def unregister():
     bpy.utils.unregister_class(FunctionSocket)
     bpy.utils.unregister_class(LogicOperatorNode)
     bpy.utils.unregister_class(LogicOperatorSocketInput)
-    bpy.utils.unregister_class(LogicOperatorSocketInputStatic)
     bpy.utils.unregister_class(LogicOperatorSocketOutput)
     bpy.utils.unregister_class(AddSocket)
     bpy.utils.unregister_class(RemoveSocket)
