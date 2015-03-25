@@ -17,103 +17,12 @@ class B4WLogicNodeTree(NodeTree):
     # Icon identifier
     bl_icon = 'NODETREE'
 
-
-# Custom socket type
-class MyCustomSocket(NodeSocket):
-    # Description string
-    '''Custom node socket type'''
-    # Optional identifier string. If not explicitly defined, the python class name is used.
-    bl_idname = 'CustomSocketType'
-    # Label for nice name display
-    bl_label = 'Custom Node Socket'
-
-    # Enum items list
-    my_items = [
-        ("DOWN", "Down", "Where your feet are"),
-        ("UP", "Up", "Where your head should be"),
-        ("LEFT", "Left", "Not right"),
-        ("RIGHT", "Right", "Not left")
-    ]
-
-    myEnumProperty = bpy.props.EnumProperty(name="Direction", description="Just an example", items=my_items, default='UP')
-
-    # Optional function for drawing the socket input value
-    def draw(self, context, layout, node, text):
-        if self.is_output or self.is_linked:
-            layout.label(text)
-        else:
-            layout.prop(self, "myEnumProperty", text=text)
-
-    # Socket color
-    def draw_color(self, context, node):
-        return (1.0, 0.4, 0.216, 0.5)
-
-
 # Mix-in class for all custom nodes in this tree type.
 # Defines a poll function to enable instantiation.
 class B4WLogicNode:
     @classmethod
     def poll(cls, ntree):
         return ntree.bl_idname == 'B4WLogicNodeTreeType'
-
-
-# Derived from the Node base type.
-class MyCustomNode(Node, B4WLogicNode):
-    # === Basics ===
-    # Description string
-    '''A custom node'''
-    # Optional identifier string. If not explicitly defined, the python class name is used.
-    bl_idname = 'CustomNodeType'
-    # Label for nice name display
-    bl_label = 'Custom Node'
-    # Icon identifier
-    bl_icon = 'SOUND'
-
-    # === Custom Properties ===
-    # These work just like custom properties in ID data blocks
-    # Extensive information can be found under
-    # http://wiki.blender.org/index.php/Doc:2.6/Manual/Extensions/Python/Properties
-    myStringProperty = bpy.props.StringProperty()
-    myFloatProperty = bpy.props.FloatProperty(default=3.1415926)
-
-    # === Optional Functions ===
-    # Initialization function, called when a new node is created.
-    # This is the most common place to create the sockets for a node, as shown below.
-    # NOTE: this is not the same as the standard __init__ function in Python, which is
-    #       a purely internal Python method and unknown to the node system!
-    def init(self, context):
-        self.inputs.new('CustomSocketType', "Hello")
-        self.inputs.new('NodeSocketFloat', "World")
-        self.inputs.new('NodeSocketVector', "!")
-
-        self.outputs.new('NodeSocketColor', "How")
-        self.outputs.new('NodeSocketColor', "are")
-        self.outputs.new('NodeSocketFloat', "you")
-
-    # Copy function to initialize a copied node from an existing one.
-    def copy(self, node):
-        print("Copying from node ", node)
-
-    # Free function to clean up on removal.
-    def free(self):
-        print("Removing node ", self, ", Goodbye!")
-
-    # Additional buttons displayed on the node.
-    def draw_buttons(self, context, layout):
-        layout.label("Node settings")
-        layout.prop(self, "myFloatProperty")
-
-    # Detail buttons in the sidebar.
-    # If this function is not defined, the draw_buttons function is used instead
-    def draw_buttons_ext(self, context, layout):
-        layout.prop(self, "myFloatProperty")
-        # myStringProperty button will only be visible in the sidebar
-        layout.prop(self, "myStringProperty")
-
-    # Optional: custom label
-    # Explicit user label overrides this, but here we can define a label dynamically
-    def draw_label(self):
-        return "I am a custom node"
 
 class SensorSocket(NodeSocket):
     bl_idname = 'SensorSocketType'
@@ -209,6 +118,19 @@ class FunctionSocket(NodeSocket):
     def draw_color(self, context, node):
         return (0.0, 1.0, 0.216, 0.5)
 
+class FunctionNodeSensorSocket(NodeSocket):
+    bl_idname = 'FunctionNodeSensorSocketType'
+    bl_label = 'Function Node Sensor Socket'
+    def draw(self, context, layout, node, text):
+        if self.is_output or self.is_linked:
+            # layout.prop(self, "ObjectsProperty", text=text)
+            pass
+        else:
+            layout.label(text)
+
+    def draw_color(self, context, node):
+        return (0.0, 1.0, 0.216, 0.5)
+
 
 class FunctionNode(Node, B4WLogicNode):
     my_items = [
@@ -232,7 +154,7 @@ class FunctionNode(Node, B4WLogicNode):
     def init(self, context):
         self.outputs.new('FunctionSocketType', "")
         self.inputs.new('TargetSocketType', "")
-        self.inputs.new('SensorSocketType', "")
+        self.inputs.new('FunctionNodeSensorSocketType', "")
 
     def copy(self, node):
         print("Copying from node ", node)
@@ -399,26 +321,12 @@ node_categories = [
     # identifier, label, items list
     MyNodeCategory("Sensors", "Sensors", items=[
         # our basic node
-        NodeItem("SensorNode", label="Sensor", settings={
-            "myStringProperty": repr("Lorem ipsum dolor sit amet"),
-            "myFloatProperty": repr(1.0),
-            }),
+        NodeItem("SensorNode", label="Sensor"),
         NodeItem("LogicOperatorNode", label="LogicOperator",),
         ]),
     MyNodeCategory("Targets", "Targets", items=[
         NodeItem("TargetNode", label="Target",),
-        # the node item can have additional settings,
-        # which are applied to new nodes
-        # NB: settings values are stored as string expressions,
-        # for this reason they should be converted to strings using repr()
-        NodeItem("CustomNodeType", label="Node A", settings={
-            "myStringProperty": repr("Lorem ipsum dolor sit amet"),
-            "myFloatProperty": repr(1.0),
-            }),
-        NodeItem("CustomNodeType", label="Node B", settings={
-            "myStringProperty": repr("consectetur adipisicing elit"),
-            "myFloatProperty": repr(2.0),
-            }),
+
         ]),
     MyNodeCategory("Callbacks", "Callbacks", items=[
         # our basic node
@@ -429,9 +337,7 @@ node_categories = [
 
 def register():
     bpy.utils.register_class(B4WLogicNodeTree)
-    bpy.utils.register_class(MyCustomSocket)
     bpy.utils.register_class(SensorSocket)
-    bpy.utils.register_class(MyCustomNode)
     bpy.utils.register_class(SensorNode)
     bpy.utils.register_class(TargetNode)
     bpy.utils.register_class(TargetSocket)
@@ -442,6 +348,7 @@ def register():
     bpy.utils.register_class(LogicOperatorSocketOutput)
     bpy.utils.register_class(AddSocket)
     bpy.utils.register_class(RemoveSocket)
+    bpy.utils.register_class(FunctionNodeSensorSocket)
 
     nodeitems_utils.register_node_categories("CUSTOM_NODES", node_categories)
 
@@ -450,9 +357,7 @@ def unregister():
     nodeitems_utils.unregister_node_categories("CUSTOM_NODES")
 
     bpy.utils.unregister_class(B4WLogicNodeTree)
-    bpy.utils.unregister_class(MyCustomSocket)
     bpy.utils.unregister_class(SensorSocket)
-    bpy.utils.unregister_class(MyCustomNode)
     bpy.utils.unregister_class(TargetNode)
     bpy.utils.unregister_class(TargetSocket)
     bpy.utils.unregister_class(FunctionNode)
@@ -462,6 +367,7 @@ def unregister():
     bpy.utils.unregister_class(LogicOperatorSocketOutput)
     bpy.utils.unregister_class(AddSocket)
     bpy.utils.unregister_class(RemoveSocket)
+    bpy.utils.unregister_class(FunctionNodeSensorSocket)
 
 if __name__ == "__main__":
     register()
