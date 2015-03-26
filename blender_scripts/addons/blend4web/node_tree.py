@@ -4,7 +4,8 @@ from bpy.types import NodeTree, Node, NodeSocket
 from bpy.props import StringProperty
 
 # Implementation of custom nodes from Python
-
+SensorSocketColor = (0.0, 1.0, 0.216, 0.5)
+TargetSocketColor = (1.0, 1.0, 0.216, 0.5)
 
 # Derived from the NodeTree base type, similar to Menu, Operator, Panel, etc.
 class B4WLogicNodeTree(NodeTree):
@@ -42,7 +43,7 @@ class SensorSocket(NodeSocket):
             layout.label(text)
 
     def draw_color(self, context, node):
-        return (1.0, 0.4, 0.216, 0.5)
+        return SensorSocketColor
 
 
 class SensorNode(Node, B4WLogicNode):
@@ -73,12 +74,13 @@ class TargetSocket(NodeSocket):
             layout.label(text)
 
     def draw_color(self, context, node):
-        return (0.0, 1.0, 0.216, 0.5)
+        return TargetSocketColor
 
 
 class TargetNode(Node, B4WLogicNode):
     def updateNode(self, context):
-        self.process_node(context)
+        pass
+        # self.process_node(context)
 
     bl_idname = 'TargetNode'
     bl_label = 'Target'
@@ -116,7 +118,7 @@ class FunctionSocket(NodeSocket):
             layout.label(text)
 
     def draw_color(self, context, node):
-        return (0.0, 1.0, 0.216, 0.5)
+        return SensorSocketColor
 
 class FunctionNodeSensorSocket(NodeSocket):
     bl_idname = 'FunctionNodeSensorSocketType'
@@ -129,7 +131,20 @@ class FunctionNodeSensorSocket(NodeSocket):
             layout.label(text)
 
     def draw_color(self, context, node):
-        return (0.0, 1.0, 0.216, 0.5)
+        return SensorSocketColor
+
+class FunctionNodeTargetSocket(NodeSocket):
+    bl_idname = 'FunctionNodeTargetSocketType'
+    bl_label = 'Function Node Target Socket'
+    def draw(self, context, layout, node, text):
+        if self.is_output or self.is_linked:
+            # layout.prop(self, "ObjectsProperty", text=text)
+            pass
+        else:
+            layout.label(text)
+
+    def draw_color(self, context, node):
+        return TargetSocketColor
 
 
 class FunctionNode(Node, B4WLogicNode):
@@ -153,8 +168,8 @@ class FunctionNode(Node, B4WLogicNode):
 
     def init(self, context):
         self.outputs.new('FunctionSocketType', "")
-        self.inputs.new('TargetSocketType', "")
         self.inputs.new('FunctionNodeSensorSocketType', "")
+        self.inputs.new('FunctionNodeTargetSocketType', "")
 
     def copy(self, node):
         print("Copying from node ", node)
@@ -212,7 +227,7 @@ class LogicOperatorSocketInput(NodeSocket):
             opera.tree_name = self.tree_name
 
     def draw_color(self, context, node):
-        return (0.0, 1.0, 0.216, 0.5)
+        return SensorSocketColor
 
 class LogicOperatorSocketOutput(NodeSocket):
     bl_idname = 'LogicOperatorSocketOutputType'
@@ -221,7 +236,7 @@ class LogicOperatorSocketOutput(NodeSocket):
         pass
 
     def draw_color(self, context, node):
-        return (0.0, 1.0, 0.216, 0.5)
+        return SensorSocketColor
 global ID
 ID=0
 class AddSocket(bpy.types.Operator):
@@ -349,6 +364,7 @@ def register():
     bpy.utils.register_class(AddSocket)
     bpy.utils.register_class(RemoveSocket)
     bpy.utils.register_class(FunctionNodeSensorSocket)
+    bpy.utils.register_class(FunctionNodeTargetSocket)
 
     nodeitems_utils.register_node_categories("CUSTOM_NODES", node_categories)
 
@@ -368,6 +384,7 @@ def unregister():
     bpy.utils.unregister_class(AddSocket)
     bpy.utils.unregister_class(RemoveSocket)
     bpy.utils.unregister_class(FunctionNodeSensorSocket)
+    bpy.utils.unregister_class(FunctionNodeTargetSocket)
 
 if __name__ == "__main__":
     register()
