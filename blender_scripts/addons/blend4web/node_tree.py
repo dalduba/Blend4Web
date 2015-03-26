@@ -262,9 +262,9 @@ class LogicOperatorNode(Node, B4WLogicNode):
         s = self.inputs.new('LogicOperatorSocketInputType', "")
         s.node_name = self.name
         s.tree_name = self.id_data.name
-        self.inputs.new('LogicOperatorSocketInputType', "")
-        self.inputs.new[-1].logic_operation = self.logic_operation
+        s.logic_operation = self.logic_operation
         self.outputs.new('LogicOperatorSocketOutputType', "")
+
 
     def copy(self, node):
         print("Copying from node ", node)
