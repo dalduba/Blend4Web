@@ -12,11 +12,14 @@ var m_cons     = require("constraints");
 var m_ctl      = require("controls");
 var m_data     = require("data");
 var m_debug    = require("debug");
+var m_geom     = require("geometry");
 var m_gyro     = require("gyroscope");
 var m_lights   = require("lights");
 var m_main     = require("main");
 var m_mixer    = require("mixer");
 var m_mat      = require("material");
+var m_nla      = require("nla");
+var m_rgb      = require("rgb");
 var m_sshot    = require("screenshooter");
 var m_scenes   = require("scenes");
 var m_shaders  = require("shaders");
@@ -30,11 +33,14 @@ var m_vec3 = require("vec3");
 var DEBUG = (m_version.type() === "DEBUG");
 var AUTO_VIEW_INTERVAL = 1000;
 var AUTO_ROTATE_RATIO  = 0.3;
-var DEFAULT_SCENE     = "dev/logo.json";
+var DEFAULT_SCENE     = "misc/logo.json";
 var DEFAULT_NAME      = "Logo";
 
 var TO_RAD = Math.PI/180;
 var TO_DEG = 180/Math.PI;
+
+var DEC_SLIDER = 188;
+var INC_SLIDER = 190; 
 
 var ANIM_OBJ_DEFAULT_INDEX = 0;
 var ANIM_NAME_DEFAULT_INDEX = 0;
@@ -50,6 +56,8 @@ var _auto_view_timeout_handle;
 var _manifest = null;
 
 var _anim_obj = null;
+var _shape_key_obj = null;
+var _shape_key_name = "";
 
 var _settings = null;
 var _scene_settings = null;
@@ -67,24 +75,28 @@ exports.init = function() {
     set_quality_config();
     set_stereo_view_config();
     set_gyro_cam_rotate_config();
+    set_outlining_overview_mode_config();
 
     m_app.init({
         canvas_container_id: "main_canvas_container",
         callback: init_cb,
+        autoresize: false,
         gl_debug: true,
         show_hud_debug_info: get_show_hud_debug_info_config(),
         sfx_mix_mode: get_mix_mode_config(),
         show_fps: true,
+        fps_elem_id: "fps_logger",
+        fps_wrapper_id: "fps_container",
 
         // engine config
         alpha : true,
         assets_dds_available: !DEBUG,
         assets_min50_available: !DEBUG,
         console_verbose: true,
-        all_objs_selectable: true,
         physics_enabled: true,
         wireframe_debug: true
     });
+
 }
 
 function init_cb(canvas_elem, success) {
@@ -107,7 +119,7 @@ function init_cb(canvas_elem, success) {
         return false;
     };
 
-    m_app.enable_controls(canvas_elem);
+    m_app.enable_controls();
 
     window.addEventListener("resize", on_resize, false);
 
@@ -131,6 +143,23 @@ function init_cb(canvas_elem, success) {
             asset_cb, null);
 }
 
+function assign_sliders_controls() {
+    $(document).ready(function() {
+        $(".ui-slider-handle").off("keydown");
+        $(".ui-slider-handle").on("keydown",function(e) {
+            var slider_id = this.parentElement.parentElement.children[0].getAttribute("id");
+            if (!slider_id)
+                return;
+            var slider_value = parseFloat(document.getElementById(slider_id).value);
+            var slider_step = parseFloat(document.getElementById(slider_id).getAttribute("step"));
+            if (e.keyCode == DEC_SLIDER)
+                set_slider(slider_id, slider_value - slider_step);
+            if (e.keyCode == INC_SLIDER)
+                set_slider(slider_id, slider_value + slider_step);
+        });
+    });
+}
+
 function get_selected_object() {
     return _selected_object;
 }
@@ -150,14 +179,13 @@ function main_canvas_clicked(event) {
     var prev_obj = get_selected_object();
 
     if (prev_obj)
-        m_scenes.clear_glow_anim(prev_obj);
+        m_scenes.clear_outline_anim(prev_obj);
 
     var obj = m_scenes.pick_object(x, y);
     _selected_object = obj;
 
     if (obj) {
         _object_selected_callback(obj);
-        m_scenes.apply_glow_anim(obj, 0.2, 3.8, 1);
     } else
         forbid_material_params();
 
@@ -267,7 +295,7 @@ function init_ui() {
     _lights_elem = document.getElementById("lights_cont");
 
     // build date
-    document.getElementById("build_date").innerHTML = m_version.date();
+    document.getElementById("build_date").innerHTML = m_version.date_str();
 
     // general buttons
     bind_control(save_quality_and_reload, "quality", "string");
@@ -292,7 +320,16 @@ function init_ui() {
     bind_control(set_animation_params, "anim_frame_current", "number");
     m_app.set_onclick("anim_play", anim_play_clicked);
     m_app.set_onclick("anim_stop", anim_stop_clicked);
-    m_app.set_onclick("get_max_bones", get_max_bones);
+
+    // nla
+    bind_control(set_nla_params, "nla_frame_current", "number");
+    m_app.set_onclick("nla_play", nla_play_clicked);
+    m_app.set_onclick("nla_stop", nla_stop_clicked);
+
+    //shape keys
+    bind_control(set_shape_keys_params, "shape_key_obj", "string");
+    bind_control(set_shape_keys_params, "shape_key_name", "string");
+    bind_control(set_shape_keys_params, "shape_key_value", "number");
 
     // materials
     bind_control(set_material_params, "material_name", "string");
@@ -416,20 +453,37 @@ function init_ui() {
     // gyroscope use
     bind_control(set_gyro_cam_rotate_reload, "gyro_use", "bool");
     refresh_gyro_use_ui();
+    
     // wind
     bind_control(set_wind_params, "wind_dir", "number");
     bind_control(set_wind_params, "wind_strength", "number");
 
+    //motion blur
+    bind_control(set_mb_params, "mb_factor", "number");
+    bind_control(set_mb_params, "mb_decay_threshold", "number");
+
+    // bloom
     bind_control(set_bloom_params, "bloom_key", "number");
     bind_control(set_bloom_params, "bloom_blur", "number");
     bind_control(set_bloom_params, "bloom_edge_lum", "number");
 
+    // glow material
+    bind_control(set_glow_material_params, "small_glow_mask_coeff", "number");
+    bind_control(set_glow_material_params, "large_glow_mask_coeff", "number");
+    bind_control(set_glow_material_params, "small_glow_mask_width", "number");
+    bind_control(set_glow_material_params, "large_glow_mask_width", "number");
+
     // debug
+    bind_control(set_canvas_resolution_factor, "canvas_rf", "number");
     bind_control(set_debug_params, "wireframe_mode", "string");
     bind_colpick(set_debug_params, "wireframe_edge_color", "object");
     bind_control(set_hud_debug_info_and_reload, "show_hud_debug_info", "bool"); //TODO
+    bind_control(set_outlining_overview_mode, "outlining_overview_mode", "bool");
+    refresh_outlining_overview_mode_ui();
     m_app.set_onclick("make_screenshot", make_screenshot_clicked);
     refresh_hud_debug_info_ui();
+
+    assign_sliders_controls();
 }
 
 function fill_select_options(elem_id, values) {
@@ -473,13 +527,13 @@ function init_scenes_list() {
     var url_params = m_app.get_url_params();
     if (url_params && url_params["load"]) {
         var elems = url_params["load"].split("/");
-        var scene_name = "Default (" + elems[elems.length - 1] + ")"
+        var scene_name = "Home (" + elems[elems.length - 1] + ")"
     } else {
         var elems = DEFAULT_SCENE.split("/");
-        var scene_name = "Default (" + elems[elems.length - 1] + ")"
+        var scene_name = "Home (" + elems[elems.length - 1] + ")"
     }
     s += "<div class='min_font' id='default_scene'>";
-    s += "<h6 class='ui-collapsible-heading'><a class='min_font ui-btn ui-btn-icon-right ui-icon-carat-r'>" + scene_name + "</a></h6>";
+    s += "<h6 class='ui-collapsible-heading'><a class='ui-mini ui-btn ui-btn-icon-right ui-icon-home'>" + scene_name + "</a></h6>";
     s += "</div>"
 
     for (var i = 0; i < _manifest.length; i++)
@@ -505,7 +559,7 @@ function init_scenes_list_category(category) {
     for (var i = 0; i < items.length; i++) {
         var item_name = items[i].name;
         var item_id = "MANIFEST_ITEM_" + item_name + "__SEPARATOR__" + name;
-        s += "<li data-mini='true'><a href='#' class='min_font' id='" + item_id + "'>" + item_name + "</a></li>"
+        s += "<li data-mini='true'><a href='#' class='min_font' id=\"" + item_id + "\">" + item_name + "</a></li>"
     }
     s += "</ul>"
     s += "</div>"
@@ -536,6 +590,7 @@ function reset_settings_to_default() {
         };
 
     _anim_obj = null;
+    _shape_key_obj = null;
     _scene_settings = null;
 }
 
@@ -601,8 +656,6 @@ function process_scene(names, call_reset_b4w, wait_textures, load_from_url) {
 function loaded_callback(data_id) {
     var canvas_elem = m_main.get_canvas_elem();
     canvas_elem.addEventListener("mousedown", main_canvas_clicked, false);
-
-    m_scenes.set_glow_color([1, 0.4, 0.05]);
 
     _selected_object = null;
     prepare_scenes(_settings);
@@ -719,8 +772,9 @@ function add_error_tooltip() {
 
     if (warnings || errors)
         _lights_elem.setAttribute("title",
-                                  "warnings:" + warnings +
-                                  '\n' + "errors:" + errors);
+                                  "Errors: " + errors + ", " +
+                                  "Warnings: " + warnings + "\n" +  
+                                  "See browser console for more info");
     else
         _lights_elem.setAttribute("title", "Loaded OK");
 }
@@ -729,9 +783,11 @@ function display_scene_stats() {
     var verts = m_debug.num_vertices();
     var tris = m_debug.num_triangles();
     var calls = m_debug.num_draw_calls();
+    var shaders = m_debug.num_shaders();
 
     document.getElementById("info_right_up").innerHTML =
-        verts + " verts" + ", " + tris + " tris" + ", " + calls + " draw calls";
+        verts + " verts" + ", " + tris + " tris" + ", " + 
+        calls + " draw calls" + ", " + shaders + " shaders";
 
     var gstats = m_debug.geometry_stats();
     var texinfo = m_debug.num_textures();
@@ -798,7 +854,9 @@ function prepare_scenes(global_settings) {
     get_wind_params();
     get_sun_params();
     get_sky_params();
+    get_mb_params();
     get_bloom_params();
+    get_glow_material_params();
     check_lighting_params();
     forbid_material_params();
     forbid_debug_params();
@@ -836,20 +894,7 @@ function change_apply_scene_settings(scene_name, settings) {
     m_scenes.set_active(scene_name);
     var camera = m_scenes.get_active_camera();
 
-    // camera settings
-    if (settings.camera_target) {
-        var targ = settings.camera_target;
-        m_cons.append_follow(camera, targ);
-    }
-
-    var hang = settings.h_angle;
-    var vang = settings.v_angle;
-
-    if ((hang === 0 || hang) && (vang === 0 || vang))
-        m_cam.set_eye_params(camera, hang, vang);
-
     // init anim active objects list
-
     var anim_obj_names = [];
     var scene_objs = m_scenes.get_all_objects();
     for (var i = 0; i < scene_objs.length; i++) {
@@ -869,19 +914,59 @@ function change_apply_scene_settings(scene_name, settings) {
                             "anim_mix_factor",
                             "anim_frame_current",
                             "anim_play",
-                            "anim_stop",
-                            "get_max_bones"];
+                            "anim_stop"];
 
-    if (_anim_obj)
+    if (_anim_obj) {
         forbid_params(anim_param_names, "enable");
-    else {
+        fill_select_options("anim_active_object", anim_obj_names);
+        set_animation_params({anim_active_object :
+                m_scenes.get_object_name(_anim_obj)});
+    } else
         forbid_params(anim_param_names, "disable");
-        return;
+
+    var nla_params = ["nla_play",
+                     "nla_stop",
+                     "nla_status",
+                     "nla_frame_current",
+                     "nla_playing"];
+    var nla_all_params = ["nla_frame_range"];
+    if (m_nla.check_nla()) {
+        if (!m_nla.check_nla_scripts())
+            forbid_params(nla_params, "enable");
+        else {
+            forbid_params(nla_params, "disable");
+            var elem_status = document.getElementById("nla_status");
+            elem_status.innerHTML = "CONTROLLED BY NLA SCRIPT";
+        }
+        forbid_params(nla_all_params, "enable");
+        update_nla_info();
+    } else {
+        forbid_params(nla_params, "disable");
+        forbid_params(nla_all_params, "disable");
     }
 
-    fill_select_options("anim_active_object", anim_obj_names);
-    set_animation_params({anim_active_object :
-            m_scenes.get_object_name(_anim_obj)});
+    // init shape keys
+
+    var shape_keys_objs_names = [];
+    for (var i = 0; i < scene_objs.length; i++) {
+        var sobj = scene_objs[i];
+        if (m_geom.check_shape_keys(sobj)) {
+            if (!_shape_key_obj)
+                _shape_key_obj = sobj;
+            shape_keys_objs_names.push(m_scenes.get_object_name(sobj));
+        }
+    }
+
+    var shape_keys_params = ["shape_key_obj",
+                            "shape_key_name",
+                            "shape_key_value",];
+    if (_shape_key_obj) {
+        forbid_params(shape_keys_params, "enable");
+        fill_select_options("shape_key_obj", shape_keys_objs_names);
+        set_shape_keys_params({shape_key_obj :
+                m_scenes.get_object_name(_shape_key_obj)});
+    } else
+        forbid_params(shape_keys_params, "disable");
 }
 
 function render_callback(elapsed, current_time) {
@@ -901,6 +986,19 @@ function render_callback(elapsed, current_time) {
             elem_status.innerHTML = "PLAYING";
         else
             elem_status.innerHTML = "STOPPED";
+    }
+    if (m_nla.check_nla()) {
+        
+        if (!m_nla.check_nla_scripts()) {
+            var elem_status = document.getElementById("nla_status");
+            if (m_nla.is_play())
+                elem_status.innerHTML = "PLAYING";
+            else
+                elem_status.innerHTML = "STOPPED";
+        }
+        var frame = parseInt(m_nla.get_frame());
+        if (parseInt($("#nla_frame_current").val()) !== frame)
+            set_slider("nla_frame_current", frame);
     }
 }
 
@@ -1004,6 +1102,13 @@ function set_stereo_view_config() {
     m_cfg.set("anaglyph_use", m_storage.get("anaglyph_use") === "true");
 }
 
+function set_outlining_overview_mode_config() {
+    if (m_storage.get("outlining_overview_mode") == "")
+        m_cfg.set("outlining_overview_mode", true)
+    else
+        m_cfg.set("outlining_overview_mode", m_storage.get("outlining_overview_mode") === "true");
+}
+
 function set_gyro_cam_rotate_config() {
     m_cfg.set("gyro_use", m_storage.get("gyro_use") === "true");
 }
@@ -1036,6 +1141,17 @@ function refresh_stereo_view_ui() {
     $("#anaglyph_use").slider("refresh");
 }
 
+function refresh_outlining_overview_mode_ui() {
+    if (m_storage.get("outlining_overview_mode") == "")
+        var opt_index = 1;
+    else
+        var opt_index = Number(m_storage.get("outlining_overview_mode") === "true");
+
+    document.getElementById("outlining_overview_mode").options[opt_index].selected = true;
+
+    $("#outlining_overview_mode").slider("refresh");
+}
+
 function refresh_gyro_use_ui() {
     var opt_index = Number(m_storage.get("gyro_use") === "true");
     document.getElementById("gyro_use").options[opt_index].selected = true;
@@ -1052,6 +1168,11 @@ function set_gyro_cam_rotate_reload(value) {
     window.location.reload();
 }
 
+function set_outlining_overview_mode(value) {
+    m_storage.set("outlining_overview_mode", value.outlining_overview_mode);
+    window.location.reload();
+}
+
 function start_auto_view() {
     _auto_view = true;
     auto_view_load_next();
@@ -1059,7 +1180,7 @@ function start_auto_view() {
 
 function on_resize(e) {
 
-    m_app.resize_to_containter();
+    m_app.resize_to_container();
 
     var canvas = m_main.get_canvas_elem();
 
@@ -1069,6 +1190,7 @@ function on_resize(e) {
 
 function cleanup() {
     _anim_obj = null;
+    _shape_key_obj = null;
     _settings = null;
     _scene_settings = null;
 }
@@ -1092,15 +1214,47 @@ function anim_stop_clicked() {
     m_anim.stop(_anim_obj, slot_num);
 }
 
-function get_max_bones() {
-    m_main.pause();
+function nla_play_clicked() {
+    m_nla.play();
+}
 
-    var rslt = m_shaders.determine_max_bones();
+function nla_stop_clicked() {
+    m_nla.stop();
+}
 
-    document.getElementById("max_bones").innerHTML = rslt.max_bones;
-    document.getElementById("max_bones_no_blending").innerHTML = rslt.max_bones_no_blending;
+function set_shape_keys_params(value) {
+    if ("shape_key_obj" in value) {
+        _shape_key_obj = m_scenes.get_object_by_name(value["shape_key_obj"]);
 
-    m_main.resume();
+        var shape_keys_names = m_geom.get_shape_keys_names(_shape_key_obj);
+
+        if (shape_keys_names.length) {
+            fill_select_options("shape_key_name" ,shape_keys_names);
+            _shape_key_name = shape_keys_names[0];
+            var key_value = m_geom.get_shape_key_value(_shape_key_obj,_shape_key_name);
+            set_slider("shape_key_value", key_value);
+        } else
+            fill_select_options("shape_key_name", ["N/K"]);
+    }
+
+    if ("shape_key_name" in value) {
+        _shape_key_name = value["shape_key_name"];
+        var key_value = m_geom.get_shape_key_value(_shape_key_obj,_shape_key_name);
+        set_slider("shape_key_value", key_value);
+    }
+
+    if ("shape_key_value" in value)
+        m_geom.set_shape_key_value(_shape_key_obj, _shape_key_name, value["shape_key_value"]);
+
+}
+
+function set_nla_params(value) {
+
+    if ("nla_frame_current" in value)
+        if (!m_nla.is_play()) {
+            var current = parseInt(value.nla_frame_current);
+            m_nla.set_frame(current);
+        }
 }
 
 function set_animation_params(value) {
@@ -1159,7 +1313,7 @@ function set_animation_params(value) {
     if ("anim_cyclic" in value) {
         var anim_name = document.getElementById("animation").value;
         var slot_num = m_anim.get_slot_num_by_anim(_anim_obj, anim_name);
-        m_anim.cyclic(_anim_obj, value.anim_cyclic, slot_num);
+        m_anim.set_behavior(_anim_obj, value.anim_cyclic ? m_anim.AB_CYCLIC : m_anim.AB_FINISH_RESET, slot_num);
     }
 
     if ("anim_frame_current" in value) {
@@ -1227,7 +1381,7 @@ function get_anim_type_color(anim_type) {
 }
 
 function update_anim_ui_name(obj, slot_num) {
-    var anim_name = m_anim.get_anim_name(obj, slot_num);
+    var anim_name = m_anim.get_current_anim_name(obj, slot_num);
     anim_name = anim_name || "None";
 
     var anim_elem = $("#" + "animation");
@@ -1244,20 +1398,37 @@ function update_anim_ui_name(obj, slot_num) {
     }
 }
 
+function update_nla_info() {
+    var slider = document.getElementById("nla_frame_current");
+    var fr_elem = document.getElementById("nla_frame_range");
+    var start_fr = m_nla.get_frame_start();
+    var end_fr = m_nla.get_frame_end();
+
+    if (start_fr != -1 && end_fr != -1) {
+        fr_elem.innerHTML = start_fr + " - " + end_fr;
+        slider.min = "" + start_fr;
+        slider.max = "" + end_fr;
+    } else
+        fr_elem.innerHTML = "N/A";
+}
+
 function update_anim_info(obj, slot_num) {
     // cyclic
-    var cyclic = m_anim.is_cyclic(obj, slot_num);
-    set_slider("anim_cyclic", Number(cyclic));
+    set_slider("anim_cyclic", Number(m_anim.get_behavior(obj, slot_num) 
+            == m_anim.AB_CYCLIC));
 
     // frame range
     var fr_elem = document.getElementById("anim_frame_range");
-    var fr = m_anim.get_frame_range(obj, slot_num);
 
-    if (fr) {
-        fr_elem.innerHTML = fr[0] + " - " + fr[1];
+    var start_fr = m_anim.get_anim_start_frame(obj, slot_num);
+    var len = m_anim.get_anim_length(obj, slot_num);
+
+    if (start_fr != -1 && len != -1) {
+        var finish_fr = start_fr + len;
+        fr_elem.innerHTML = start_fr + " - " + finish_fr;
         var slider = document.getElementById("anim_frame_current");
-        slider.min = "" + fr[0];
-        slider.max = "" + fr[1];
+        slider.min = "" + start_fr;
+        slider.max = "" + finish_fr;
     } else
         fr_elem.innerHTML = "N/A";
 }
@@ -1493,7 +1664,7 @@ function get_shadow_params() {
 
     set_slider("first_cascade_blur_radius", shadow_params["first_cascade_blur_radius"]);
 
-    if (shadow_params["b4w_enable_csm"]) {
+    if (shadow_params["enable_csm"]) {
         set_slider("csm_first_cascade_border", shadow_params["csm_first_cascade_border"]);
 
         if (shadow_params["csm_num"] > 1) {
@@ -1528,11 +1699,10 @@ function set_shadow_params(value) {
 }
 
 function display_shadows_info(shadow_params) {
-
     document.getElementById("csm_resolution").innerHTML = "&nbsp;&nbsp;"
             + shadow_params["csm_resolution"];
 
-    if (shadow_params["b4w_enable_csm"]) {
+    if (shadow_params["enable_csm"]) {
         document.getElementById("csm_num").innerHTML = " " + shadow_params["csm_num"];
 
         var data_blocks = ["csm_borders", "blur_radii"];
@@ -1689,8 +1859,7 @@ function get_material_params(obj, mat_name) {
     }
 
     var diffuse_color = m_mat.get_diffuse_color(obj, mat_name);
-    diffuse_color.pop();
-    mparams["diffuse_color"] = diffuse_color;
+    mparams["diffuse_color"] = diffuse_color.subarray(0, 3);
 
     forbid_params(mat_param_names, "enable");
 
@@ -2115,20 +2284,32 @@ function get_dof_params() {
     var dof_params  = m_scenes.get_dof_params();
 
     var dof_param_names = ["dof_distance",
-                       "dof_front",
-                       "dof_rear",
-                       "dof_power",
-                       "dof_on"];
+                           "dof_object",
+                           "dof_front",
+                           "dof_rear",
+                           "dof_power",
+                           "dof_on"];
 
     if (dof_params) {
-        set_slider("dof_distance", dof_params["dof_distance"]);
         set_slider("dof_front", dof_params["dof_front"]);
         set_slider("dof_rear", dof_params["dof_rear"]);
         set_slider("dof_power", dof_params["dof_power"]);
-
+        
+        $("#" + "dof_distance").parent().parent().parent().removeClass('ui-disabled');
+        if (dof_params["dof_object"]) {
+            set_label("dof_object", dof_params["dof_object"].name);
+            dof_param_names.splice(0, 1);
+            $("#" + "dof_distance").parent().addClass('ui-disabled');
+            $("#" + "dof_object").parent().removeClass('ui-disabled');
+        } else {
+            set_slider("dof_distance", dof_params["dof_distance"]);
+            dof_param_names.splice(1, 1);
+            $("#" + "dof_distance").parent().removeClass('ui-disabled'); 
+            $("#" + "dof_object").parent().addClass('ui-disabled');
+        }
         forbid_params(dof_param_names, "enable");
 
-        var opt_index = (dof_params["dof_distance"] > 0) ? 0 : 1;
+        var opt_index = (dof_params["dof_distance"] > 0) ? 1 : 0;
         document.getElementById("dof_on").options[opt_index].selected = true;
 
         $("#dof_on").slider("refresh");
@@ -2202,6 +2383,45 @@ function set_god_rays_params(value) {
     m_scenes.set_god_rays_params(god_rays_params);
 }
 
+function set_canvas_resolution_factor(value) {
+
+    if ("canvas_rf" in value) {
+        m_cfg.set("canvas_resolution_factor", value.canvas_rf);
+        on_resize();
+    }
+}
+
+function get_mb_params() {
+    var mb_params = m_scenes.get_mb_params();
+    var mb_param_names = ["mb_factor",
+                            "mb_decay_threshold"];
+
+    if (!mb_params) {
+        forbid_params(mb_param_names, "disable");
+        return;
+    }
+
+    forbid_params(mb_param_names, "enable");
+
+    if (mb_params) {
+        set_slider("mb_factor", mb_params["mb_factor"]);
+        set_slider("mb_decay_threshold", mb_params["mb_decay_threshold"]);
+    }
+}
+
+function set_mb_params(value) {
+    var mb_params = {};
+
+    if ("mb_factor" in value) {
+        mb_params["mb_factor"] = value.mb_factor;
+    }
+    if ("mb_decay_threshold" in value) {
+        mb_params["mb_decay_threshold"] = value.mb_decay_threshold;
+    }
+
+    m_scenes.set_mb_params(mb_params);
+}
+
 function get_bloom_params() {
     var bloom_params = m_scenes.get_bloom_params();
     var bloom_param_names = ["bloom_key",
@@ -2238,43 +2458,56 @@ function set_bloom_params(value) {
     m_scenes.set_bloom_params(bloom_params);
 }
 
-function set_color_picker(id, color) {
-    // copied from colorpicker
-    function RGBToHex(rgb) {
-        var hex = [rgb.r.toString(16), rgb.g.toString(16), rgb.b.toString(16)];
-        $.each(hex, function(nr, val) {
-            if (val.length == 1) {
-                hex[nr] = '0' + val;
-            }
-        });
-        return hex.join('');
-    };
+function get_glow_material_params() {
+    var glow_material_params = m_scenes.get_glow_material_params();
+    var glow_material_param_names = ["small_glow_mask_coeff",
+                                     "large_glow_mask_coeff",
+                                     "small_glow_mask_width",
+                                     "large_glow_mask_width"];
 
-    color = lin_to_srgb(color);
+    if (!glow_material_params) {
+        forbid_params(glow_material_param_names, "disable");
+        return;
+    }
+
+    forbid_params(glow_material_param_names, "enable");
+
+    set_slider("small_glow_mask_coeff", glow_material_params["small_glow_mask_coeff"]);
+    set_slider("large_glow_mask_coeff", glow_material_params["large_glow_mask_coeff"]);
+    set_slider("small_glow_mask_width", glow_material_params["small_glow_mask_width"]);
+    set_slider("large_glow_mask_width", glow_material_params["large_glow_mask_width"]);
+}
+
+function set_glow_material_params(value) {
+    var glow_material_params = {};
+
+    if ("small_glow_mask_coeff" in value) {
+        glow_material_params["small_glow_mask_coeff"] = value.small_glow_mask_coeff;
+    }
+    if ("large_glow_mask_coeff" in value) {
+        glow_material_params["large_glow_mask_coeff"] = value.large_glow_mask_coeff;
+    }
+    if ("small_glow_mask_width" in value) {
+        glow_material_params["small_glow_mask_width"] = value.small_glow_mask_width;
+    }
+    if ("large_glow_mask_width" in value) {
+        glow_material_params["large_glow_mask_width"] = value.large_glow_mask_width;
+    }
+
+    m_scenes.set_glow_material_params(glow_material_params);
+}
+
+function set_color_picker(id, color) {
+    var css_rgb = m_rgb.rgb_to_css(color);
+    var css_hex = m_rgb.rgb_to_css_hex(color);
 
     var rgb = {
-        r: Math.round(color[0] * 255),
-        g: Math.round(color[1] * 255),
-        b: Math.round(color[2] * 255)
+        r: css_rgb[0],
+        g: css_rgb[1],
+        b: css_rgb[2]
     };
     $("#" + id).ColorPickerSetColor(rgb);
-    $("#" + id + " div").css('backgroundColor', '#' + RGBToHex(rgb));
-}
-
-function srgb_to_lin(color) {
-    return [
-        Math.pow(color[0], 2.2),
-        Math.pow(color[1], 2.2),
-        Math.pow(color[2], 2.2)
-    ];
-}
-
-function lin_to_srgb(color) {
-    return [
-        Math.pow(color[0], 1/2.2),
-        Math.pow(color[1], 1/2.2),
-        Math.pow(color[2], 1/2.2)
-    ];
+    $("#" + id + " div").css('backgroundColor', css_hex);
 }
 
 function get_wind_params() {
@@ -2306,6 +2539,7 @@ function set_wind_params(value) {
 function set_slider(id, val) {
     $("#" + id).val(val);
     $("#" + id).slider("refresh");
+    $("#" + id).trigger("change");
 }
 
 function set_label(id, val) {
@@ -2336,22 +2570,14 @@ function bind_control(fun, id, type) {
 }
 
 function bind_colpick(fun, id) {
-    $("#" + id).ColorPicker({onChange: function (hsb, hex, rgb) {
-        $("#" + id + " div").css('backgroundColor', '#' + hex);
+    $("#" + id).ColorPicker({onChange: function (hsb, css_hex, css_rgb) {
+        $("#" + id + " div").css('backgroundColor', '#' + css_hex);
         var arg = {};
-        arg[id] = srgb_to_lin(rgb_to_float(rgb));
+        var color = m_rgb.css_to_rgb(css_rgb.r, css_rgb.g, css_rgb.b);
+        // need untyped array here
+        arg[id] = [color[0], color[1], color[2]];
         fun(arg);
     }});
-}
-
-function rgb_to_float(rgb, opt_dest) {
-    opt_dest = opt_dest || [];
-
-    opt_dest[0] = rgb.r / 255;
-    opt_dest[1] = rgb.g / 255;
-    opt_dest[2] = rgb.b / 255;
-
-    return opt_dest;
 }
 
 function init_jQM_select(id) {

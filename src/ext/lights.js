@@ -9,8 +9,9 @@ b4w.module["lights"] = function(exports, require) {
 // TODO: consider use of standard translation/rotation functions from transform module
 
 var m_print     = require("__print");
-var lights      = require("__lights");
-var scenes      = require("__scenes");
+var m_lights    = require("__lights");
+var m_scenes    = require("__scenes");
+var m_batch     = require("__batch");
 var transform   = require("__transform");
 var util        = require("__util");
 
@@ -26,12 +27,12 @@ var _max_sun_angle  = 60;
  * If lamps_type is defined, creates a new array
  * @method module:lights.get_lamps
  * @param {String} [lamps_type] Lamps type ("POINT", "SPOT", "SUN", "HEMI")
- * @returns {Array} Array with lamp object IDs
+ * @returns {Object3D[]} Array with lamp objects.
  */
 exports.get_lamps = function(lamps_type) {
 
-    var scene = scenes.get_active();
-    var lamps = scenes.get_scene_objs(scene, "LAMP", scenes.DATA_ID_ALL);
+    var scene = m_scenes.get_active();
+    var lamps = m_scenes.get_scene_objs(scene, "LAMP", m_scenes.DATA_ID_ALL);
 
     if (!lamps_type)
         return lamps;
@@ -49,12 +50,12 @@ exports.get_sun_params = get_sun_params;
 /**
  * Get the sun parameters.
  * @method module:lights.get_sun_params
- * @returns {Object} Sun params object
+ * @returns {SunParams} Sun params object
  * @cc_externs hor_position vert_position
  */
 function get_sun_params() {
-    var scene = scenes.get_active();
-    var lamps = scenes.get_scene_objs(scene, "LAMP", scenes.DATA_ID_ALL);
+    var scene = m_scenes.get_active();
+    var lamps = m_scenes.get_scene_objs(scene, "LAMP", m_scenes.DATA_ID_ALL);
     var sun = null;
 
     for (var i = 0; i < lamps.length; i++) {
@@ -92,12 +93,12 @@ exports.set_sun_params = set_sun_params;
 /**
  * Set the sun parameters.
  * @method module:lights.set_sun_params
- * @param {Object} sun_params sun parameters
+ * @param {SunParams} sun_params sun parameters
  */
 function set_sun_params (sun_params) {
 
-    var scene = scenes.get_active();
-    var lamps = scenes.get_scene_objs(scene, "LAMP", scenes.DATA_ID_ALL);
+    var scene = m_scenes.get_active();
+    var lamps = m_scenes.get_scene_objs(scene, "LAMP", m_scenes.DATA_ID_ALL);
 
     // Index of lamp(sun) on the scene
 
@@ -150,10 +151,10 @@ function set_sun_params (sun_params) {
             var sun_energy = Math.max( Math.min(3.0 * energy, 1.0), 0.0) * def_sun_energy;
             var env_energy = Math.max(energy, 0.1) * def_env_color;
 
-            lights.set_light_energy(sun_light, sun_energy);
-            scenes.set_environment_colors(scene, env_energy, null, null);
+            m_lights.set_light_energy(sun_light, sun_energy);
+            m_scenes.set_environment_colors(scene, env_energy, null, null);
         }
-        scenes.update_lamp_scene(sun, scene);
+        m_scenes.update_lamp_scene(sun, scene);
     }
 }
 
@@ -164,8 +165,8 @@ exports.set_day_time = set_day_time;
  * @param {Number} time new time (0.0...24.0)
  */
 function set_day_time(time) {
-    var scene = scenes.get_active();
-    var lamps = scenes.get_scene_objs(scene, "LAMP", scenes.DATA_ID_ALL);
+    var scene = m_scenes.get_active();
+    var lamps = m_scenes.get_scene_objs(scene, "LAMP", m_scenes.DATA_ID_ALL);
 
     for (var i = 0; i < lamps.length; i++) {
         var lamp = lamps[i];
@@ -216,12 +217,12 @@ exports.set_max_sun_angle = function(angle) {
 /**
  * Get the light params.
  * @method module:lights.get_light_params
- * @param {Object} lamp_obj Lamp object ID
- * @returns {Object} Light params
+ * @param {Object3D} lamp_obj Lamp object
+ * @returns {LightParams} Light params
  */
 exports.get_light_params = function(lamp_obj) {
 
-    if (lights.is_lamp(lamp_obj))
+    if (m_lights.is_lamp(lamp_obj))
         var light = lamp_obj._light;
     else {
         m_print.error("get_light_params(): Wrong object");
@@ -268,11 +269,11 @@ exports.get_light_type = get_light_type
 /**
  * Get the light type.
  * @method module:lights.get_light_type
- * @param {Object} lamp_obj Lamp object ID
+ * @param {Object3D} lamp_obj Lamp object.
  * @returns {String} Light type
  */
 function get_light_type(lamp_obj) {
-    if (lights.is_lamp(lamp_obj))
+    if (m_lights.is_lamp(lamp_obj))
         return lamp_obj._light.type;
     else
         m_print.error("get_light_type(): Wrong object");
@@ -281,45 +282,46 @@ function get_light_type(lamp_obj) {
 /**
  * Set the light params.
  * @method module:lights.set_light_params
- * @param {Object} lamp_obj Lamp object ID                  
- * @param {Object} light_params Light params
+ * @param {Object3D} lamp_obj Lamp object.
+ * @param {LightParams} light_params Light params
  * @cc_externs light_distance light_spot_size light_spot_blend light_energy light_color
  */
 exports.set_light_params = function(lamp_obj, light_params) {
 
-    if (lights.is_lamp(lamp_obj))
+    if (m_lights.is_lamp(lamp_obj))
         var light = lamp_obj._light;
     else {
         m_print.error("set_light_params(): Wrong object");
         return false;
     }
 
-    var scene = scenes.get_active();
+    var scene = m_scenes.get_active();
 
     if (typeof light_params.light_energy == "number") {
-        lights.set_light_energy(light, light_params.light_energy);
-        scenes.update_lamp_scene(lamp_obj, scene);
+        m_lights.set_light_energy(light, light_params.light_energy);
+        m_scenes.update_lamp_scene(lamp_obj, scene);
     }
 
     if (typeof light_params.light_color == "object") {
-        lights.set_light_color(light, light_params.light_color);
-        scenes.update_lamp_scene(lamp_obj, scene);
+        m_lights.set_light_color(light, light_params.light_color);
+        m_scenes.update_lamp_scene(lamp_obj, scene);
     }
 
     if (typeof light_params.light_spot_blend == "number") {
-        lights.set_light_spot_blend(light, light_params.light_spot_blend);
-        scenes.update_lamp_scene(lamp_obj, scene);
+        m_lights.set_light_spot_blend(light, light_params.light_spot_blend);
+        m_scenes.update_lamp_scene(lamp_obj, scene);
     }
 
     if (typeof light_params.light_spot_size == "number") {
-        lights.set_light_spot_size(light, light_params.light_spot_size);
-        scenes.update_lamp_scene(lamp_obj, scene);
+        m_lights.set_light_spot_size(light, light_params.light_spot_size);
+        m_scenes.update_lamp_scene(lamp_obj, scene);
     }
 
     if (typeof light_params.light_distance == "number") {
-        lights.set_light_distance(light, light_params.light_distance);
-        scenes.update_lamp_scene(lamp_obj, scene);
+        m_lights.set_light_distance(light, light_params.light_distance);
+        m_scenes.update_lamp_scene(lamp_obj, scene);
     }
+    m_scenes.update_all_mesh_shaders();
 }
 
 function update_sun_position(time) {

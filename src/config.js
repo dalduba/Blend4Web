@@ -29,9 +29,9 @@ exports.defaults = {
 
     alpha_sort_threshold       : 0.1,
 
-    min_format_version         : 5.0,
+    min_format_version         : [5, 4],
 
-    max_fps                    : 10000,
+    max_fps                    : 10000, // not accurate
 
     console_verbose            : false,
 
@@ -45,13 +45,9 @@ exports.defaults = {
 
     background_color           : [0.0, 0.0, 0.0, 0.0],
 
-    force_selectable           : false,
-
-    all_objs_selectable        : false,
-
     lod_transition_ratio       : 0.01,
 
-    resolution_factor          : 1.0,
+    render_resolution_factor   : 1.0,
 
     canvas_resolution_factor   : 1.0,
 
@@ -66,11 +62,10 @@ exports.defaults = {
     // init and show HUD on canvas provided by app
     show_hud_debug_info        : false,
 
-    // required for DEPTH shadows
+    // required for shadows
     depth_textures             : true,
 
-    // "NONE", "DEPTH"
-    shadows                    : "DEPTH",
+    shadows                    : true,
 
     anaglyph_use               : false,
 
@@ -79,8 +74,6 @@ exports.defaults = {
     reflect_multiplier         : 0.5,
 
     refractions                : true,
-
-    glow                       : true,
 
     ssao                       : true,
 
@@ -119,10 +112,7 @@ exports.defaults = {
 
     max_texture_size           : 1024,
 
-    max_cube_map_size          : 512,       //NEW
-
-    // Windows ANGLE limits, returned by determine_max_bones()
-    max_bones                  : 53,
+    max_cube_map_size          : 512,
 
     use_dds                    : true,
 
@@ -132,8 +122,6 @@ exports.defaults = {
     quality                    : exports.P_HIGH,
 
     allow_vertex_textures      : true,
-
-    glsl_unroll_hack           : false,
 
     no_phy_interp_hack         : false,
 
@@ -145,11 +133,11 @@ exports.defaults = {
 
     is_mobile_device           : false,
 
+    chrome_disable_doppler_effect_hack: false,
+
     init_wa_context_hack       : false,
 
     clear_procedural_sky_hack  : false,
-
-    firefox_disable_html_video_tex_hack: false,
 
     sky_update_hack            : false,
 
@@ -159,7 +147,25 @@ exports.defaults = {
 
     gyro_use                   : false,
 
-    firefox_shadows_slink_hack : false
+    firefox_shadows_slink_hack : false,
+
+    intel_cubemap_hack         : false,
+
+    enable_selectable          : true,
+
+    enable_outlining           : true,
+
+    glow_materials             : true,
+
+    max_vertex_uniform_vectors : 128,
+
+    ie11_touchscreen_hack      : false,
+
+    ios_depth_hack             : false,
+
+    macos_tex_reuse_hack       : false,
+
+    loaded_data_version        : [0, 0]
 }
 
 exports.defaults_save = m_util.clone_object_r(exports.defaults);
@@ -184,27 +190,31 @@ exports.assets = {
 exports.assets_save = m_util.clone_object_r(exports.assets);
 
 exports.paths = {
-    shaders_dir         : "../../shaders/",
+    shaders_dir         : "",
     shaders_include_dir : "include/",
-    built_in_data_module : "built_in_data",
-    smaa_search_texture_path: "",
-    smaa_area_texture_path: "",
 
-    // for developer version
-    resources_dir: "../deploy/apps/common/",
-    resources_search_paths: [
+    built_in_data_module : "built_in_data",
+
+    js_src_search_paths: [
         "b4w.min.js",
         "b4w.full.min.js",
         "src/b4w.js",
-        "USER_DEFINED_MODULE"
-    ]
+        "USER_DEFINED_MODULE"   // replaced when something compiled with the engine
+    ],
+
+    // relative to engine sources (default value for developer version)
+    resources_dir: "../deploy/apps/common/",
+
+    smaa_search_texture_path: "",
+    smaa_area_texture_path: ""
 }
 
 // physics config
 exports.physics = {
     enabled: true,
     max_fps: 60,
-    uranium_path: ""
+    uranium_path: "",
+    calc_fps: false
 }
 exports.physics_save = m_util.clone_object_r(exports.physics);
 
@@ -224,6 +234,16 @@ exports.sfx = {
 
 }
 exports.sfx_save = m_util.clone_object_r(exports.sfx);
+
+exports.outlining = {
+    outlining_overview_mode : false,
+    outline_color           : [1, 0.4, 0.05],
+    outline_intensity       : 1.0,
+    outline_duration        : 0.2,
+    outline_period          : 3.8,
+    outline_relapses        : 1.0
+}
+
 
 exports.debug_subs = {
     enabled     : false,
@@ -246,11 +266,9 @@ exports.apply_quality = function() {
 
     case exports.P_ULTRA:
 
-        cfg_def.shadows = "DEPTH",
+        cfg_def.shadows = true,
 
         cfg_def.shore_smoothing = true,
-
-        cfg_def.glow = true;
 
         cfg_def.ssao = true;
 
@@ -274,7 +292,7 @@ exports.apply_quality = function() {
 
         cfg_def.procedural_fog = true;
 
-        cfg_def.resolution_factor = 1.75;
+        cfg_def.render_resolution_factor = 1.75;
 
         cfg_scs.grass_tex_size = 4.0*512;
 
@@ -283,8 +301,6 @@ exports.apply_quality = function() {
         cfg_def.anisotropic_filtering = true;
 
         cfg_def.use_min50 = false;
-
-        cfg_def.max_bones = 53;
 
         cfg_def.precision = "highp";
 
@@ -302,17 +318,19 @@ exports.apply_quality = function() {
 
         cfg_def.allow_hidpi = true;
 
+        cfg_def.enable_outlining = true;
+
+        cfg_def.glow_materials = true;
+
         cfg_phy.max_fps = 120;
 
         break;
 
     case exports.P_HIGH:
 
-        cfg_def.shadows = "DEPTH";
+        cfg_def.shadows = true;
 
         cfg_def.shore_smoothing = true;
-
-        cfg_def.glow = true;
 
         cfg_def.ssao = true;
 
@@ -336,7 +354,7 @@ exports.apply_quality = function() {
 
         cfg_def.procedural_fog = true;
 
-        cfg_def.resolution_factor = 1;
+        cfg_def.render_resolution_factor = 1.0;
 
         cfg_scs.grass_tex_size = 2*512;
 
@@ -345,8 +363,6 @@ exports.apply_quality = function() {
         cfg_def.anisotropic_filtering = true;
 
         cfg_def.use_min50 = false;
-
-        cfg_def.max_bones = 53;
 
         cfg_def.precision = "highp";
 
@@ -364,17 +380,19 @@ exports.apply_quality = function() {
 
         cfg_def.allow_hidpi = false;
 
+        cfg_def.enable_outlining = true;
+
+        cfg_def.glow_materials = true;
+
         cfg_phy.max_fps = 60;
 
         break;
 
     case exports.P_LOW:
 
-        cfg_def.shadows = "NONE";
+        cfg_def.shadows = false;
 
         cfg_def.shore_smoothing = false;
-
-        cfg_def.glow = false;
 
         cfg_def.ssao = false;
 
@@ -398,7 +416,7 @@ exports.apply_quality = function() {
 
         cfg_def.procedural_fog = false;
 
-        cfg_def.resolution_factor = 1; // can be 0.5
+        cfg_def.render_resolution_factor = 1; // can be 0.5
 
         cfg_scs.grass_tex_size = 1*512;
 
@@ -407,8 +425,6 @@ exports.apply_quality = function() {
         cfg_def.anisotropic_filtering = false;
 
         cfg_def.use_min50 = true;
-
-        cfg_def.max_bones = 53;
 
         cfg_def.precision = "mediump";
 
@@ -426,6 +442,10 @@ exports.apply_quality = function() {
 
         cfg_def.allow_hidpi = false;
 
+        cfg_def.enable_outlining = false;
+
+        cfg_def.glow_materials = false;
+
         cfg_phy.max_fps = 60;
 
         break;
@@ -438,9 +458,6 @@ exports.set = set;
  */
 function set(prop, value) {
     switch (prop) {
-    case "all_objs_selectable":
-        exports.defaults.all_objs_selectable = value;
-        break;
     case "allow_cors":
         exports.defaults.allow_cors = value;
         break;
@@ -471,6 +488,9 @@ function set(prop, value) {
     case "assets_min50_available":
         exports.assets.min50_available = value;
         break;
+    case "audio":
+        exports.sfx.webaudio = value;
+        break;
     case "background_color":
         exports.defaults.background_color = value;
         break;
@@ -483,20 +503,11 @@ function set(prop, value) {
     case "console_verbose":
         exports.defaults.console_verbose = value;
         break;
-    case "context_antialias":
-        exports.context.antialias = value;
-        break;
     case "do_not_load_resources":
         exports.defaults.do_not_load_resources = value;
         break;
-    case "force_selectable":
-        exports.defaults.force_selectable = value;
-        break;
     case "gyro_use":
         exports.defaults.gyro_use = value;
-        break;
-    case "glow":
-        exports.defaults.glow = value;
         break;
     case "physics_enabled":
         exports.physics.enabled = value;
@@ -504,14 +515,17 @@ function set(prop, value) {
     case "physics_uranium_path":
         exports.physics.uranium_path = value;
         break;
+    case "physics_calc_fps":
+        exports.physics.calc_fps = value;
+        break;
     case "precision":
         exports.defaults.precision = value;
         break;
     case "quality":
         exports.defaults.quality = value;
         break;
-    case "resolution_factor":
-        exports.defaults.resolution_factor = value;
+    case "render_resolution_factor":
+        exports.defaults.render_resolution_factor = value;
         break;
     case "sfx_mix_mode":
         exports.sfx.mix_mode = value;
@@ -534,16 +548,26 @@ function set(prop, value) {
     case "wireframe_debug":
         exports.defaults.wireframe_debug = value;
         break;
+    case "enable_selectable":
+        exports.defaults.enable_selectable = value;
+        break;
+    case "enable_outlining":
+        exports.defaults.enable_outlining = value;
+        break;
+    case "outlining_overview_mode":
+        exports.outlining.outlining_overview_mode = value;
+        break;
+    case "glow_materials":
+        exports.defaults.glow_materials = value;
+        break;
     default:
-        m_print.error("B4W config set - property unknown: " + prop);
+        m_print.error("Unknown config property: " + prop);
         break;
     }
 }
 
 exports.get = function(prop) {
     switch (prop) {
-    case "all_objs_selectable":
-        return exports.defaults.all_objs_selectable;
     case "allow_cors":
         return exports.defaults.allow_cors;
     case "allow_hidpi":
@@ -564,6 +588,8 @@ exports.get = function(prop) {
         return exports.assets.dds_available;
     case "assets_min50_available":
         return exports.assets.min50_available;
+    case "audio":
+        return exports.sfx.webaudio;
     case "background_color":
         return exports.defaults.background_color;
     case "built_in_module_name":
@@ -572,26 +598,22 @@ exports.get = function(prop) {
         return exports.defaults.canvas_resolution_factor;
     case "console_verbose":
         return exports.defaults.console_verbose;
-    case "context_antialias":
-        return exports.context.antialias;
     case "do_not_load_resources":
         return exports.defaults.do_not_load_resources;
-    case "force_selectable":
-        return exports.defaults.force_selectable;
     case "gyro_use":
         return exports.defaults.gyro_use;
-    case "glow":
-        return exports.defaults.glow;
     case "physics_enabled":
         return exports.physics.enabled;
     case "physics_uranium_path":
         return exports.physics.uranium_path;
+    case "physics_calc_fps":
+        return exports.physics.calc_fps;
     case "precision":
         return exports.defaults.precision;
     case "quality":
         return exports.defaults.quality;
-    case "resolution_factor":
-        return exports.defaults.resolution_factor;
+    case "render_resolution_factor":
+        return exports.defaults.render_resolution_factor;
     case "sfx_mix_mode":
         return exports.sfx.mix_mode;
     case "shaders_dir":
@@ -606,8 +628,16 @@ exports.get = function(prop) {
         return exports.paths.smaa_area_texture_path;
     case "wireframe_debug":
         return exports.defaults.wireframe_debug;
+    case "enable_selectable":
+        return exports.defaults.enable_selectable;
+    case "enable_outlining":
+        return exports.defaults.enable_outlining;
+    case "outlining_overview_mode":
+        return exports.outlining.outlining_overview_mode;
+    case "glow_materials":
+        return exports.defaults.glow_materials;
     default:
-        m_print.error("B4W config get - property unknown: " + prop);
+        m_print.error("Unknown config property: " + prop);
         break;
     }
 }
@@ -628,54 +658,69 @@ function is_built_in_data() {
 }
 
 /**
- * Set configuration paths for uranium engine and smaa textures.
+ * Set configuration paths for shaders, uranium engine and smaa textures.
  */
-exports.set_resources_paths = function() {
+exports.set_paths = function() {
     var cfg_pth = exports.paths;
     var cfg_phy = exports.physics;
+
+    if (!is_built_in_data() && cfg_pth.shaders_dir == "")
+        cfg_pth.shaders_dir = js_src_dir() + "../shaders/";
+
     if (is_built_in_data()) {
         cfg_pth.smaa_search_texture_path = "smaa_search_texture.png";
         cfg_pth.smaa_area_texture_path = "smaa_area_texture.png";
     } else if (cfg_pth.smaa_search_texture_path == ""
-            || cfg_pth.smaa_area_texture_path == "" || cfg_phy.uranium_path == "") {
+            || cfg_pth.smaa_area_texture_path == "") {
+        var resources_dir = js_src_dir() + cfg_pth.resources_dir;
 
-        var src_path = null;
-
-        var scripts = document.getElementsByTagName('script');
-        for (var i = 0; i < scripts.length; i++) {
-            var src = scripts[i].src;
-
-            for (var j = 0; j < cfg_pth.resources_search_paths.length; j++) {
-                var script_path = cfg_pth.resources_search_paths[j];
-                if (src.indexOf(script_path) >= 0) {
-                    src_path = src;
-                    break;
-                }
-            }
-
-            if (src_path !== null)
-                break;
-        }
-
-        if (!src_path) {
-            m_print.warn("Couldn't determine path to ancillary resources, " + 
-                    "fallback to the current page directory");
-            src_path = document.location.href;
-        }
-
-        var index = src_path.indexOf("?");
-        if (index >= 0)
-            src_path = src_path.substring(0, index);
-
-        var js_src_dir = src_path.substring(0, src_path.lastIndexOf("/") + 1);
-        var resources_dir = js_src_dir + cfg_pth.resources_dir;
-
-        cfg_phy.uranium_path = cfg_phy.uranium_path || resources_dir + "uranium.js";
         cfg_pth.smaa_search_texture_path = cfg_pth.smaa_search_texture_path || 
                 resources_dir + "smaa_search_texture.png";
         cfg_pth.smaa_area_texture_path = cfg_pth.smaa_area_texture_path ||
                 resources_dir + "smaa_area_texture.png";
     }
+
+    if (cfg_phy.enabled && cfg_phy.uranium_path == "") {
+        var resources_dir = js_src_dir() + cfg_pth.resources_dir;
+        cfg_phy.uranium_path = resources_dir + "uranium.js";
+    }
+}
+
+/**
+ * Get path to the engine's source
+ */
+function js_src_dir() {
+    var cfg_pth = exports.paths;
+
+    var src_path = null;
+
+    var scripts = document.getElementsByTagName('script');
+    for (var i = 0; i < scripts.length; i++) {
+        var src = scripts[i].src;
+
+        for (var j = 0; j < cfg_pth.js_src_search_paths.length; j++) {
+            var script_path = cfg_pth.js_src_search_paths[j];
+            if (src.indexOf(script_path) >= 0) {
+                src_path = src;
+                break;
+            }
+        }
+
+        if (src_path !== null)
+            break;
+    }
+
+    if (!src_path) {
+        m_print.warn("Couldn't determine path to ancillary resources, " + 
+                "fallback to the current page directory");
+        src_path = document.location.href;
+    }
+
+    var index = src_path.indexOf("?");
+    if (index >= 0)
+        src_path = src_path.substring(0, index);
+
+    return src_path.substring(0, src_path.lastIndexOf("/") + 1);
 }
 
 exports.get_std_assets_path = function() {

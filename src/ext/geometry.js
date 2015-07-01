@@ -15,14 +15,14 @@ var m_render = require("__renderer");
 /**
  * Extract the vertex array from the object.
  * @method module:geometry.extract_vertex_array
- * @param {Object} obj Object ID
+ * @param {Object3D} obj Object 3D
  * @param {String} mat_name Material name
  * @param {String} attrib_name Attribute name (a_position, a_normal, a_tangent)
  * @returns {Float32Array} Vertex array
  */
 exports.extract_vertex_array = function(obj, mat_name, attrib_name) {
 
-    if (!has_dyn_geom(obj)) {
+    if (!m_geom.has_dyn_geom(obj)) {
         m_print.error("Wrong object:", obj["name"]);
         return null;
     }
@@ -44,23 +44,16 @@ exports.extract_vertex_array = function(obj, mat_name, attrib_name) {
     }
 }
 
-function has_dyn_geom(obj) {
-    if (obj && obj._render && obj._render.dynamic_geometry)
-        return true;
-    else
-        return false;
-}
-
 /**
  * Extract the array of triangulated face indices from the given object.
  * @method module:geometry.extract_index_array
- * @param {Object} obj Object ID
+ * @param {Object3D} obj Object 3D
  * @param {String} mat_name Material name
  * @returns {Uint16Array|Uint32Array} Array of triangle indices
  */
 exports.extract_index_array = function(obj, mat_name) {
 
-    if (!has_dyn_geom(obj)) {
+    if (!m_geom.has_dyn_geom(obj)) {
         m_print.error("Wrong object:", obj["name"]);
         return null;
     }
@@ -85,7 +78,7 @@ exports.extract_index_array = function(obj, mat_name) {
 /**
  * Update the vertex array for the given object.
  * @method module:geometry.update_vertex_array
- * @param {Object} obj Object ID
+ * @param {Object3D} obj Object 3D
  * @param {String} mat_name Material name
  * @param {String} attrib_name Attribute name (a_position, a_normal, a_tangent)
  * @param {Float32Array} array The new array
@@ -93,7 +86,7 @@ exports.extract_index_array = function(obj, mat_name) {
 exports.update_vertex_array = function(obj, mat_name, attrib_name, array) {
     var types = ["MAIN", "NODES", "DEPTH", "COLOR_ID"];
 
-    if (!has_dyn_geom(obj)) {
+    if (!m_geom.has_dyn_geom(obj)) {
         m_print.error("Wrong object:", obj["name"]);
         return;
     }
@@ -116,7 +109,7 @@ exports.update_vertex_array = function(obj, mat_name, attrib_name, array) {
 /**
  * Override geometry for the given object.
  * @method module:geometry.override_geometry
- * @param {Object} obj Object ID
+ * @param {Object3D} obj Object 3D
  * @param {String} mat_name Material name
  * @param {Uint16Array|Uint32Array} ibo_array Array of triangle indices
  * @param {Float32Array} positions_array New vertex positions array
@@ -127,7 +120,7 @@ exports.override_geometry = function(obj, mat_name, ibo_array,
 
     var types = ["MAIN", "NODES", "DEPTH", "COLOR_ID"];
 
-    if (!has_dyn_geom(obj)) {
+    if (!m_geom.has_dyn_geom(obj)) {
         m_print.error("Wrong object:", obj["name"]);
         return;
     }
@@ -221,16 +214,80 @@ exports.override_geometry = function(obj, mat_name, ibo_array,
                 m_render.assign_attribute_setters(batch);
 
                 // NOTE: process child batches if bufs_data was copied not by link
-                if (batch.childs)
-                    for (var j = 0; j < batch.childs.length; j++) {
-                        var child_batch = batch.childs[j];
+                var child_batch = m_batch.find_batch_material_forked(obj, batch);
+                if (child_batch && child_batch.bufs_data)
+                    child_batch.bufs_data = bufs_data;
 
-                        if (child_batch && child_batch.bufs_data)
-                            child_batch.bufs_data = bufs_data;
-                    }
             }
         }
     }
+}
+/**
+ * Apply shape key to the object.
+ * @method module:geometry.set_shape_key_value
+ * @param {Object3D} obj Object 3D
+ * @param {String} key_name Shape key name
+ * @param {Number} value Shape key value
+ */
+exports.set_shape_key_value = function(obj, key_name, value) {
+    if (!m_geom.check_shape_keys(obj)) {
+        m_print.error("Wrong object:", obj["name"]);
+        return null;
+    }
+
+    if (!m_geom.has_shape_key(obj, key_name)) {
+        m_print.error("Wrong key name:", key_name);
+        return null;
+    }
+
+    var float_value = parseFloat(value);
+
+    m_geom.apply_shape_key(obj, key_name, float_value);
+}
+/**
+ * Check if object has got shape keys.
+ * @method module:geometry.check_shape_keys
+ * @param {Object3D} obj Object 3D
+ * @returns {Boolean} Checking result.
+ */
+exports.check_shape_keys = function(obj) {
+    return m_geom.check_shape_keys(obj);
+}
+/**
+ * Return all available shape keys names.
+ * @method module:geometry.get_shape_keys_names
+ * @param {Object3D} obj Object 3D
+ * @returns {String[]} Array of animation names
+ */
+exports.get_shape_keys_names = function(obj) {
+
+    if (!m_geom.check_shape_keys(obj)) {
+        m_print.error("Wrong object:", obj["name"]);
+        return null;
+    }
+
+    return m_geom.get_shape_keys_names(obj);
+}
+/**
+ * Return shape key current value.
+ * @method module:geometry.get_shape_key_value
+ * @param {Object3D} obj Object 3D
+ * @param {String} key_name Shape key name
+ * @returns {Number} value Shape key value
+ */
+exports.get_shape_key_value = function(obj, key_name) {
+
+    if (!m_geom.check_shape_keys(obj)) {
+        m_print.error("Wrong object:", obj["name"]);
+        return null;
+    }
+
+    if (!m_geom.has_shape_key(obj, key_name)) {
+        m_print.error("Wrong key name:", key_name);
+        return null;
+    }
+
+    return m_geom.get_shape_key_value(obj, key_name);
 }
 
 }

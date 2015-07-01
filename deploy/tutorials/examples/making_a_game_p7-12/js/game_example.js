@@ -52,8 +52,7 @@ exports.init = function() {
         quality: quality,
         console_verbose: true,
         show_fps: true,
-        alpha: false,
-        physics_uranium_path: "uranium.js"
+        alpha: false
     });
 }
 
@@ -83,7 +82,6 @@ function load() {
 function load_cb(data_id) {
 
     m_char.init_wrapper()
-    m_combat.set_player_char();
 
     var elapsed_sensor = m_ctl.create_elapsed_sensor();
 

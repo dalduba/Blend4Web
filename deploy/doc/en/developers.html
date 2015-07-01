@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>For Application Developers &mdash; User Manual: Blend4Web v15.02</title>
+    <title>For Application Developers &mdash; User Manual: Blend4Web v15.06</title>
     
     <link rel="stylesheet" href="_static/agogo.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '15.02',
+        VERSION:     '15.06',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,19 +25,19 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="author" title="About these documents" href="about.html" />
-    <link rel="top" title="User Manual: Blend4Web v15.02" href="index.html" />
+    <link rel="top" title="User Manual: Blend4Web v15.06" href="index.html" />
     <link rel="next" title="For Engine Developers" href="developers_advanced.html" />
     <link rel="prev" title="Non-Linear Animation" href="nla.html" /> 
   </head>
-  <body>
-    <div class="header-wrapper">
+  <body role="document">
+    <div class="header-wrapper" role="banner">
       <div class="header">
           <p class="logo"><a href="index.html">
             <img class="logo" src="_static/b4w_logo.png" alt="Logo"/>
           </a></p>
         <div class="headertitle"><a
-          href="index.html">User Manual: Blend4Web v15.02</a></div>
-        <div class="rel">
+          href="index.html">User Manual: Blend4Web v15.06</a></div>
+        <div class="rel" role="navigation" aria-label="related navigation">
           <a href="nla.html" title="Non-Linear Animation"
              accesskey="P">previous</a> |
           <a href="developers_advanced.html" title="For Engine Developers"
@@ -54,7 +54,7 @@
             
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <div class="section" id="developers">
 <span id="id1"></span><h1>For Application Developers<a class="headerlink" href="#developers" title="Permalink to this headline">¶</a></h1>
@@ -78,18 +78,18 @@
 <span class="nt">&lt;/html&gt;</span>
 </pre></div>
 </div>
-<p>The engine library is embedded with the <tt class="docutils literal"><span class="pre">&lt;script</span> <span class="pre">src=&quot;...&quot;&gt;</span></tt> tag. The app waits for the page to load and prints the current version in the browser window. In this example <tt class="docutils literal"><span class="pre">version</span></tt> is the only used module which has a function with the same name - <tt class="docutils literal"><span class="pre">version()</span></tt>. A more detailed info about the usage of engine&#8217;s modules and function can be found in the <a class="reference external" href="https://www.blend4web.com/api_doc/index.html">API documentation</a>.</p>
-<p>The compiled engine files are located in the SDK&#8217;s <tt class="docutils literal"><span class="pre">deploy/apps/common</span></tt> directory. The <tt class="docutils literal"><span class="pre">b4w.min.js</span></tt> file contains a basic version. If you need to use the add-ons, <tt class="docutils literal"><span class="pre">b4w.full.min.js</span></tt> should be taken instead.</p>
+<p>This app prints a message and the engine&#8217;s version in the browser window. Let&#8217;s look at this example in detail. The engine library (without add-ons) is embedded with the <code class="docutils literal"><span class="pre">&lt;script</span> <span class="pre">src=&quot;...&quot;&gt;</span></code> element. Then, the app waits for the page to load and prints the current version in the browser window. In this example, <code class="docutils literal"><span class="pre">version</span></code> is the only used module which has a function with the same name - <code class="docutils literal"><span class="pre">version()</span></code>. A more detailed info about the usage of engine&#8217;s modules and functions can be found in the <a class="reference external" href="https://www.blend4web.com/api_doc/index.html">API documentation</a>.</p>
+<p>The compiled engine file <code class="docutils literal"><span class="pre">b4w.min.js</span></code> can be copied from the SDK&#8217;s <code class="docutils literal"><span class="pre">deploy/apps/common</span></code> directory and placed in the same directory as the HTML file.</p>
 </div>
 <div class="section" id="id2">
 <h2>Loading a Scene into an App<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
 <p>To load a 3D scene you need:</p>
 <ol class="arabic simple">
-<li><p class="first">Place a <tt class="docutils literal"><span class="pre">&lt;canvas&gt;</span></tt> element on a page for rendering.</p>
+<li><p class="first">Place a <code class="docutils literal"><span class="pre">&lt;canvas&gt;</span></code> element on a page for rendering.</p>
 </li>
-<li><p class="first">Call the <tt class="docutils literal"><span class="pre">m_main.init()</span></tt> function with the created element id to init the WebGL context after the page is loaded.</p>
+<li><p class="first">Call the <code class="docutils literal"><span class="pre">m_main.init()</span></code> function with the created element id to init the WebGL context after the page is loaded.</p>
 </li>
-<li><p class="first">Call the <tt class="docutils literal"><span class="pre">m_data.load()</span></tt> function to load a 3D scene.</p>
+<li><p class="first">Call the <code class="docutils literal"><span class="pre">m_data.load()</span></code> function to load a 3D scene.</p>
 </li>
 </ol>
 <div class="highlight-html"><div class="highlight"><pre><span class="cp">&lt;!DOCTYPE html&gt;</span>
@@ -117,7 +117,7 @@
 </div>
 <div class="section" id="id3">
 <h2>Creating Apps Quickly<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
-<p>Creating an app from scratch can be a tedious task, especially for beginners. To address this there is a special add-on for the engine called <tt class="docutils literal"><span class="pre">app</span></tt>:</p>
+<p>Creating an app from scratch can be a tedious task, especially for beginners. To address this there is a special add-on for the engine called <code class="docutils literal"><span class="pre">app</span></code>:</p>
 <div class="highlight-html"><div class="highlight"><pre><span class="cp">&lt;!DOCTYPE html&gt;</span>
 <span class="nt">&lt;html&gt;</span>
 <span class="nt">&lt;head&gt;</span>
@@ -128,45 +128,58 @@
 <span class="kd">var</span> <span class="nx">m_data</span> <span class="o">=</span> <span class="nx">b4w</span><span class="p">.</span><span class="nx">require</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">);</span>
 
 <span class="nx">m_app</span><span class="p">.</span><span class="nx">init</span><span class="p">({</span>
-    <span class="nx">canvas_container_id</span><span class="o">:</span> <span class="s2">&quot;body_id&quot;</span><span class="p">,</span>
+    <span class="nx">canvas_container_id</span><span class="o">:</span> <span class="s2">&quot;container_id&quot;</span><span class="p">,</span>
     <span class="nx">callback</span><span class="o">:</span> <span class="nx">load_cb</span>
 <span class="p">});</span>
 
-<span class="kd">function</span> <span class="nx">load_cb</span><span class="p">()</span> <span class="p">{</span>
-    <span class="nx">m_data</span><span class="p">.</span><span class="nx">load</span><span class="p">(</span><span class="s2">&quot;some_scene.json&quot;</span><span class="p">);</span>
+<span class="kd">function</span> <span class="nx">load_cb</span><span class="p">()</span>
+    <span class="nx">m_data</span><span class="p">.</span><span class="nx">load</span><span class="p">(</span><span class="s2">&quot;some_scene.json&quot;</span><span class="p">,</span> <span class="nx">loaded_cb</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kd">function</span> <span class="nx">loaded_cb</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">m_app</span><span class="p">.</span><span class="nx">enable_controls</span><span class="p">();</span>
+    <span class="nx">m_app</span><span class="p">.</span><span class="nx">enable_camera_controls</span><span class="p">();</span>
 <span class="p">}</span>
 
 <span class="nt">&lt;/script&gt;</span>
 <span class="nt">&lt;/head&gt;</span>
 
-<span class="nt">&lt;body</span> <span class="na">id=</span><span class="s">&quot;body_id&quot;</span><span class="nt">&gt;&lt;/body&gt;</span>
+<span class="nt">&lt;body&gt;</span>
+    <span class="nt">&lt;div</span> <span class="na">id=</span><span class="s">&quot;container_id&quot;</span> <span class="na">style=</span><span class="s">&quot;width: 350px; height: 200px;&quot;</span><span class="nt">&gt;&lt;/div&gt;</span>
+<span class="nt">&lt;/body&gt;</span>
 
 <span class="nt">&lt;/html&gt;</span>
 </pre></div>
 </div>
-<p>In this case the <tt class="docutils literal"><span class="pre">app</span></tt> module creates a <tt class="docutils literal"><span class="pre">&lt;canvas&gt;</span></tt> element inside the <tt class="docutils literal"><span class="pre">body_id</span></tt> container, inits the engine upon page loading and then calls the <tt class="docutils literal"><span class="pre">load_cb</span></tt> callback.</p>
+<p>In this case the <code class="docutils literal"><span class="pre">app</span></code> module will create a <code class="docutils literal"><span class="pre">&lt;canvas&gt;</span></code> element inside the container with the specified <code class="docutils literal"><span class="pre">container_id</span></code> id. Then it will initialize the engine after the page is loaded and will finally execute the <code class="docutils literal"><span class="pre">load_cb</span></code> callback.</p>
+<p>Then the some_scene.json scene is loaded similar to the previous example. The only difference is that after the scene is loaded, the control system is initialized and camera movement with keyboard and mouse (or sensor screen) becomes possible.</p>
+<p>In case when the <code class="docutils literal"><span class="pre">app</span></code> module is used, it is necessary to specify dimensions of the container element. Otherwise the created <code class="docutils literal"><span class="pre">&lt;canvas&gt;</span></code> element will have zero dimensions.</p>
 </div>
 <div class="section" id="sdk">
-<span id="app-building"></span><h2>Application Development Inside the SDK<a class="headerlink" href="#sdk" title="Permalink to this headline">¶</a></h2>
-<p>The SDK includes a script <tt class="docutils literal"><span class="pre">apps_dev/project.py</span></tt> for building applications.</p>
+<span id="app-building"></span><span id="sdk-dev"></span><h2>Developing Apps Within the SDK<a class="headerlink" href="#sdk" title="Permalink to this headline">¶</a></h2>
+<p>The SDK includes a script <code class="docutils literal"><span class="pre">apps_dev/project.py</span></code> for building applications.</p>
 <p>Example:</p>
 <div class="highlight-bash"><div class="highlight"><pre>./project.py -a my_app_path -o advanced -b copy -v 15.02 -s my_resources_path
 </pre></div>
 </div>
 <ul class="simple">
-<li><p class="first">With the <tt class="docutils literal"><span class="pre">&quot;-a&quot;</span></tt> parameter the app&#8217;s directory can be specified.</p>
+<li><p class="first">With the <code class="docutils literal"><span class="pre">&quot;-a&quot;</span></code> parameter the app&#8217;s directory can be specified.</p>
 </li>
-<li><p class="first">The <tt class="docutils literal"><span class="pre">&quot;-o&quot;</span></tt> parameter (optional) is used in order to specify the optimization level for JavaScript files. Available options: <strong>whitespace</strong>, <strong>simple</strong> (default) and <strong>advanced</strong>.</p>
+<li><p class="first">The <code class="docutils literal"><span class="pre">&quot;-o&quot;</span></code> parameter (optional) is used in order to specify the optimization level for JavaScript files. Available options: <strong>whitespace</strong>, <strong>simple</strong> (default) and <strong>advanced</strong>.</p>
 </li>
-<li><p class="first">With the <tt class="docutils literal"><span class="pre">&quot;-b&quot;</span></tt> parameter (optional) the engine&#8217;s directory can be specified. Available options: <strong>link</strong> (default) - the engine file is linked from <tt class="docutils literal"><span class="pre">deploy/apps/common/</span></tt>, <strong>copy</strong> - the engine file is copied into the directory with the built app, <strong>combine</strong> - the engine file is merged with the minified script located in the app&#8217;s root, <strong>compile</strong> - required engine modules are compiled together with the app code.</p>
+<li><p class="first">With the <code class="docutils literal"><span class="pre">&quot;-b&quot;</span></code> parameter (optional) the engine&#8217;s directory can be specified. Available options: <strong>link</strong> (default) - the engine file is linked from <code class="docutils literal"><span class="pre">deploy/apps/common/</span></code>, <strong>copy</strong> - the engine file is copied into the directory with the built app, <strong>combine</strong> - the engine file is merged with the minified script located in the app&#8217;s root, <strong>compile</strong> - required engine modules are compiled together with the app code.</p>
 </li>
-<li><p class="first">With the <tt class="docutils literal"><span class="pre">&quot;-d&quot;</span></tt> parameter (optional) the directory for the compiled app can be specified.</p>
+<li><p class="first">With the <code class="docutils literal"><span class="pre">&quot;-d&quot;</span></code> parameter (optional) the directory for the compiled app can be specified.</p>
 </li>
-<li><p class="first">With the <tt class="docutils literal"><span class="pre">&quot;-s&quot;</span></tt> parameter (optional) the directory can be specified where the scene resources are located.</p>
+<li><p class="first">With the <code class="docutils literal"><span class="pre">&quot;-s&quot;</span></code> parameter (optional) the directory can be specified where the scene resources are located.</p>
 </li>
-<li><p class="first">The <tt class="docutils literal"><span class="pre">&quot;-p&quot;</span></tt> parameter (optional) specifies the directory for scene resources, relative to the app root.</p>
+<li><p class="first">The <code class="docutils literal"><span class="pre">&quot;-p&quot;</span></code> parameter (optional) specifies the directory for scene resources, relative to the app root.</p>
 </li>
-<li><p class="first">The <tt class="docutils literal"><span class="pre">&quot;-v&quot;</span></tt> parameter (optional) adds version statement to the urls of scripts and styles. This will force the browser to use updated scripts and styles instead of loading them from the browser cache.</p>
+<li><p class="first">The <code class="docutils literal"><span class="pre">&quot;-v&quot;</span></code> parameter (optional) adds version statement to the urls of scripts and styles. This will force the browser to use updated scripts and styles instead of loading them from the browser cache.</p>
+</li>
+<li><p class="first">The <code class="docutils literal"><span class="pre">&quot;-j&quot;</span></code> parameter (optional) specifies JavaScript files to be excluded from compilation.</p>
+</li>
+<li><p class="first">The <code class="docutils literal"><span class="pre">&quot;-c&quot;</span></code> parameter (optional) specifies CSS styles to be excluded from compilation.</p>
 </li>
 </ul>
 <p>App structure:</p>
@@ -178,7 +191,7 @@
 </ul>
 <p>How the app builder works:</p>
 <ul class="simple">
-<li><p class="first">An app is copied as a whole into <tt class="docutils literal"><span class="pre">deploy/apps/app_name/</span></tt>.</p>
+<li><p class="first">An app is copied as a whole into <code class="docutils literal"><span class="pre">deploy/apps/app_name/</span></code>.</p>
 </li>
 <li><p class="first">If the <strong>&#8216;-d&#8217;</strong> parameter is used, the app is compiled into the corresponding directory.</p>
 </li>
@@ -186,9 +199,73 @@
 </li>
 </ul>
 </div>
+<div class="section" id="canvas-nonfullscreen-coords">
+<span id="id4"></span><h2>Non-FullScreen Web Apps<a class="headerlink" href="#canvas-nonfullscreen-coords" title="Permalink to this headline">¶</a></h2>
+<p>The Canvas element, to which the rendering is performed, can change its position relative to the browser window. This can occur due to some manipulations over the DOM tree, or as a result of page scrolling which is especially relevant for non-fullscreen web applications.</p>
+<p>In most cases this will not affect the performance of the app by any means. However, some DOM events related to mouse cursor or touch position may carry incorrect information. This occurs because the coordinates obtained from the corresponding events are measured relative to the origin of the browser window, while the engine works with the coordinate space of the Canvas element itself (its origin is located in the top left corner).</p>
+<p>In order to obtain coordinates suitable for use in the engine, you can transform them by using the <code class="docutils literal"><span class="pre">client_to_canvas_coords</span></code> method of the <code class="docutils literal"><span class="pre">container</span></code> module:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">var</span> <span class="nx">m_cont</span>   <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s2">&quot;container&quot;</span><span class="p">);</span>
+<span class="kd">var</span> <span class="nx">_vec2_tmp</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Float32Array</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+<span class="c1">// . . .</span>
+<span class="kd">var</span> <span class="nx">canvas_xy</span> <span class="o">=</span> <span class="nx">m_cont</span><span class="p">.</span><span class="nx">client_to_canvas_coords</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">clientX</span><span class="p">,</span> <span class="nx">event</span><span class="p">.</span><span class="nx">clientY</span><span class="p">,</span> <span class="nx">_vec2_tmp</span><span class="p">);</span>
+<span class="c1">// . . .</span>
+</pre></div>
+</div>
+<p>In order to obtain coordinates in the Canvas space, the engine should know its position relative to the browser window. However, if this position is subjected to changes during the work of the app (due to scrolling for example), the Canvas position should be recalculated. To do this automatically, you can set the <code class="docutils literal"><span class="pre">track_container_position</span></code> property upon app initialization:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="nx">exports</span><span class="p">.</span><span class="nx">init</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">m_app</span><span class="p">.</span><span class="nx">init</span><span class="p">({</span>
+        <span class="c1">// . . .</span>
+        <span class="nx">track_container_position</span><span class="o">:</span> <span class="kc">true</span><span class="p">,</span>
+        <span class="c1">// . . .</span>
+    <span class="p">});</span>
+    <span class="c1">// . . .</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Please note, that this setting can lead to performance degradation in some browsers (such as Firefox) due to frequent DOM tree accesses. If the performance is critical, you can update the Canvas position manually when it is really necessary. To do this, use the <code class="docutils literal"><span class="pre">force_offsets_updating</span></code> and <code class="docutils literal"><span class="pre">update_canvas_offsets</span></code> methods instead of the <code class="docutils literal"><span class="pre">track_container_position</span></code> setting, or even the lower-level <code class="docutils literal"><span class="pre">set_canvas_offsets</span></code> method from the <code class="docutils literal"><span class="pre">container</span></code> module:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">var</span> <span class="nx">m_cont</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s2">&quot;container&quot;</span><span class="p">);</span>
+<span class="c1">// . . .</span>
+<span class="nx">m_cont</span><span class="p">.</span><span class="nx">force_offsets_updating</span><span class="p">();</span>
+<span class="c1">// . . .</span>
+<span class="nx">m_cont</span><span class="p">.</span><span class="nx">update_canvas_offsets</span><span class="p">();</span>
+<span class="c1">// . . .</span>
+<span class="nx">m_cont</span><span class="p">.</span><span class="nx">set_canvas_offsets</span><span class="p">(</span><span class="nx">offset_left</span><span class="p">,</span> <span class="nx">offset_top</span><span class="p">);</span>
+<span class="c1">// . . .</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="code-snippets">
+<span id="id5"></span><h2>Code Examples<a class="headerlink" href="#code-snippets" title="Permalink to this headline">¶</a></h2>
+<p>The SDK includes the Code Snippets application which demonstrates how to use the engine&#8217;s functionality.</p>
+<dl class="docutils">
+<dt>Currently, this application contains the following examples:</dt>
+<dd><ul class="first last simple">
+<li><p class="first">Canvas Texture - working with canvas textures</p>
+</li>
+<li><p class="first">Camera Animation - procedural camera animation</p>
+</li>
+<li><p class="first">Camera Move Styles - changing control modes for the camera</p>
+</li>
+<li><p class="first">Custom Anchors - creating custom annotations</p>
+</li>
+<li><p class="first">Dynamic Geometry - procedural geometry modification</p>
+</li>
+<li><p class="first">Gyro (Mobile Only) - working with mobile devices&#8217; gyroscopes</p>
+</li>
+<li><p class="first">Instancing - copying scene objects in runtime</p>
+</li>
+<li><p class="first">Material API - tweaking material properties and replacing objects&#8217; materials</p>
+</li>
+<li><p class="first">Morphing - using shape keys</p>
+</li>
+</ul>
+</dd>
+</dl>
+<p>The Code Snippets application is available at <code class="docutils literal"><span class="pre">SDK/apps_dev/code_snippets/code_snippets_dev.html</span></code>. It can be also run by using a link in the <code class="docutils literal"><span class="pre">index.html</span></code> file located in the SDK root.</p>
+</div>
 <div class="section" id="converter">
-<span id="id4"></span><h2>Resource Conversion<a class="headerlink" href="#converter" title="Permalink to this headline">¶</a></h2>
-<p>Existing browsers do not fully support all possible media formats, so in order to create cross-browser applications and for optimization purposes we need to use a resource converter.The conversion is carried out according to the following arrangement:</p>
+<span id="id6"></span><h2>Resource Conversion<a class="headerlink" href="#converter" title="Permalink to this headline">¶</a></h2>
+<p>Existing browsers do not fully support all possible media formats, so in order to create cross-browser applications and for optimization purposes we need to use a resource converter. The conversion is performed according as follows:</p>
 <dl class="docutils">
 <dt>for audio (convert_media):</dt>
 <dd><ul class="first last simple">
@@ -197,18 +274,21 @@
 <li>mp4 -&gt; ogg</li>
 </ul>
 </dd>
+</dl>
+<p>We recommend to use <em>Ogg</em> as the basic format. In this case the only conversion required for cross-browser compatibility will be <em>ogg</em> to <em>mp4</em>. Example of an input file: <code class="docutils literal"><span class="pre">file_name.ogg</span></code>, example of an output file: <code class="docutils literal"><span class="pre">file_name.altconv.mp4</span></code>.</p>
+<dl class="docutils">
 <dt>for video (convert_media):</dt>
 <dd><ul class="first last simple">
-<li>ogv -&gt; webm</li>
-<li>m4v -&gt; webm</li>
 <li>webm -&gt; m4v</li>
-<li>ogv -&gt; seq</li>
-<li>m4v -&gt; seq</li>
+<li>m4v -&gt; webm</li>
+<li>ogv -&gt; webm</li>
 <li>webm -&gt; seq</li>
+<li>m4v -&gt; seq</li>
+<li>ogv -&gt; seq</li>
 </ul>
 </dd>
 </dl>
-<p>Example of input file: file_name.webm, example of output file: file_name.altconv.m4v</p>
+<p>We recommend to use <em>WebM</em> as the basic format. In this case the only conversion required for cross-browser compatibility will be <em>webm</em> to <em>m4v</em> (<em>webm</em> to <em>seq</em> for iPhone). Example of an input file: <code class="docutils literal"><span class="pre">file_name.webm</span></code>, example of an output file: <code class="docutils literal"><span class="pre">file_name.altconv.m4v</span></code>.</p>
 <dl class="docutils">
 <dt>for images (convert_dds):</dt>
 <dd><ul class="first last simple">
@@ -217,8 +297,8 @@
 </ul>
 </dd>
 </dl>
-<p>Example of input file: file_name.jpg, example of output file: file_name.altconv.jpg.dds</p>
-<p>For the purpose of optimizing application performance it&#8217;s possible to use min50 and dds textures. In order to do this, we need to pass the following parameters during the application initialization.</p>
+<p>Example of an input file: <code class="docutils literal"><span class="pre">file_name.jpg</span></code>, example of an output file: <code class="docutils literal"><span class="pre">file_name.altconv.jpg.dds</span></code>.</p>
+<p>For the purpose of optimizing application performance it&#8217;s possible to use <em>min50</em> (halved) and <em>DDS</em> textures. In order to do this, we need to pass the following parameters during the application initialization.</p>
 <div class="highlight-javascript"><div class="highlight"><pre><span class="nx">exports</span><span class="p">.</span><span class="nx">init</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
     <span class="nx">m_app</span><span class="p">.</span><span class="nx">init</span><span class="p">({</span>
         <span class="c1">// . . .</span>
@@ -230,20 +310,21 @@
 <span class="p">}</span>
 </pre></div>
 </div>
-<p id="seq">The <tt class="docutils literal"><span class="pre">.seq</span></tt> file format is used for sequential video. This is applied for IE 11 and iPhone because they are currently missing support for standard video formats for textures. Using dds format for images is more optimal compared to other formats.</p>
+<p id="seq">The <code class="docutils literal"><span class="pre">.seq</span></code> file format is used for sequential video. This is applied for IE 11 and iPhone because they are currently missing support for standard video formats for textures. Using dds format for images is more optimal compared to other formats.</p>
 <p>To support a wider range of platforms, a Python script (scripts/converter.py) for converting the source files into other formats is included into the distribution. Run it with the command:</p>
-<div class="highlight-bash"><div class="highlight"><pre>&gt; ./converter.py <span class="o">[</span>-d file_path<span class="o">]</span> resize_textures | convert_dds | convert_media
+<div class="highlight-bash"><div class="highlight"><pre>&gt; ./converter.py <span class="o">[</span>-d file_path<span class="o">]</span> resize_textures <span class="p">|</span> convert_dds <span class="p">|</span> convert_media
 </pre></div>
 </div>
 <p>With the -d parameter you can specify the path to a directory in which converting will take place.</p>
+<p>To exclude some directory from resource conversion, it is enough to put a file named <code class="docutils literal"><span class="pre">.b4w_no_conv</span></code> in it. This will not affect conversion in nested directories.</p>
 <p>The <strong>resize_textures</strong> argument is used for decreasing texture resolution for the <strong>LOW</strong> mode.</p>
-<p>The engine can use files which are manually created by a user if they have the following names: <tt class="docutils literal"><span class="pre">file_name.altconv.m4v</span></tt>, <tt class="docutils literal"><span class="pre">file_name.altconv.mp3</span></tt> and so on. Such files should be placed in the same directory as the mediafiles used in Blender.</p>
+<p>The engine can use files which are manually created by a user if they have the following names: <code class="docutils literal"><span class="pre">file_name.altconv.m4v</span></code>, <code class="docutils literal"><span class="pre">file_name.altconv.mp3</span></code> and so on. Such files should be placed in the same directory as the mediafiles used in Blender.</p>
 <p>You can also use the free and cross-platform application <a class="reference external" href="http://www.mirovideoconverter.com/">Miro Video Converter</a> to convert mediafiles.</p>
 </div>
-<div class="section" id="id5">
-<h2>Module System<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h2>
-<p>While the engine gives an app programmer an API in the scale of dozens of modules, it occupies a single <tt class="docutils literal"><span class="pre">b4w</span></tt> namespace. To call a module&#8217;s method import it first with the <tt class="docutils literal"><span class="pre">b4w.require</span></tt> function.</p>
-<p>It is possible to register external modules if their names do not collide with already existing modules. A module can be registered with a <tt class="docutils literal"><span class="pre">b4w.register</span></tt> call. Check if a module with some name already exists with a <tt class="docutils literal"><span class="pre">b4w.module_check</span></tt> call.</p>
+<div class="section" id="id7">
+<h2>Module System<a class="headerlink" href="#id7" title="Permalink to this headline">¶</a></h2>
+<p>While the engine gives an app programmer an API in the scale of dozens of modules, it occupies a single <code class="docutils literal"><span class="pre">b4w</span></code> namespace. To call a module&#8217;s method import it first with the <code class="docutils literal"><span class="pre">b4w.require</span></code> function.</p>
+<p>It is possible to register external modules if their names do not collide with already existing modules. A module can be registered with a <code class="docutils literal"><span class="pre">b4w.register</span></code> call. Check if a module with some name already exists with a <code class="docutils literal"><span class="pre">b4w.module_check</span></code> call.</p>
 <p>Example:</p>
 <div class="highlight-javascript"><div class="highlight"><pre><span class="c1">// check if module exists</span>
 <span class="k">if</span> <span class="p">(</span><span class="nx">b4w</span><span class="p">.</span><span class="nx">module_check</span><span class="p">(</span><span class="s2">&quot;my_module&quot;</span><span class="p">))</span>
@@ -270,145 +351,21 @@
 </pre></div>
 </div>
 </div>
-<div class="section" id="id6">
-<h2>Moving Objects<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h2>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">Make sure that the object you are trying to move is a <a class="reference internal" href="objects.html#static-dynamic-objects"><em>dynamic object</em></a>.</p>
-</div>
-<p>Use the following methods of the <cite>transform</cite> module to move objects in the engine:</p>
-<dl class="docutils">
-<dt><em>get_translation</em></dt>
-<dd><p class="first last">Get the coordinates of the object&#8217;s center. The option with a single argument returns a new vector (non-optimized option) while the option with two arguments requires an additional vector to write the result down.</p>
-</dd>
-<dt><em>get_rotation</em></dt>
-<dd><p class="first last">Get the object&#8217;s rotation quaternion. There are two ways of calling this function similar to <cite>get_translation</cite>.</p>
-</dd>
-<dt><em>get_scale</em></dt>
-<dd><p class="first last">Get the object&#8217;s scale.</p>
-</dd>
-<dt><em>set_translation, set_translation_v</em></dt>
-<dd><p class="first last">Move the object&#8217;s center into the specified location. The first function takes separate coordinates as arguments while the second one takes a three-component vector (Array or Float32Array).</p>
-</dd>
-<dt><em>set_rotation, set_rotation_v</em></dt>
-<dd><p class="first last">Set the object&#8217;s rotation quaternion. The first function takes separate coordinates as arguments while the second one takes a four-component vector (Array or Float32Array).</p>
-</dd>
-<dt><em>set_scale</em></dt>
-<dd><p class="first last">Set the object&#8217;s scale. One corresponds to the object&#8217;s original state. Values less than one mean scaling down, more than one - scaling up. Note that not all objects can be scaled. Particularly scaling is not allowed for physics objects.</p>
-</dd>
-<dt><em>set_rotation_euler, set_rotation_euler_v</em></dt>
-<dd><p class="first last">Set the object&#8217;s rotation using Euler angles. An <strong>intrinsic</strong> YZX rotation system is used (that means the angles follow in the YZX order and the origin of coordinates rotates and takes up a new position for every angle).</p>
-</dd>
-</dl>
-</div>
-<div class="section" id="index-0">
-<span id="id7"></span><h2>Quaternions<a class="headerlink" href="#index-0" title="Permalink to this headline">¶</a></h2>
-<p>Quaternion is a four-component vector used to perform rotating. Quaternions have a number of advantages over other rotation methods such as:</p>
-<blockquote>
-<div><ul class="simple">
-<li><p class="first">A quaternion isn&#8217;t ambiguant and doesn&#8217;t depend on the rotation order as the Euler angles.</p>
-</li>
-<li><p class="first">Quaternion&#8217;s memory usage is more effective (2-4 times less depending on the matrix used).</p>
-</li>
-<li><p class="first">Better computing efficiency than for matrices in case of a series of rotations.</p>
-</li>
-<li><p class="first">Numeric stability - compensation for multiplication errors arising from float number inaccuracy.</p>
-</li>
-<li><p class="first">Convenient interpolation method.</p>
-</li>
-</ul>
-</div></blockquote>
-<dl class="docutils">
-<dt>Quaternions have some drawbacks:</dt>
-<dd><ul class="first last simple">
-<li><p class="first">Rotating a vector with a quaternion is more computationally expensive than rotating with a matrix.</p>
-</li>
-<li><p class="first">It is difficult to use quaternions for non-rotation transformations (such as perspective or orthogonal projection).</p>
-</li>
-</ul>
-</dd>
-</dl>
-<p>The engine has a number of functions to make it more convenient to work with quaternions:</p>
-<dl class="docutils">
-<dt><em>quat.multiply</em></dt>
-<dd><p class="first last">Quaternion multiplication. Note that left-multiplying A quaternion by B quaternion A*B is a rotation by A. I.e. the object already has some rotation B which we supplement with a new rotation by A.</p>
-</dd>
-<dt><em>quat.setAxisAngle</em></dt>
-<dd><p class="first last">A quaternion is an alternative presentation of rotation by an arbitrary angle relative to the arbitrary axis (vector). Positive direction of rotation is defined as anticlockwise when viewing from the vector&#8217;s end. For example the <tt class="code docutils literal"><span class="pre">quat.setAxisAngle([1,</span> <span class="pre">0,</span> <span class="pre">0],</span> <span class="pre">Math.PI/2,</span> <span class="pre">quat)</span></tt> call forms a quaternion which can be used for rotating the object by 90 degrees (anticlockwise if viewing from the X axis&#8217; end) relative to the X axis.</p>
-</dd>
-<dt><em>quat.slerp</em></dt>
-<dd><p class="first last">Spherical interpolation of quaternions. Used for smoothing the object&#8217;s rotation and animation.</p>
-</dd>
-<dt><em>util.euler_to_quat, util.quat_to_euler</em>.</dt>
-<dd><p class="first last">Сonversion from Euler angles and back.</p>
-</dd>
-</dl>
-<div class="section" id="id8">
-<h3>Example of working with quaternions<a class="headerlink" href="#id8" title="Permalink to this headline">¶</a></h3>
-<p>We need to rotate the object by 60 degrees in a horizontal plane to the right. We have a model named &#8220;Cessna&#8221; in Blender.</p>
-<a class="reference internal image-reference" href="_images/aircraft.jpg"><img alt="_images/aircraft.jpg" class="align-center" src="_images/aircraft.jpg" style="width: 100%;" /></a>
-<div class="line-block">
-<div class="line"><br /></div>
-</div>
-<p>Lets save a reference to the object in the <strong>aircraft</strong> variable:</p>
-<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">var</span> <span class="nx">aircraft</span> <span class="o">=</span> <span class="nx">m_scenes</span><span class="p">.</span><span class="nx">get_object_by_name</span><span class="p">(</span><span class="s2">&quot;Cessna&quot;</span><span class="p">);</span>
-</pre></div>
-</div>
-<p>Lets rotate it:</p>
-<blockquote>
-<div><ul class="simple">
-<li><p class="first">The orientation of coordinate axes is different in Blender and in the engine. Upon export there will be a transformation [X Y Z] (Blender) -&gt; [X -Z Y] (the engine). Therefore we need to rotate the object relative to the Y axis and not the Z axis.</p>
-</li>
-<li><p class="first">A clockwise rotation corresponds to the rotation to the right (i.e. in the negative direction).</p>
-</li>
-<li><p class="first">60 degrees = <span class="math">\(\pi/3\)</span> radians.</p>
-</li>
-</ul>
-</div></blockquote>
-<p>As a result we get:</p>
-<div class="highlight-javascript"><div class="highlight"><pre><span class="c1">// compose quaternion</span>
-<span class="kd">var</span> <span class="nx">quat_60_Y_neg</span> <span class="o">=</span> <span class="nx">m_quat</span><span class="p">.</span><span class="nx">setAxisAngle</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="nb">Math</span><span class="p">.</span><span class="nx">PI</span><span class="o">/</span><span class="mi">3</span><span class="p">,</span> <span class="nx">m_quat</span><span class="p">.</span><span class="nx">create</span><span class="p">());</span>
-
-<span class="c1">// get old rotation</span>
-<span class="kd">var</span> <span class="nx">quat_old</span> <span class="o">=</span> <span class="nx">m_transform</span><span class="p">.</span><span class="nx">get_rotation</span><span class="p">(</span><span class="nx">aircraft</span><span class="p">);</span>
-
-<span class="c1">// left multiply: quat60_Y_neg * quat_old</span>
-<span class="kd">var</span> <span class="nx">quat_new</span> <span class="o">=</span> <span class="nx">m_quat</span><span class="p">.</span><span class="nx">multiply</span><span class="p">(</span><span class="nx">quat_60_Y_neg</span><span class="p">,</span> <span class="nx">quat_old</span><span class="p">,</span> <span class="nx">m_quat</span><span class="p">.</span><span class="nx">create</span><span class="p">());</span>
-
-<span class="c1">// set new rotation</span>
-<span class="nx">m_transform</span><span class="p">.</span><span class="nx">set_rotation_v</span><span class="p">(</span><span class="nx">aircraft</span><span class="p">,</span> <span class="nx">quat_new</span><span class="p">);</span>
-</pre></div>
-</div>
-<p>The optimized version which does not create new objects:</p>
-<div class="highlight-javascript"><div class="highlight"><pre><span class="c1">// cache arrays as global vars</span>
-<span class="kd">var</span> <span class="nx">AXIS_Y</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Float32Array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
-<span class="kd">var</span> <span class="nx">quat_tmp</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Float32Array</span><span class="p">(</span><span class="mi">4</span><span class="p">);</span>
-<span class="kd">var</span> <span class="nx">quat_tmp2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Float32Array</span><span class="p">(</span><span class="mi">4</span><span class="p">);</span>
-<span class="p">...</span>
-<span class="c1">// rotate</span>
-<span class="nx">m_quat</span><span class="p">.</span><span class="nx">setAxisAngle</span><span class="p">(</span><span class="nx">AXIS_Y</span><span class="p">,</span> <span class="o">-</span><span class="nb">Math</span><span class="p">.</span><span class="nx">PI</span><span class="o">/</span><span class="mi">3</span><span class="p">,</span> <span class="nx">quat_tmp</span><span class="p">);</span>
-<span class="nx">m_transform</span><span class="p">.</span><span class="nx">get_rotation</span><span class="p">(</span><span class="nx">aircraft</span><span class="p">,</span> <span class="nx">quat_tmp2</span><span class="p">);</span>
-<span class="nx">m_quat</span><span class="p">.</span><span class="nx">multiply</span><span class="p">(</span><span class="nx">quat_tmp</span><span class="p">,</span> <span class="nx">quat_tmp2</span><span class="p">,</span> <span class="nx">quat_tmp</span><span class="p">);</span>
-<span class="nx">m_transform</span><span class="p">.</span><span class="nx">set_rotation_v</span><span class="p">(</span><span class="nx">aircraft</span><span class="p">,</span> <span class="nx">quat_tmp</span><span class="p">);</span>
-</pre></div>
-</div>
-</div>
-</div>
 <div class="section" id="event-model">
-<span id="id9"></span><h2>Event-Driven Model<a class="headerlink" href="#event-model" title="Permalink to this headline">¶</a></h2>
+<span id="id8"></span><h2>Event-Driven Model<a class="headerlink" href="#event-model" title="Permalink to this headline">¶</a></h2>
 <p>The event-driven model provides a universal interface for describing the 3D scene&#8217;s change of state. It simpifies the processing of physics events and user actions.</p>
-<div class="section" id="index-1">
-<span id="id10"></span><h3>Sensors<a class="headerlink" href="#index-1" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="index-0">
+<span id="id9"></span><h3>Sensors<a class="headerlink" href="#index-0" title="Permalink to this headline">¶</a></h3>
 <p>The basic unit of the event-driven model is a sensor. A sensor is a programming entity and can only be active (1, one) or inactive (0, zero). Some sensors may carry a payload. For example the ray-tracing sensor (Ray Sensor) provides the relative length of the intersection ray.</p>
-<p id="index-2">Users cannot directly control sensors via the external API. Instead all sensors must be present in one or multiple collections - so called sensor manifolds. A manifold is a logic container associated with a scene object. It generates a response to a defined set of sensor events by executing a callback function. To define the manifold it is required to have the following information (see also the API documenation for decription of the <tt class="docutils literal"><span class="pre">controls.create_sensor_manifold()</span></tt> function):</p>
+<p id="index-1">Users cannot directly control sensors via the external API. Instead all sensors must be present in one or multiple collections - so called sensor manifolds. A manifold is a logic container associated with a scene object. It generates a response to a defined set of sensor events by executing a callback function. To define the manifold it is required to have the following information (see also the API documenation for decription of the <code class="docutils literal"><span class="pre">controls.create_sensor_manifold()</span></code> function):</p>
 <ul>
 <li><p class="first">An object to carry the manifold (e.g. a thrown object).</p>
 </li>
 <li><p class="first">An unique id of the manifold (e.g. &#8220;IMPACT&#8221;).</p>
 </li>
-<li><p class="first">A callback execution mode (the options are: <tt class="docutils literal"><span class="pre">CT_CONTINUOUS</span></tt>,</p>
+<li><p class="first">A callback execution mode (the options are: <code class="docutils literal"><span class="pre">CT_CONTINUOUS</span></code>,</p>
 <blockquote>
-<div><p><tt class="docutils literal"><span class="pre">CT_LEVEL</span></tt>, <tt class="docutils literal"><span class="pre">CT_SHOT</span></tt>, <tt class="docutils literal"><span class="pre">CT_TRIGGER</span></tt>).</p>
+<div><p><code class="docutils literal"><span class="pre">CT_LEVEL</span></code>, <code class="docutils literal"><span class="pre">CT_SHOT</span></code>, <code class="docutils literal"><span class="pre">CT_TRIGGER</span></code>).</p>
 </div></blockquote>
 </li>
 <li><p class="first">An array of sensors.</p>
@@ -421,8 +378,8 @@
 </li>
 </ul>
 </div>
-<div class="section" id="id11">
-<h3>Example<a class="headerlink" href="#id11" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id10">
+<h3>Example<a class="headerlink" href="#id10" title="Permalink to this headline">¶</a></h3>
 <p>Lets consider the task to insonify the impact of a thrown stone. A distinctive sound should be produced for impacting different media (for example terrain and wall). There are collision meshes with physical materials in the Blender scene, material ids are &#8220;TERRAIN&#8221; and &#8220;WALL&#8221;. There is also a physical object being thrown in the scene, the object is named &#8220;Stone&#8221;.</p>
 <p>Lets define a collision sensor for each medium, by the type of the sound produced.</p>
 <div class="highlight-javascript"><div class="highlight"><pre><span class="c1">// import the modules</span>
@@ -469,7 +426,7 @@
 </div>
 </div>
 <div class="section" id="quality-settings">
-<span id="id12"></span><h2>Quality Profiles<a class="headerlink" href="#quality-settings" title="Permalink to this headline">¶</a></h2>
+<span id="id11"></span><h2>Quality Profiles<a class="headerlink" href="#quality-settings" title="Permalink to this headline">¶</a></h2>
 <p>Several quality profiles are implemented in order to support platforms with different functionality.</p>
 <blockquote>
 <div><ul class="simple">
@@ -493,7 +450,7 @@
 <span class="nx">m_main</span><span class="p">.</span><span class="nx">init</span><span class="p">(...);</span>
 </pre></div>
 </div>
-<p>Application developers can also set the <strong>quality</strong> parameter upon engine initialization using the <tt class="docutils literal"><span class="pre">app.js</span></tt> add-on:</p>
+<p>Application developers can also set the <strong>quality</strong> parameter upon engine initialization using the <code class="docutils literal"><span class="pre">app.js</span></code> add-on:</p>
 <div class="highlight-javascript"><div class="highlight"><pre><span class="kd">var</span> <span class="nx">m_cfg</span> <span class="o">=</span> <span class="nx">b4w</span><span class="p">.</span><span class="nx">require</span><span class="p">(</span><span class="s2">&quot;config&quot;</span><span class="p">);</span>
 <span class="kd">var</span> <span class="nx">m_app</span> <span class="o">=</span> <span class="nx">b4w</span><span class="p">.</span><span class="nx">require</span><span class="p">(</span><span class="s2">&quot;app&quot;</span><span class="p">);</span>
 
@@ -505,7 +462,7 @@
 </div>
 </div>
 <div class="section" id="repo-file-structure">
-<span id="id13"></span><h2>SDK File Structure<a class="headerlink" href="#repo-file-structure" title="Permalink to this headline">¶</a></h2>
+<span id="id12"></span><h2>SDK File Structure<a class="headerlink" href="#repo-file-structure" title="Permalink to this headline">¶</a></h2>
 <dl class="docutils">
 <dt><strong>apps_dev</strong></dt>
 <dd><p class="first">source code of the applications (not all applications are available as a free version)</p>
@@ -670,7 +627,7 @@
 </div>
 <div class="section" id="canvas">
 <span id="canvas-texture"></span><h2>Canvas Textures<a class="headerlink" href="#canvas" title="Permalink to this headline">¶</a></h2>
-<p>Such textures can be accessed via the <tt class="docutils literal"><span class="pre">textures</span></tt> module. The workflow is described below.</p>
+<p>Such textures can be accessed via the <code class="docutils literal"><span class="pre">textures</span></code> module. The workflow is described below.</p>
 <div class="highlight-javascript"><div class="highlight"><pre><span class="kd">var</span> <span class="nx">m_tex</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s2">&quot;textures&quot;</span><span class="p">);</span>
 <span class="p">...</span>
 <span class="kd">var</span> <span class="nx">ctx</span> <span class="o">=</span> <span class="nx">m_tex</span><span class="p">.</span><span class="nx">get_canvas_texture_context</span><span class="p">(</span><span class="s2">&quot;canvas_id&quot;</span><span class="p">);</span>
@@ -680,15 +637,15 @@
 <span class="nx">m_tex</span><span class="p">.</span><span class="nx">update_canvas_texture_context</span><span class="p">(</span><span class="s2">&quot;canvas_id&quot;</span><span class="p">);</span>
 </pre></div>
 </div>
-<p>The context can be obtained with the <tt class="docutils literal"><span class="pre">get_canvas_texture_context()</span></tt> function, to which a &#8220;canvas_id&#8221; identifier specified by the user in Blender is passed. After any <a class="reference external" href="http://www.w3.org/TR/2014/CR-2dcontext-20140821/">operations with the context</a> the <tt class="docutils literal"><span class="pre">update_canvas_texture_context()</span></tt> function should be executed, which performs visualization of the changes of the &#8220;canvas_id&#8221; element.</p>
+<p>The context can be obtained with the <code class="docutils literal"><span class="pre">get_canvas_texture_context()</span></code> function, to which a &#8220;canvas_id&#8221; identifier specified by the user in Blender is passed. After any <a class="reference external" href="http://www.w3.org/TR/2014/CR-2dcontext-20140821/">operations with the context</a> the <code class="docutils literal"><span class="pre">update_canvas_texture_context()</span></code> function should be executed, which performs visualization of the changes of the &#8220;canvas_id&#8221; element.</p>
 </div>
 <div class="section" id="browser-for-local-loading">
-<span id="id15"></span><h2>Setting up the Browser for Loading Local Resources<a class="headerlink" href="#browser-for-local-loading" title="Permalink to this headline">¶</a></h2>
-<p>Since version 15.02 the Blend4Web SDK includes the <a class="reference internal" href="setup.html#local-development-server"><em>development server</em></a> to solve the problem of loading local resources. Nevertheless the following instructions can still be useful for developers.</p>
-<p>The engine&#8217;s renderer is a web application and it works when you view an HTML file in a browser. After initialization the resources (scenes, textures) are loaded. This process is subject to the <a class="reference external" href="http://en.wikipedia.org/wiki/Same-origin_policy">same-origin policy</a> rule. In particular this rule forbids loading from a local directory. A simple way to bypass this limitation is to set up the browser for loading local resources (recommended). Another way is to use a <a class="reference internal" href="#local-web-server"><em>local web server</em></a>.</p>
+<span id="id14"></span><h2>Setting up the Browser for Loading Local Resources<a class="headerlink" href="#browser-for-local-loading" title="Permalink to this headline">¶</a></h2>
+<p>Since version 15.02 the Blend4Web SDK includes the <a class="reference internal" href="setup.html#local-development-server"><span>development server</span></a> to solve the problem of loading local resources. Nevertheless the following instructions can still be useful for developers.</p>
+<p>The engine&#8217;s renderer is a web application and it works when you view an HTML file in a browser. After initialization the resources (scenes, textures) are loaded. This process is subject to the <a class="reference external" href="http://en.wikipedia.org/wiki/Same-origin_policy">same-origin policy</a> rule. In particular this rule forbids loading from a local directory. A simple way to bypass this limitation is to set up the browser for loading local resources (recommended). Another way is to use a <a class="reference internal" href="#local-web-server"><span>local web server</span></a>.</p>
 <p>Setting up the browser for loading local resources can be a simple and versatile method to bypass security limitation. It is recommended to use such browsers only for viewing local content.</p>
 <p><em>Chrome under Windows</em>:</p>
-<p>Right click on the browser shortcut, select the <tt class="docutils literal"><span class="pre">Properties</span></tt> option and add the <tt class="docutils literal"><span class="pre">--allow-file-access-from-files</span></tt> option to the executable filepath (after the space symbol). Click <tt class="docutils literal"><span class="pre">ОК</span></tt>.</p>
+<p>Right click on the browser shortcut, select the <code class="docutils literal"><span class="pre">Properties</span></code> option and add the <code class="docutils literal"><span class="pre">--allow-file-access-from-files</span></code> option to the executable filepath (after the space symbol). Click <code class="docutils literal"><span class="pre">ОК</span></code>.</p>
 <div class="line-block">
 <div class="line"><br /></div>
 </div>
@@ -716,7 +673,7 @@
 <div class="line"><br /></div>
 </div>
 <p><em>Firefox under Windows/Linux/OS X</em>:</p>
-<p>Enter <strong>about:config</strong> to the browser&#8217;s address bar, search for the <tt class="docutils literal"><span class="pre">security.fileuri.strict_origin_policy</span></tt> parameter and double-click on it to switch from <tt class="docutils literal"><span class="pre">true</span></tt> to <tt class="docutils literal"><span class="pre">false</span></tt>.</p>
+<p>Enter <strong>about:config</strong> to the browser&#8217;s address bar, search for the <code class="docutils literal"><span class="pre">security.fileuri.strict_origin_policy</span></code> parameter and double-click on it to switch from <code class="docutils literal"><span class="pre">true</span></code> to <code class="docutils literal"><span class="pre">false</span></code>.</p>
 <div class="line-block">
 <div class="line"><br /></div>
 </div>
@@ -729,14 +686,14 @@
 <a class="reference internal image-reference" href="_images/safari_setup.png"><img alt="_images/safari_setup.png" class="align-center" src="_images/safari_setup.png" style="width: 100%;" /></a>
 </div>
 <div class="section" id="local-web-server">
-<span id="id17"></span><h2>Running a Local Server<a class="headerlink" href="#local-web-server" title="Permalink to this headline">¶</a></h2>
-<p>You may prefer running your own web server instead of the <a class="reference internal" href="setup.html#local-development-server"><em>development server</em></a> included in the SDK. An easy way to do this is running the web server from the standard <a class="reference external" href="http://en.wikipedia.org/wiki/Python_(programming_language)">Python</a> library.</p>
+<span id="id16"></span><h2>Running a Local Server<a class="headerlink" href="#local-web-server" title="Permalink to this headline">¶</a></h2>
+<p>You may prefer running your own web server instead of the <a class="reference internal" href="setup.html#local-development-server"><span>development server</span></a> included in the SDK. An easy way to do this is running the web server from the standard <a class="reference external" href="http://en.wikipedia.org/wiki/Python_(programming_language)">Python</a> library.</p>
 <div class="line-block">
 <div class="line"><br /></div>
 </div>
 <p><em>Under Windows</em>:</p>
 <ol class="arabic">
-<li><p class="first">Download and install the latest Python distribution from the <a class="reference external" href="http://www.python.org/downloads/">official site</a>. When installing select the option for adding the executable to the path (<tt class="docutils literal"><span class="pre">Add</span> <span class="pre">python.exe</span> <span class="pre">to</span> <span class="pre">Path</span></tt>).</p>
+<li><p class="first">Download and install the latest Python distribution from the <a class="reference external" href="http://www.python.org/downloads/">official site</a>. When installing select the option for adding the executable to the path (<code class="docutils literal"><span class="pre">Add</span> <span class="pre">python.exe</span> <span class="pre">to</span> <span class="pre">Path</span></code>).</p>
 </li>
 <li><p class="first">Run Command Prompt.</p>
 </li>
@@ -780,7 +737,7 @@
 <li class="toctree-l1"><a class="reference internal" href="about.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="features.html">Features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="first_steps.html">Quick Install</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setup.html">Development Environment Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setup.html">Installing the SDK</a></li>
 <li class="toctree-l1"><a class="reference internal" href="workflow.html">Workflow</a></li>
 <li class="toctree-l1"><a class="reference internal" href="viewer.html">Scene Viewer</a></li>
 <li class="toctree-l1"><a class="reference internal" href="web_player.html">Web Player</a></li>
@@ -792,11 +749,11 @@
 <li class="toctree-l1"><a class="reference internal" href="node_materials.html">Node Materials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="lighting.html">Lighting, Shadows and Background</a></li>
 <li class="toctree-l1"><a class="reference internal" href="postprocessing_effects.html">Postprocessing Effects</a></li>
-<li class="toctree-l1"><a class="reference internal" href="particles.html">Particle System</a></li>
-<li class="toctree-l1"><a class="reference internal" href="particles_instancing.html">Particle System for Instancing Objects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="particles.html">Particle System. Fluids</a></li>
+<li class="toctree-l1"><a class="reference internal" href="particles_instancing.html">Particle System. Instancing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="animation.html">Animation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="outdoor_rendering.html">Outdoor Rendering</a></li>
-<li class="toctree-l1"><a class="reference internal" href="gamma_alpha.html">Gamma Correction and Alpha Compositing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gamma_alpha.html">Gamma and Alpha</a></li>
 <li class="toctree-l1"><a class="reference internal" href="audio.html">Audio System</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physics.html">Physics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="nla.html">Non-Linear Animation</a></li>
@@ -804,11 +761,11 @@
 <li class="toctree-l2"><a class="reference internal" href="#hello-world">Hello World!</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#id2">Loading a Scene into an App</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#id3">Creating Apps Quickly</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#sdk">Application Development Inside the SDK</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sdk">Developing Apps Within the SDK</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#canvas-nonfullscreen-coords">Non-FullScreen Web Apps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#code-snippets">Code Examples</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#converter">Resource Conversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id5">Module System</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id6">Moving Objects</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#index-0">Quaternions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id7">Module System</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#event-model">Event-Driven Model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#quality-settings">Quality Profiles</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#repo-file-structure">SDK File Structure</a></li>
@@ -823,16 +780,18 @@
 <li class="toctree-l1"><a class="reference internal" href="release_notes.html">Release Notes</a></li>
 </ul>
 
-          <h3 style="margin-top: 1.5em;">Search</h3>
-          <form class="search" action="search.html" method="get">
-            <input type="text" name="q" />
-            <input type="submit" value="Go" />
-            <input type="hidden" name="check_keywords" value="yes" />
-            <input type="hidden" name="area" value="default" />
-          </form>
-          <p class="searchtip" style="font-size: 90%">
-            Enter search terms or a module, class or function name.
-          </p>
+          <div role="search">
+            <h3 style="margin-top: 1.5em;">Search</h3>
+            <form class="search" action="search.html" method="get">
+                <input type="text" name="q" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+            </form>
+            <p class="searchtip" style="font-size: 90%">
+                Enter search terms or a module, class or function name.
+            </p>
+          </div>
         </div>
         <div class="clearer"></div>
       </div>
@@ -841,20 +800,24 @@
     <div class="footer-wrapper">
       <div class="footer">
         <div class="left">
-          <a href="nla.html" title="Non-Linear Animation"
-             >previous</a> |
-          <a href="developers_advanced.html" title="For Engine Developers"
-             >next</a> |
-          <a href="genindex.html" title="General Index"
-             >index</a>
+          <div role="navigation" aria-label="related navigaton">
+            <a href="nla.html" title="Non-Linear Animation"
+              >previous</a> |
+            <a href="developers_advanced.html" title="For Engine Developers"
+              >next</a> |
+            <a href="genindex.html" title="General Index"
+              >index</a>
+          </div>
+          <div role="note" aria-label="source link">
+          </div>
         </div>
 
         <div class="right">
           
-    <div class="footer">
+    <div class="footer" role="contentinfo">
         &copy; Copyright 2015, Triumph LLC.
-      Last updated on 2015-02-25.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+      Last updated on 2015-06-30.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
     </div>
         </div>
         <div class="clearer"></div>

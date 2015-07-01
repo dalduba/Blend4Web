@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Table of contents &mdash; User Manual: Blend4Web v15.02</title>
+    <title>Table of contents &mdash; User Manual: Blend4Web v15.06</title>
     
     <link rel="stylesheet" href="_static/agogo.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '15.02',
+        VERSION:     '15.06',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,18 +25,18 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="author" title="About these documents" href="about.html" />
-    <link rel="top" title="User Manual: Blend4Web v15.02" href="#" />
+    <link rel="top" title="User Manual: Blend4Web v15.06" href="#" />
     <link rel="next" title="Overview" href="about.html" /> 
   </head>
-  <body>
-    <div class="header-wrapper">
+  <body role="document">
+    <div class="header-wrapper" role="banner">
       <div class="header">
           <p class="logo"><a href="#">
             <img class="logo" src="_static/b4w_logo.png" alt="Logo"/>
           </a></p>
         <div class="headertitle"><a
-          href="#">User Manual: Blend4Web v15.02</a></div>
-        <div class="rel">
+          href="#">User Manual: Blend4Web v15.06</a></div>
+        <div class="rel" role="navigation" aria-label="related navigation">
           <a href="about.html" title="Overview"
              accesskey="N">next</a> |
           <a href="genindex.html" title="General Index"
@@ -51,7 +51,7 @@
             
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <div class="section" id="id1">
 <h1>Table of contents<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h1>
@@ -91,14 +91,14 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="first_steps.html">Quick Install</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="first_steps.html#blender">Installing Blender</a></li>
-<li class="toctree-l2"><a class="reference internal" href="first_steps.html#index-1">The Engine Addon Install</a></li>
+<li class="toctree-l2"><a class="reference internal" href="first_steps.html#index-1">Installing the Addon</a></li>
 <li class="toctree-l2"><a class="reference internal" href="first_steps.html#quick-install-export-viewer">Exporting and Viewing Scenes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="first_steps.html#quick-install-addon-upgrade">Upgrading the Addon</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="setup.html">Development Environment Setup</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="setup.html#getting-started-distribution">Distribution Installation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="setup.html#getting-started-addon">Setting up the Addon</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setup.html">Installing the SDK</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="setup.html#id3">Unpacking the Archive</a></li>
+<li class="toctree-l2"><a class="reference internal" href="setup.html#id4">Setting up the Add-on</a></li>
 <li class="toctree-l2"><a class="reference internal" href="setup.html#local-development-server">Local Development Server</a></li>
 <li class="toctree-l2"><a class="reference internal" href="setup.html#getting-started-launching-viewer">Running Viewer and Demos</a></li>
 </ul>
@@ -126,30 +126,39 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="addon.html">The Add-on</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="addon.html#index-1">Initialization Errors</a></li>
-<li class="toctree-l2"><a class="reference internal" href="addon.html#export-errors">Critical Export Errors</a></li>
-<li class="toctree-l2"><a class="reference internal" href="addon.html#index-3">Non-Critical Export Errors</a></li>
-<li class="toctree-l2"><a class="reference internal" href="addon.html#id5">Other Messages for Users&#8217; Attention</a></li>
 <li class="toctree-l2"><a class="reference internal" href="addon.html#export-opts">Export Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="addon.html#index-1">Initialization Errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="addon.html#version-errors">Compatibility Errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="addon.html#export-errors">Critical Export Errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="addon.html#index-4">Non-Critical Export Errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="addon.html#id7">Other Messages</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="objects.html">Objects</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="objects.html#id2">Types</a></li>
 <li class="toctree-l2"><a class="reference internal" href="objects.html#static-dynamic-objects">Static and Dynamic Objects</a></li>
 <li class="toctree-l2"><a class="reference internal" href="objects.html#id4">Settings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="objects.html#index-0">Object Transform API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="objects.html#index-1">Quaternions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="objects.html#tsr">Moving via TSR Vectors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="objects.html#id8">Copying Objects (Instancing)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="objects.html#selection">Object Selection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="objects.html#morphing">Morphing</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="camera.html">Camera</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="camera.html#id2">Move Styles and General Settings</a></li>
 <li class="toctree-l2"><a class="reference internal" href="camera.html#camera-velocity">Camera Movement Velocity</a></li>
 <li class="toctree-l2"><a class="reference internal" href="camera.html#id4">Limiting the Camera Movement</a></li>
+<li class="toctree-l2"><a class="reference internal" href="camera.html#api">Camera Controls API</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="materials.html">Materials</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="materials.html#material-lighting-params">Lighting Parameters</a></li>
 <li class="toctree-l2"><a class="reference internal" href="materials.html#alpha-blend">Transparency</a></li>
 <li class="toctree-l2"><a class="reference internal" href="materials.html#material-mirror">Reflection</a></li>
-<li class="toctree-l2"><a class="reference internal" href="materials.html#index-9">Engine Specific Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="materials.html#index-9">Rendering Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="materials.html#index-10">Engine Specific Parameters</a></li>
 <li class="toctree-l2"><a class="reference internal" href="materials.html#halo">Halo Materials</a></li>
 </ul>
 </li>
@@ -175,7 +184,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="lighting.html">Lighting, Shadows and Background</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="lighting.html#index-1">Shading Types</a></li>
-<li class="toctree-l2"><a class="reference internal" href="lighting.html#index-2">Normals Editor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lighting.html#index-2">Normal Editor</a></li>
 <li class="toctree-l2"><a class="reference internal" href="lighting.html#index-3">Lighting with Light Sources</a></li>
 <li class="toctree-l2"><a class="reference internal" href="lighting.html#environment-lighting">Environment Lighting (Ambient)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="lighting.html#shadows">Shadows</a></li>
@@ -188,19 +197,20 @@
 <li class="toctree-l2"><a class="reference internal" href="postprocessing_effects.html#ssao">Screen-Space Ambient Occlusion</a></li>
 <li class="toctree-l2"><a class="reference internal" href="postprocessing_effects.html#god-rays">God Rays</a></li>
 <li class="toctree-l2"><a class="reference internal" href="postprocessing_effects.html#id14">Bloom</a></li>
-<li class="toctree-l2"><a class="reference internal" href="postprocessing_effects.html#glow">Glow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="postprocessing_effects.html#outlining">Outlining</a></li>
 <li class="toctree-l2"><a class="reference internal" href="postprocessing_effects.html#anaglyph">Stereoscopic Rendering (Anaglyph)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="postprocessing_effects.html#color-correction">Color Correction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="postprocessing_effects.html#antialiasing">Anti-Aliasing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="postprocessing_effects.html#glow">Glow</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="particles.html">Particle System</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="particles.html">Particle System. Fluids</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="particles.html#id2">Use</a></li>
 <li class="toctree-l2"><a class="reference internal" href="particles.html#id5">Setup</a></li>
 <li class="toctree-l2"><a class="reference internal" href="particles.html#particles-textures">Textures in Particle Systems</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="particles_instancing.html">Particle System for Instancing Objects</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="particles_instancing.html">Particle System. Instancing</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="particles_instancing.html#id2">Particle System Setup</a></li>
 <li class="toctree-l2"><a class="reference internal" href="particles_instancing.html#particles-grass">Grass</a></li>
 <li class="toctree-l2"><a class="reference internal" href="particles_instancing.html#particles-leaves">Tree Leaves</a></li>
@@ -212,7 +222,7 @@
 <li class="toctree-l2"><a class="reference internal" href="animation.html#id4">Skinning and Skeletal Animation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="animation.html#id5">Vertex Animation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="animation.html#id6">Audio Source Parametrization</a></li>
-<li class="toctree-l2"><a class="reference internal" href="animation.html#value">Value Node Animation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="animation.html#value-rgb">Animation of Value and RGB Nodes</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="outdoor_rendering.html">Outdoor Rendering</a><ul>
@@ -221,11 +231,11 @@
 <li class="toctree-l2"><a class="reference internal" href="outdoor_rendering.html#wind">Wind</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="gamma_alpha.html">Gamma Correction and Alpha Compositing</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="gamma_alpha.html#id2">Overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="gamma_alpha.html#id3">Human Vision, Monitors and Gamma Correction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="gamma_alpha.html#id4">Gamma</a></li>
-<li class="toctree-l2"><a class="reference internal" href="gamma_alpha.html#gamma-nodes">Gamma Correction in Node Materials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gamma_alpha.html">Gamma and Alpha</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gamma_alpha.html#id2">Gamma Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gamma_alpha.html#id3">Human Vision and Monitors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gamma_alpha.html#id4">Gamma Formula</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gamma_alpha.html#gamma-node-materials">Gamma in Node Materials</a></li>
 <li class="toctree-l2"><a class="reference internal" href="gamma_alpha.html#alpha-compositing">Alpha Compositing</a></li>
 </ul>
 </li>
@@ -248,17 +258,18 @@
 <li class="toctree-l1"><a class="reference internal" href="nla.html">Non-Linear Animation</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="nla.html#nla-editor">NLA Editor</a></li>
 <li class="toctree-l2"><a class="reference internal" href="nla.html#nla-script">Visual Programming (NLA Script)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="nla.html#api">Controlling via API</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="developers.html">For Application Developers</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="developers.html#hello-world">Hello World!</a></li>
 <li class="toctree-l2"><a class="reference internal" href="developers.html#id2">Loading a Scene into an App</a></li>
 <li class="toctree-l2"><a class="reference internal" href="developers.html#id3">Creating Apps Quickly</a></li>
-<li class="toctree-l2"><a class="reference internal" href="developers.html#sdk">Application Development Inside the SDK</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developers.html#sdk">Developing Apps Within the SDK</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developers.html#canvas-nonfullscreen-coords">Non-FullScreen Web Apps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developers.html#code-snippets">Code Examples</a></li>
 <li class="toctree-l2"><a class="reference internal" href="developers.html#converter">Resource Conversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="developers.html#id5">Module System</a></li>
-<li class="toctree-l2"><a class="reference internal" href="developers.html#id6">Moving Objects</a></li>
-<li class="toctree-l2"><a class="reference internal" href="developers.html#index-0">Quaternions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developers.html#id7">Module System</a></li>
 <li class="toctree-l2"><a class="reference internal" href="developers.html#event-model">Event-Driven Model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="developers.html#quality-settings">Quality Profiles</a></li>
 <li class="toctree-l2"><a class="reference internal" href="developers.html#repo-file-structure">SDK File Structure</a></li>
@@ -274,7 +285,7 @@
 <li class="toctree-l2"><a class="reference internal" href="developers_advanced.html#dependencies">Dependencies</a></li>
 <li class="toctree-l2"><a class="reference internal" href="developers_advanced.html#id7">Naming Functions and Variables</a></li>
 <li class="toctree-l2"><a class="reference internal" href="developers_advanced.html#debugging">Debugging</a></li>
-<li class="toctree-l2"><a class="reference internal" href="developers_advanced.html#shaders">Shaders</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developers_advanced.html#index-0">Shader Compilation</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="git_short_manual.html">Team Work. Using Git</a><ul>
@@ -297,6 +308,10 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="release_notes.html">Release Notes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="release_notes.html#v15-06">v15.06</a></li>
+<li class="toctree-l2"><a class="reference internal" href="release_notes.html#v15-05">v15.05</a></li>
+<li class="toctree-l2"><a class="reference internal" href="release_notes.html#v15-04">v15.04</a></li>
+<li class="toctree-l2"><a class="reference internal" href="release_notes.html#v15-03">v15.03</a></li>
 <li class="toctree-l2"><a class="reference internal" href="release_notes.html#v15-02">v15.02</a></li>
 <li class="toctree-l2"><a class="reference internal" href="release_notes.html#v15-01">v15.01</a></li>
 <li class="toctree-l2"><a class="reference internal" href="release_notes.html#v14-12">v14.12</a></li>
@@ -308,8 +323,8 @@
 </ul>
 </div>
 <ul class="simple">
-<li><a class="reference internal" href="genindex.html"><em>Index</em></a></li>
-<li><a class="reference internal" href="search.html"><em>Search Page</em></a></li>
+<li><a class="reference internal" href="genindex.html"><span>Index</span></a></li>
+<li><a class="reference internal" href="search.html"><span>Search Page</span></a></li>
 </ul>
 </div>
 
@@ -324,7 +339,7 @@
 <li class="toctree-l1"><a class="reference internal" href="about.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="features.html">Features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="first_steps.html">Quick Install</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setup.html">Development Environment Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setup.html">Installing the SDK</a></li>
 <li class="toctree-l1"><a class="reference internal" href="workflow.html">Workflow</a></li>
 <li class="toctree-l1"><a class="reference internal" href="viewer.html">Scene Viewer</a></li>
 <li class="toctree-l1"><a class="reference internal" href="web_player.html">Web Player</a></li>
@@ -336,11 +351,11 @@
 <li class="toctree-l1"><a class="reference internal" href="node_materials.html">Node Materials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="lighting.html">Lighting, Shadows and Background</a></li>
 <li class="toctree-l1"><a class="reference internal" href="postprocessing_effects.html">Postprocessing Effects</a></li>
-<li class="toctree-l1"><a class="reference internal" href="particles.html">Particle System</a></li>
-<li class="toctree-l1"><a class="reference internal" href="particles_instancing.html">Particle System for Instancing Objects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="particles.html">Particle System. Fluids</a></li>
+<li class="toctree-l1"><a class="reference internal" href="particles_instancing.html">Particle System. Instancing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="animation.html">Animation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="outdoor_rendering.html">Outdoor Rendering</a></li>
-<li class="toctree-l1"><a class="reference internal" href="gamma_alpha.html">Gamma Correction and Alpha Compositing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gamma_alpha.html">Gamma and Alpha</a></li>
 <li class="toctree-l1"><a class="reference internal" href="audio.html">Audio System</a></li>
 <li class="toctree-l1"><a class="reference internal" href="physics.html">Physics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="nla.html">Non-Linear Animation</a></li>
@@ -351,16 +366,18 @@
 <li class="toctree-l1"><a class="reference internal" href="release_notes.html">Release Notes</a></li>
 </ul>
 
-          <h3 style="margin-top: 1.5em;">Search</h3>
-          <form class="search" action="search.html" method="get">
-            <input type="text" name="q" />
-            <input type="submit" value="Go" />
-            <input type="hidden" name="check_keywords" value="yes" />
-            <input type="hidden" name="area" value="default" />
-          </form>
-          <p class="searchtip" style="font-size: 90%">
-            Enter search terms or a module, class or function name.
-          </p>
+          <div role="search">
+            <h3 style="margin-top: 1.5em;">Search</h3>
+            <form class="search" action="search.html" method="get">
+                <input type="text" name="q" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+            </form>
+            <p class="searchtip" style="font-size: 90%">
+                Enter search terms or a module, class or function name.
+            </p>
+          </div>
         </div>
         <div class="clearer"></div>
       </div>
@@ -369,18 +386,22 @@
     <div class="footer-wrapper">
       <div class="footer">
         <div class="left">
-          <a href="about.html" title="Overview"
-             >next</a> |
-          <a href="genindex.html" title="General Index"
-             >index</a>
+          <div role="navigation" aria-label="related navigaton">
+            <a href="about.html" title="Overview"
+              >next</a> |
+            <a href="genindex.html" title="General Index"
+              >index</a>
+          </div>
+          <div role="note" aria-label="source link">
+          </div>
         </div>
 
         <div class="right">
           
-    <div class="footer">
+    <div class="footer" role="contentinfo">
         &copy; Copyright 2015, Triumph LLC.
-      Last updated on 2015-02-25.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+      Last updated on 2015-06-30.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
     </div>
         </div>
         <div class="clearer"></div>

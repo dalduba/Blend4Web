@@ -17,27 +17,29 @@ var m_sfx       = require("__sfx");
 var m_trans     = require("__transform");
 var m_tsr       = require("__tsr");
 var m_util      = require("__util");
+var m_reformer  = require("__reformer");
 
 var m_mat4 = require("mat4");
 var m_quat = require("quat");
 var m_vec4 = require("vec4");
+var m_vec3 = require("vec3");
 
 var cfg_ani = m_config.animation;
 
+var OBJ_ANIM_TYPE_NONE       =  0;
 var OBJ_ANIM_TYPE_ARMATURE   = 10;
 var OBJ_ANIM_TYPE_OBJECT     = 20;
 var OBJ_ANIM_TYPE_VERTEX     = 30;
 var OBJ_ANIM_TYPE_SOUND      = 40;
 var OBJ_ANIM_TYPE_PARTICLES  = 50;
-var OBJ_ANIM_TYPE_STATIC     = 60;
-var OBJ_ANIM_TYPE_MATERIAL   = 70;
+var OBJ_ANIM_TYPE_MATERIAL   = 60;
 
+exports.OBJ_ANIM_TYPE_NONE      = OBJ_ANIM_TYPE_NONE;
 exports.OBJ_ANIM_TYPE_ARMATURE  = OBJ_ANIM_TYPE_ARMATURE;
 exports.OBJ_ANIM_TYPE_OBJECT    = OBJ_ANIM_TYPE_OBJECT;
 exports.OBJ_ANIM_TYPE_VERTEX    = OBJ_ANIM_TYPE_VERTEX;
 exports.OBJ_ANIM_TYPE_SOUND     = OBJ_ANIM_TYPE_SOUND;
 exports.OBJ_ANIM_TYPE_PARTICLES = OBJ_ANIM_TYPE_PARTICLES;
-exports.OBJ_ANIM_TYPE_STATIC    = OBJ_ANIM_TYPE_STATIC;
 exports.OBJ_ANIM_TYPE_MATERIAL  = OBJ_ANIM_TYPE_MATERIAL;
 
 var SLOT_0   = 0;
@@ -70,6 +72,8 @@ var AB_CYCLIC = 10;
 var AB_FINISH_RESET = 20;
 var AB_FINISH_STOP = 30;
 
+var VECTORS_RESERVED = 50;
+
 exports.AB_CYCLIC = AB_CYCLIC;
 exports.AB_FINISH_RESET = AB_FINISH_RESET;
 exports.AB_FINISH_STOP = AB_FINISH_STOP;
@@ -86,6 +90,10 @@ var _mat4_tmp = new Float32Array(16);
 var _anim_objs_cache = [];
 var _actions = [];
 
+exports.get_max_bones = function() {
+    return m_util.trunc((m_config.defaults.max_vertex_uniform_vectors - VECTORS_RESERVED) / 4);
+}
+
 exports.frame_to_sec = function(frame) {
     return frame/cfg_ani.framerate;
 }
@@ -97,6 +105,7 @@ exports.update = function(elapsed) {
     for (var i = 0; i < _anim_objs_cache.length; i++) {
         var obj = _anim_objs_cache[i];
 
+        //TODO: need to sort slots properly (psys "set_time" issue)
         for (var j = 0; j < 8; j++)
             animate(obj, elapsed, j);
 
@@ -112,7 +121,7 @@ exports.update = function(elapsed) {
         var obj = _anim_objs_cache[i];
         for (var j = 0; j < 8; j++) {
             // NOTE: anim_slots may be cleared in some of finish callbacks
-            if (!obj._anim_slots)
+            if (!obj._anim_slots.length)
                 break;
             handle_finish_callback(obj, j);
         }
@@ -182,13 +191,14 @@ function apply_particles_anim(obj, psys, slot_num) {
 
 function init_anim(obj, slot_num) {
 
-    if (!obj._anim_slots)
-        obj._anim_slots = [null,null,null,null,
-                           null,null,null,null];
-
     var anim_slot = {
         type: null,
         animation_name: null,
+
+        action_frame_range: null,
+        action_step: 0,
+        action_bflags: null,
+        channels_mask: null,
 
         quats: null,
         trans: null,
@@ -215,8 +225,15 @@ function init_anim(obj, slot_num) {
         pitch: null,
 
         nodemat_values: [],
-        node_value_inds: []
+        node_value_inds: [],
+
+        nodemat_rgbs: [],
+        node_rgb_inds: []
     };
+
+    if (!obj._anim_slots.length)
+        for (var i = 0; i < 8; i++)
+            obj._anim_slots.push(null);
 
     obj._anim_slots[slot_num] = anim_slot;
 
@@ -226,14 +243,6 @@ function init_anim(obj, slot_num) {
 function update_anim_cache(obj) {
     if (_anim_objs_cache.indexOf(obj) == -1)
         _anim_objs_cache.push(obj);
-}
-
-exports.get_current_animation_name = function(obj, slot_num) {
-    var anim_slot = obj._anim_slots[slot_num]
-    if (anim_slot && anim_slot.animation_name)
-        return strip_baked_suffix(anim_slot.animation_name);
-
-    return null;
 }
 
 exports.get_anim_names = function(obj) {
@@ -267,7 +276,7 @@ exports.get_anim_type = function(obj, slot_num) {
     if (anim_slot)
         return anim_slot.type;
 
-    return null;
+    return OBJ_ANIM_TYPE_NONE;
 }
 
 /**
@@ -278,22 +287,8 @@ exports.apply_def = function(obj) {
     var slot_num = SLOT_0;
 
     var actions = get_default_actions(obj);
-    for (var i = 0; i < actions.length; i++) {
-        var action = actions[i]
 
-        if (!m_util.get_dict_length(action["fcurves"])) {
-            m_print.error("No fcurves in action \"" + action["name"] + "\"");
-            continue;
-        }
-
-        do_before_apply(obj, slot_num);
-        apply_action(obj, action, slot_num);
-        do_after_apply(obj, slot_num);
-        obj._anim_slots[slot_num].behavior =
-                anim_behavior_bpy_b4w(obj["b4w_anim_behavior"]);
-        slot_num++
-    }
-
+    // NOTE: particle system actions are more foreground
     var psystems = obj["particle_systems"];
     for (var i = 0; i < psystems.length; i++) {
         var psys = psystems[i];
@@ -310,6 +305,19 @@ exports.apply_def = function(obj) {
         }
     }
 
+    for (var i = 0; i < actions.length; i++) {
+        var action = actions[i]
+
+        do_before_apply(obj, slot_num);
+        if (apply_action(obj, action, slot_num)) {
+            do_after_apply(obj, slot_num);
+            obj._anim_slots[slot_num].behavior =
+                    anim_behavior_bpy_b4w(obj["b4w_anim_behavior"]);
+            slot_num++
+        } else
+            obj._anim_slots[slot_num] = null;
+    }
+
     if (has_vertex_anim(obj)) {
         do_before_apply(obj, slot_num);
         apply_vertex_anim(obj, obj["data"]["b4w_vertex_anim"][0], slot_num);
@@ -318,19 +326,6 @@ exports.apply_def = function(obj) {
                 anim_behavior_bpy_b4w(obj["b4w_anim_behavior"]);
         slot_num++
 
-    } else if (!actions.length && !m_particles.has_anim_particles(obj)) {
-        do_before_apply(obj, SLOT_0);
-        var anim_slot = obj._anim_slots[0];
-
-        anim_slot.type = OBJ_ANIM_TYPE_STATIC;
-        anim_slot.animation_name = obj.name + "_STATIC";
-        // TODO: proper obj -> scene -> timeline
-
-        var frame_range = m_scs.get_scene_timeline(m_scs.get_active());
-        anim_slot.start = frame_range[0];
-        // last frame will be rendered
-        anim_slot.length = frame_range[1] - frame_range[0] + 1;
-        do_after_apply(obj, slot_num);
     }
 }
 
@@ -366,7 +361,8 @@ function get_actions(obj) {
         } else if (act_render.params["volume"] || act_render.params["pitch"]) {
             if (m_sfx.is_speaker(obj))
                 act_list.push(action);
-        } else if (!is_material_action(action)) {
+        } else if (!is_material_action(action) &&
+                   m_util.get_dict_length(action["fcurves"])) {
             act_list.push(action);
         }
     }
@@ -382,7 +378,7 @@ function get_actions(obj) {
  *  obj.animation_data.action
  *  spkobj.data.animation_data
  *  obj.data.materials.node_tree.animation_data
- * @param {Object} obj Object ID
+ * @param {Object3D} obj Object 3D
  * @returns Default action or null
  */
 function get_default_actions(obj) {
@@ -393,10 +389,14 @@ function get_default_actions(obj) {
     var anim_data = obj["animation_data"];
 
     if (anim_data && anim_data["action"]) {
-        var bones = anim_data["action"]._render.bones;
-        var bones_num = m_util.get_dict_length(bones);
-        if (obj["type"] == "ARMATURE" || !bones_num)
-            act_list.push(anim_data["action"]);
+        var action = anim_data["action"];
+        // do not return actions without fcurves
+        if (m_util.get_dict_length(action["fcurves"])) {
+            var bones = action._render.bones;
+            var bones_num = m_util.get_dict_length(bones);
+            if (obj["type"] == "ARMATURE" || !bones_num)
+                act_list.push(action);
+        }
     }
 
     if (m_sfx.is_speaker(obj) && obj["data"]["animation_data"] &&
@@ -418,14 +418,30 @@ function get_material_actions(obj) {
         var mat = materials[i];
         var node_tree = mat["node_tree"];
 
-        if (node_tree && node_tree["animation_data"]) {
-            var anim_data = node_tree["animation_data"];
-            if (anim_data["action"]) {
-                act_list.push(anim_data["action"]);
-            }
-        }
+        if (node_tree)
+            get_node_tree_actions_r(node_tree, act_list);
     }
     return act_list;
+}
+
+function get_node_tree_actions_r(node_tree, container) {
+    if (node_tree["animation_data"]) {
+        var anim_data = node_tree["animation_data"];
+        var action = anim_data["action"];
+        // do not return actions without fcurves
+        if (action && m_util.get_dict_length(action["fcurves"])) {
+            container.push(action);
+        }
+    }
+    var nodes = node_tree["nodes"];
+    for (var i = 0; i < nodes.length; i++) {
+        var node = nodes[i];
+        if (node["node_group"]) {
+            var g_node_tree = node["node_group"]["node_tree"];
+            if (g_node_tree)
+                get_node_tree_actions_r(g_node_tree, container);
+        }
+    }
 }
 
 function has_vertex_anim(obj) {
@@ -496,14 +512,14 @@ exports.set_current_frame_float = function(obj, cff, slot_num) {
             var anim_slot = anim_slots[i]
             if (anim_slot) {
                 anim_slot.current_frame_float = cff;
-                update_object_animation(obj, 0, i)
+                update_object_animation(obj, 0, i, true)
             }
         }
     } else {
         var anim_slot = anim_slots[slot_num]
         if (anim_slot) {
             anim_slot.current_frame_float = cff;
-            update_object_animation(obj, 0, slot_num)
+            update_object_animation(obj, 0, slot_num, true)
         }
     }
 }
@@ -571,8 +587,8 @@ function process_anim_slots(anim_slots, slot_num, procedure) {
  * Update object animation (set object pose)
  */
 exports.update_object_animation = update_object_animation;
-function update_object_animation(obj, elapsed, slot_num) {
-    animate(obj, elapsed, slot_num);
+function update_object_animation(obj, elapsed, slot_num, force_update) {
+    animate(obj, elapsed, slot_num, force_update);
     handle_finish_callback(obj, slot_num);
 
     if (obj._render.anim_mixing) {
@@ -625,10 +641,7 @@ exports.is_animatable = function(bpy_obj) {
 }
 
 exports.is_animated = function(obj) {
-    if (obj._anim_slots)
-        return true;
-    else
-        return false;
+    return Boolean(obj._anim_slots.length);
 }
 
 /**
@@ -648,6 +661,7 @@ function apply_action(obj, action, slot_num) {
     anim_slot.action_frame_range = frame_range;
     anim_slot.action_step = act_render.pierce_step;
     anim_slot.action_bflags = act_render.bflags;
+    anim_slot.channels_mask = act_render.channels_mask;
 
     anim_slot.start = frame_range[0];
     anim_slot.length = frame_range[1] - frame_range[0];
@@ -679,7 +693,6 @@ function apply_action(obj, action, slot_num) {
         anim_slot.type = OBJ_ANIM_TYPE_SOUND;
 
     } else if (obj["type"] == "MESH" && is_material_action(action)) {
-
         anim_slot.type = OBJ_ANIM_TYPE_MATERIAL;
 
         var nodemat_anim_data = get_cached_anim_data(obj, action);
@@ -689,8 +702,10 @@ function apply_action(obj, action, slot_num) {
             cache_anim_data(obj, action, nodemat_anim_data);
         }
 
-        anim_slot.node_value_inds = nodemat_anim_data.value_inds;
+        anim_slot.node_value_inds = nodemat_anim_data.val_inds;
         anim_slot.nodemat_values = nodemat_anim_data.values;
+        anim_slot.node_rgb_inds = nodemat_anim_data.rgb_inds;
+        anim_slot.nodemat_rgbs = nodemat_anim_data.rgbs;
 
     } else {
         var tsr = act_render.params["tsr"];
@@ -699,7 +714,6 @@ function apply_action(obj, action, slot_num) {
             anim_slot.type = OBJ_ANIM_TYPE_OBJECT;
 
             var obj_anim_data = get_cached_anim_data(obj, action);
-
             if (!obj_anim_data) {
                 obj_anim_data = calc_obj_anim_data(obj, action, tsr);
                 cache_anim_data(obj, action, obj_anim_data);
@@ -710,19 +724,19 @@ function apply_action(obj, action, slot_num) {
 
             // move particles with world coordinate system to objects position
             if (m_particles.has_particles(obj)) {
-                var trans = anim_slot.trans;
-                var quats = anim_slot.quats;
+                var trans = anim_slot.trans[0];
+                var quats = anim_slot.quats[0];
                 m_particles.update_start_pos(obj, trans, quats);
             }
         } else {
-            m_print.warn("B4W Warning: Incompatible action \"" +
-                action["name"] + "\" has been applied to object \"" +
-                obj["name"] + "\"");
-            anim_slot.type = OBJ_ANIM_TYPE_STATIC;
+            m_print.warn("Incompatible action \"" + action["name"] + 
+                    "\" has been applied to object \"" + obj["name"] + "\"");
+            return false;
         }
     }
     if (m_util.is_armature(obj) && !num_bones)
         recalculate_armature_anim_slots(obj, slot_num);
+    return true;
 }
 
 function get_cached_anim_data(obj, action) {
@@ -890,26 +904,38 @@ function calc_armature_bone_pointers(armobj) {
 
 function calc_nodemat_anim_data(obj, action) {
 
-    var value_inds = [];
+    var val_inds = [];
     var values = [];
+    var rgb_inds = [];
+    var rgbs = [];
 
     var act_render = action._render;
     var val_ind_pairs = obj._render.mats_anim_inds;
+    var rgb_ind_pairs = obj._render.mats_rgb_anim_inds;
 
-    for (var node_val_name in act_render.params) {
-        var act_node_val_name = action["name"] + "_" + node_val_name;
-        for (var i = 0; i < val_ind_pairs.length; i+=2) {
-            var name = val_ind_pairs[i];
-            if (act_node_val_name == name) {
-                var ind = val_ind_pairs[i+1];
-                value_inds.push(ind);
-                values.push(act_render.params[node_val_name]);
-                break;
-            }
+    for (var node_name in act_render.params) {
+        var act_node_name = action["name"] + "%join%" + node_name;
+        calc_node_act(node_name, act_node_name, act_render, values, val_inds,
+                      val_ind_pairs);
+        calc_node_act(node_name, act_node_name, act_render, rgbs, rgb_inds,
+                      rgb_ind_pairs);
+    }
+    return {val_inds: val_inds, values: values,
+            rgb_inds: rgb_inds, rgbs: rgbs};
+}
+
+function calc_node_act(node_name, act_node_name, act_render, values, inds,
+                       val_ind_pairs) {
+    for (var i = 0; i < val_ind_pairs.length; i+=2) {
+        var name = val_ind_pairs[i];
+        if (act_node_name == name) {
+            var ind = val_ind_pairs[i+1];
+            inds.push(ind);
+            values.push(new Float32Array(act_render.params[node_name]));
         }
     }
-    return {value_inds: value_inds, values: values};
 }
+
 
 function calc_obj_anim_data(obj, action, tsr) {
 
@@ -962,15 +988,14 @@ function is_material_action(action) {
     return false;
 }
 
-function animate(obj, elapsed, slot_num) {
-
+function animate(obj, elapsed, slot_num, force_update) {
     var anim_slot = obj._anim_slots[slot_num];
 
-    if (!anim_slot)
+    if (!anim_slot || anim_slot.type == null)
         return;
 
     // update paused animation only if elapsed == 0
-    if (!(anim_slot.play || elapsed == 0))
+    if (!anim_slot.play && !force_update)
         return
 
     var render = obj._render;
@@ -1057,9 +1082,14 @@ function animate(obj, elapsed, slot_num) {
                     anim_slot.quat_smooth_period, quat);
         }
 
-        m_trans.set_translation(obj, trans);
-        m_trans.set_rotation(obj, quat);
-        m_trans.set_scale(obj, scale);
+        var mask = anim_slot.channels_mask;
+
+        if (mask[0])
+            m_trans.set_translation(obj, trans);
+        if (mask[1])
+            m_trans.set_rotation(obj, quat);
+        if (mask[2])
+            m_trans.set_scale(obj, scale);
 
         m_trans.update_transform(obj);
         m_phy.sync_transform(obj);
@@ -1103,23 +1133,33 @@ function animate(obj, elapsed, slot_num) {
         var ff = finfo[2];
 
         var values = anim_slot.nodemat_values;
-        var indices  = anim_slot.node_value_inds;
+        var val_indices = anim_slot.node_value_inds;
 
-        for (var i = 0; i < indices.length; i++) {
-            var ind = indices[i];
+        var rgbs = anim_slot.nodemat_rgbs;
+        var rgb_indices = anim_slot.node_rgb_inds;
+
+        for (var i = 0; i < val_indices.length; i++) {
             var vals = values[i];
+            var ind = val_indices[i];
 
             var nodemat_value = (1-ff) * vals[fc] + ff * vals[fn];
-            obj._render.mats_anim_values[ind] = nodemat_value;
+            obj._render.mats_values[ind] = nodemat_value;
+        }
+        for (var i = 0; i < rgb_indices.length; i++) {
+            var rgb = rgbs[i];
+            var ind = rgb_indices[i];
+
+            var prev = rgb.subarray(fc*3, fc*3 + 3);
+            var next = rgb.subarray(fn*3, fn*3 + 3);
+            var curr = m_vec3.lerp(prev, next, ff, _vec3_tmp);
+            obj._render.mats_rgbs[ind] = curr[0];
+            obj._render.mats_rgbs[ind + 1] = curr[1];
+            obj._render.mats_rgbs[ind + 2] = curr[2];
         }
         break;
 
-    case OBJ_ANIM_TYPE_STATIC:
-        // do nothing
-        break;
-
     default:
-        throw("Unknown animation type:" + anim_type);
+        m_util.panic("Unknown animation type:" + anim_type);
         break;
     }
 }
@@ -1525,7 +1565,6 @@ function calc_pose_bone(pose_bone, dest_trans_scale, dest_quat) {
  * Parse animation curves.
  */
 exports.append_action = function(action) {
-
     action._render = {};
     var act_render = action._render;
     act_render.pierce_step = 1 / cfg_ani.frame_steps;
@@ -1545,7 +1584,7 @@ exports.append_action = function(action) {
             for (var i = 0; i < pierced_points; i++)
                 storage[i] = default_value;
         } else
-            throw "Wrong storage default value";
+            m_util.panic("Wrong storage default value");
 
         return storage;
     }
@@ -1553,31 +1592,29 @@ exports.append_action = function(action) {
     var BONE_EXP = new RegExp(/pose.bones\[\".+\"\]/g);
     var TSR8_DEF = m_tsr.create();
 
-    var get_storage = function(params, bones, data_path, pierced_points) {
+    var get_storage = function(params, bones, data_path, pierced_points,
+                               num_channels) {
         if (data_path.search(BONE_EXP) > -1) {
             var storage_obj = bones;
             var name = data_path.split("\"")[1];
             var def_val = TSR8_DEF;
         } else {
             var storage_obj = params;
-
-            if (data_path.indexOf("location") > -1) {
+            if (num_channels == 8) {
                 var name = "tsr";
                 var def_val = TSR8_DEF;
-            } else if (data_path.indexOf("rotation_quaternion") > -1) {
-                var name = "tsr";
-                var def_val = TSR8_DEF;
-            } else if (data_path.indexOf("scale") > -1) {
-                var name = "tsr";
-                var def_val = TSR8_DEF;
+            } else if (num_channels > 1) {
+                var name = data_path;
+                var def_val = new Float32Array(num_channels);
             } else {
                 var name = data_path;
                 var def_val = 0.0;
             }
         }
 
-        if (!storage_obj[name])
+        if (!storage_obj[name]) {
             storage_obj[name] = init_storage(pierced_points, def_val);
+        }
 
         return storage_obj[name];
     }
@@ -1595,9 +1632,8 @@ exports.append_action = function(action) {
             var channel_offset = 0;
         } else {
             var base_offset = 0;
-            var channel_offset = 0;
+            var channel_offset = array_index;
         }
-
         return base_offset + channel_offset;
     }
     var fcurves = action["fcurves"];
@@ -1606,16 +1642,22 @@ exports.append_action = function(action) {
     var bones = {};
 
     var num_pierced = 0;
+
     for (var data_path in fcurves) {
         var channels = fcurves[data_path];
+
         for (var array_index in channels) {
             var fcurve = channels[array_index];
             var pp = fcurve._pierced_points;
+            m_reformer.check_anim_fcurve_completeness(fcurve, action);
+            var num_channels = fcurve["num_channels"];
 
             if (!num_pierced)
                 num_pierced = pp.length;
 
-            var storage = get_storage(params, bones, data_path, num_pierced);
+            var storage = get_storage(params, bones, data_path, num_pierced,
+                                      num_channels);
+
             var stride = storage.length / num_pierced;
             // NOTE: converting JSON key "array_index" to Int
             var offset = storage_offset(data_path, array_index | 0);
@@ -1644,63 +1686,26 @@ exports.append_action = function(action) {
     act_render.bflags = action._bflags;
     act_render.num_pierced = num_pierced;
 
+    if ("tsr" in params)
+        act_render.channels_mask = set_act_channels_mask(fcurves);
+    else
+        act_render.channels_mask = null;
+
     _actions.push(action);
 }
 
-/**
- * @deprecated Unused
- */
-function get_transform_from_group(channels, pierced_index, animation_name) {
-
-    var tran = [0, 0, 0];
-    var quat = [1, 0, 0, 0];
-    var scal = [1, 1, 1];
-
-    var storage;
-
-    var bflag = 0;
-
-    // for every fcurve of the group
-    for (var i = 0; i < channels.length; i++) {
-        var fcurve = channels[i];
-
-        var data_path = fcurve[0];
-        var array_index = fcurve[1];
-        var pp = fcurve._pierced_points;
-
-        // if some channel is blended all transform will be blended
-        var pp_bflag = pp[2*pierced_index];
-        if (pp_bflag)
-            bflag = 1;
-
-        var pp_value = pp[2*pierced_index + 1];
-
-        if (data_path.indexOf("location") > -1)
-            storage = tran;
-        else if (data_path.indexOf("rotation_quaternion") > -1)
-            storage = quat;
-        else if (data_path.indexOf("scale") > -1)
-            storage = scal;
-        else {
-            m_print.error("B4W warning: unsupported fcurve data path: " + data_path +
-                " (Animation: " + animation_name + ")");
-            break;
-        }
-
-        storage[array_index] = pp_value;
+function set_act_channels_mask(fcurves) {
+    var mask = [0,0,0];
+    for (var data_path in fcurves) {
+        var channels = fcurves[data_path];
+        if (data_path == "location")
+            mask[0] = 1;
+        else if (data_path == "rotation_quaternion")
+            mask[1] = 1;
+        else if (data_path == "scale")
+            mask[2] = 1;
     }
-
-    // uniform scale supported
-    scal = (scal[0] + scal[1] + scal[2]) / 3;
-
-    // pack scale to translation
-    tran = [tran[0], tran[1], tran[2], scal];
-
-    // convert quaternion: (w, x, y, z) -> (x, y, z, w) to use in shader
-    quat = [quat[1], quat[2], quat[3], quat[0]];
-    m_quat.normalize(quat, quat);
-
-    return {tran: tran, quat: quat, bflag: bflag};
+    return mask;
 }
 
 exports.get_approx_curve_length = function(start, end) {
@@ -1834,7 +1839,7 @@ exports.approximate_curve = function(fcurve, fcurve_bin_data, points, bflags,
                         out_cursor++;
                         break;
                     default:
-                        throw "Unknown keyframe intepolation mode: " + interp;
+                        m_util.panic("Unknown keyframe intepolation mode: " + interp);
                     }
                 }
             }
@@ -2039,13 +2044,13 @@ function do_after_apply(obj, slot_num) {
     // to update e.g bounding boxes
     m_trans.update_transform(obj);
     m_phy.sync_transform(obj);
-    update_object_animation(obj, 0, slot_num);
+    update_object_animation(obj, 0, slot_num, true);
 }
 
 exports.apply = apply;
 function apply(obj, name, slot_num) {
 
-    slot_num = slot_num || 0;
+    slot_num = slot_num || SLOT_0;
 
     if (m_util.is_mesh(obj)) {
         var vertex_anim = m_util.keysearch("name", name,
@@ -2068,26 +2073,56 @@ function apply(obj, name, slot_num) {
             }
         }
     }
-
     var action = m_util.keysearch("name", name, _actions) ||
             m_util.keysearch("name", name + "_B4W_BAKED", _actions);
     if (action) {
-
-        if (!m_util.get_dict_length(action["fcurves"])) {
-            m_print.error("No fcurves in action \"" + action["name"] + "\"");
-            return false;
-        }
-
         do_before_apply(obj, slot_num);
-        apply_action(obj, action, slot_num);
-        do_after_apply(obj, slot_num);
-        return true;
+        if (apply_action(obj, action, slot_num)) {
+            do_after_apply(obj, slot_num);
+            return true;
+        } else
+            obj._anim_slots[slot_num] = null;
     }
 
-    m_print.error("Unsupported object: \"", obj.name,
-                  "\" or animation name: \"", name, "\"");
+    m_print.error("Unsupported object: \"" + obj.name +
+                  "\" or animation name: \"" + name + "\"");
     return false;
 }
+
+exports.apply_by_uuid = function(obj, uuid, slot_num) {
+    slot_num = slot_num || SLOT_0;
+    var action = m_util.keysearch("uuid", uuid, _actions);
+    if (action) {
+        do_before_apply(obj, slot_num);
+        if (apply_action(obj, action, slot_num)) {
+            do_after_apply(obj, slot_num);
+            return true;
+        } else
+            obj._anim_slots[slot_num] = null;
+    }
+
+    m_print.error("Unsupported object: \"" + obj.name +
+                  "\" or animation uuid: \"" + uuid + "\"");
+    return false;
+}
+
+exports.validate_action_by_name = function(obj, name) {
+    var action = m_util.keysearch("name", name, _actions) ||
+            m_util.keysearch("name", name + "_B4W_BAKED", _actions);
+
+    if (!action) {
+        var psys = m_util.keysearch("name", name, obj["particle_systems"]);
+        if (psys)
+            return true;
+        return false
+    }
+
+    if (!m_util.get_dict_length(action["fcurves"]))
+        return false;
+
+    return true;
+}
+
 
 exports.get_slot_num_by_anim = get_slot_num_by_anim
 function get_slot_num_by_anim(obj, anim_name) {
@@ -2103,15 +2138,14 @@ function get_slot_num_by_anim(obj, anim_name) {
 
 exports.get_anim_by_slot_num = function(obj, slot_num) {
     var anim_slot = obj._anim_slots[slot_num];
-    if (anim_slot && anim_slot.animation_name) {
-        var anim_name = strip_baked_suffix(anim_slot.animation_name);
-        return anim_name;
-    }
+    if (anim_slot && anim_slot.animation_name)
+        return strip_baked_suffix(anim_slot.animation_name);
+
     return null;
 }
 
 exports.remove = function(obj) {
-    obj._anim_slots = null;
+    obj._anim_slots.length = 0;
     var ind = _anim_objs_cache.indexOf(obj);
     if (ind != -1)
         _anim_objs_cache.splice(ind, 1);
@@ -2124,7 +2158,7 @@ exports.remove_actions = function(data_id) {
 }
 
 exports.apply_to_first_empty_slot = function(obj, name) {
-    if (!obj._anim_slots) {
+    if (!obj._anim_slots.length) {
         if (apply(obj, name, SLOT_0))
             return SLOT_0;
         else
@@ -2181,8 +2215,27 @@ function has_animated_nodemats(obj) {
     for (var j = 0; j < materials.length; j++) {
         var mat = materials[j];
         var node_tree = mat["node_tree"];
-        if (mat["use_nodes"] && node_tree && node_tree["animation_data"])
-            return true;
+        if (mat["use_nodes"] && node_tree) {
+            if (check_node_tree_anim_data_r(node_tree))
+                return true;
+        }
+    }
+
+    return false;
+}
+
+function check_node_tree_anim_data_r(node_tree) {
+    if (node_tree["animation_data"])
+        return true;
+
+    var nodes = node_tree["nodes"];
+    for (var i = 0; i < nodes.length; i++) {
+        var node = nodes[i];
+        if (node["node_group"]) {
+            var g_node_tree = node["node_group"]["node_tree"];
+            if (g_node_tree && check_node_tree_anim_data_r(g_node_tree))
+                return true;
+        }
     }
 
     return false;
@@ -2196,42 +2249,40 @@ exports.cleanup = function() {
 /**
  * uses _vec3_tmp, _quat4_tmp
  */
-exports.fcurves_replace_euler_by_quat = function(fcurves, data_path) {
-    var channels = fcurves[data_path];
-
-    var ch = channels[0] || channels[1] || channels[2];
+exports.fcurve_replace_euler_by_quat = function(fcurve) {
+    var ch = fcurve[0] || fcurve[1] || fcurve[2];
     var pcount = ch._pierced_points.length;
 
     var quat = _quat4_tmp;
     var euler_angles = _vec3_tmp;
 
-    var is_x_rot = Boolean(channels[0]);
+    var is_x_rot = Boolean(fcurve[0]);
     if (!is_x_rot)
-        channels[0] = { _pierced_points: new Float32Array(pcount) };
-    var is_y_rot = Boolean(channels[1]);
+        fcurve[0] = { _pierced_points: new Float32Array(pcount),
+                        "num_channels": 8};
+    var is_y_rot = Boolean(fcurve[1]);
     if (!is_y_rot)
-        channels[1] = { _pierced_points: new Float32Array(pcount) };
-    var is_z_rot = Boolean(channels[2]);
+        fcurve[1] = { _pierced_points: new Float32Array(pcount),
+                        "num_channels": 8};
+    var is_z_rot = Boolean(fcurve[2]);
     if (!is_z_rot)
-        channels[2] = { _pierced_points: new Float32Array(pcount) };
-    channels[3] = { _pierced_points: new Float32Array(pcount) };
+        fcurve[2] = { _pierced_points: new Float32Array(pcount),
+                        "num_channels": 8};
+    fcurve[3] = { _pierced_points: new Float32Array(pcount),
+                    "num_channels": 8};
 
     for (var i = 0; i < pcount; i++) {
-        euler_angles[0] = (is_x_rot) ? channels[0]._pierced_points[i]: 0;
-        euler_angles[1] = (is_y_rot) ? channels[1]._pierced_points[i]: 0;
-        euler_angles[2] = (is_z_rot) ? channels[2]._pierced_points[i]: 0;
+        euler_angles[0] = (is_x_rot) ? fcurve[0]._pierced_points[i]: 0;
+        euler_angles[1] = (is_y_rot) ? fcurve[1]._pierced_points[i]: 0;
+        euler_angles[2] = (is_z_rot) ? fcurve[2]._pierced_points[i]: 0;
         m_util.euler_to_quat(euler_angles, quat);
 
         // (x, y, z, w) to (w, x, y, z) fcurve format
-        channels[0]._pierced_points[i] = quat[3];
-        channels[1]._pierced_points[i] = quat[0];
-        channels[2]._pierced_points[i] = quat[1];
-        channels[3]._pierced_points[i] = quat[2];
+        fcurve[0]._pierced_points[i] = quat[3];
+        fcurve[1]._pierced_points[i] = quat[0];
+        fcurve[2]._pierced_points[i] = quat[1];
+        fcurve[3]._pierced_points[i] = quat[2];
     }
-
-    var new_path = data_path.replace("euler", "quaternion")
-    fcurves[new_path] = channels;
-    delete fcurves[data_path];
 }
 
 }

@@ -95,9 +95,10 @@ exports.lamp_to_light = function(lamp_obj) {
         light.distance = data["distance"];
 
     if (light.type === "SPOT") {
-        light.spot_size = data["spot_size"];
         light.spot_blend = data["spot_blend"];
-    }
+        light.spot_size = data["spot_size"];
+    } else if (light.type === "POINT")
+        light.spot_size = Math.PI / 2;
 
     light.generate_shadows = data["b4w_generate_shadows"];
     light.dynamic_intensity = data["b4w_dynamic_intensity"];
@@ -177,7 +178,7 @@ function update_light_transform(obj) {
         return;
 
     m_util.quat_to_dir(obj._render.quat, m_util.AXIS_Y, light.direction);
-
+    m_vec3.normalize(light.direction, light.direction);
 }
 
 }

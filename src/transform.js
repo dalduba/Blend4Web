@@ -19,6 +19,7 @@ var m_tsr       = require("__tsr");
 var m_util      = require("__util");
 
 var m_vec3 = require("vec3");
+var m_vec4 = require("vec4");
 var m_quat = require("quat");
 var m_mat3 = require("mat3");
 var m_mat4 = require("mat4");
@@ -26,6 +27,7 @@ var m_mat4 = require("mat4");
 var _vec3_tmp = new Float32Array(3);
 var _quat4_tmp = new Float32Array(4);
 var _mat3_tmp = new Float32Array(9);
+var _tsr_tmp = new Float32Array(8);
 
 var _elapsed = 0;
 
@@ -121,17 +123,21 @@ exports.set_tsr = function(obj, tsr) {
     if (m_cons.get_type(obj) == m_cons.CONS_TYPE_CHILD_OF) {
         var offset = m_cons.get_child_of_offset(obj);
         m_tsr.copy(tsr, offset);
-    } else {
-        var render = obj._render;
-        render.trans[0] = tsr[0];
-        render.trans[1] = tsr[1];
-        render.trans[2] = tsr[2];
-        render.scale = tsr[3];
-        render.quat[0] = tsr[4];
-        render.quat[1] = tsr[5];
-        render.quat[2] = tsr[6];
-        render.quat[3] = tsr[7];
-    }
+    } else
+        set_tsr_raw(obj, tsr);
+}
+
+exports.set_tsr_raw = set_tsr_raw;
+function set_tsr_raw(obj, tsr) {
+    var render = obj._render;
+    render.trans[0] = tsr[0];
+    render.trans[1] = tsr[1];
+    render.trans[2] = tsr[2];
+    render.scale = tsr[3];
+    render.quat[0] = tsr[4];
+    render.quat[1] = tsr[5];
+    render.quat[2] = tsr[6];
+    render.quat[3] = tsr[7];
 }
 
 exports.get_object_size = function(obj) {
@@ -192,23 +198,20 @@ exports.update_transform = update_transform;
  * Set object render world_matrix.
  * NOTE: do not try to update batched objects (buggy _dg_parent influence)
  * @methodOf transform
- * @param {Object} obj Object ID
+ * @param {Object3D} obj Object 3D
  */
 function update_transform(obj) {
-
     var render = obj._render;
+    var main_scene = m_scs.get_main();
+
+    // NOTE: need to update before constraints, because they rely on to this flag
+    if (obj["type"] == "CAMERA")
+        m_cam.update_camera_upside_down(obj);
 
     m_cons.update_constraint(obj, _elapsed);
-    m_cam.update_camera(obj);
 
-    if (obj["type"] == "CAMERA") {
-        m_cam.clamp_limits(obj);
-
-        if (render.move_style == m_cam.MS_TARGET_CONTROLS) {
-            var z_world_cam = m_util.quat_to_dir(render.quat, m_util.AXIS_Z, _vec3_tmp);
-            render.target_cam_upside_down = z_world_cam[1] > 0;
-        }
-    }
+    if (obj["type"] == "CAMERA")
+        m_cam.update_camera(obj);
 
     // should not change after constraint update
     var trans = render.trans;
@@ -232,7 +235,7 @@ function update_transform(obj) {
 
     m_mat4.invert(wm, render.inv_world_matrix);
 
-    if (obj._anim_slots && m_particles.has_anim_particles(obj))
+    if (obj._anim_slots.length && m_particles.has_anim_particles(obj))
         m_particles.update_emitter_transform(obj);
 
     // NOTE: available only after batch creation (really needed now?)
@@ -242,7 +245,20 @@ function update_transform(obj) {
         m_bounds.bounding_ellipsoid_transform(render.be_local, render.tsr,
                                              render.be_world)
         if (render.shadow_cast)
-            m_scs.schedule_shadow_update(m_scs.get_active());
+            m_scs.schedule_shadow_update(main_scene);
+
+        if (render.cube_reflection_id != null && main_scene)
+            m_scs.update_cube_reflect_subs(main_scene, obj);
+    }
+
+    if (main_scene && main_scene._render.reflection_params) {
+        var refl_objs = main_scene._render.reflection_params.refl_plane_objs;
+        for (var i = 0; i < refl_objs.length; i++) {
+            if (refl_objs[i] == obj) {
+                m_scs.update_plane_reflection_by_id(i, main_scene);
+                break;
+            }
+        }
     }
 
     switch (obj["type"]) {
@@ -252,23 +268,43 @@ function update_transform(obj) {
     case "CAMERA":
         m_cam.update_camera_transform(obj);
         // listener only for active scene camera
-        if (m_scs.check_active() && m_scs.get_camera(m_scs.get_active()) == obj)
-            m_sfx.listener_update_transform(m_scs.get_active(), trans, quat, _elapsed);
+        if (main_scene && m_scs.get_camera(main_scene) == obj)
+            m_sfx.listener_update_transform(main_scene, trans, quat, _elapsed);
         break;
     case "LAMP":
         m_lights.update_light_transform(obj);
-        if (m_scs.check_active())
-            m_scs.update_lamp_scene(obj, m_scs.get_active());
+        if (main_scene)
+            m_scs.update_lamp_scene(obj, main_scene);
         break;
     case "EMPTY":
         if (obj["field"])
             m_scs.update_force(obj);
         break;
+    case "MESH":
+        var modifiers = obj["modifiers"];
+        var armobj = null;
+        for (var i = 0; i < modifiers.length; i++) {
+            var modifier = modifiers[i];
+            if (modifier["type"] == "ARMATURE")
+                armobj = modifier["object"];
+        }
+
+        if (armobj) {
+            var armobj_tsr = armobj._render.tsr;
+            m_tsr.invert(armobj_tsr, _tsr_tmp);
+            m_tsr.multiply(_tsr_tmp, render.tsr, _tsr_tmp);
+            m_vec4.set(_tsr_tmp[0], _tsr_tmp[1], _tsr_tmp[2], _tsr_tmp[3],
+                     render.arm_rel_trans);
+            m_quat.set(_tsr_tmp[4], _tsr_tmp[5], _tsr_tmp[6], _tsr_tmp[7],
+                     render.arm_rel_quat);
+        }
+
+        break;
     }
 
     if (obj["type"] == "LAMP" || obj["type"] == "CAMERA") {
-        if (m_scs.check_active()) {
-            var active_scene = m_scs.get_active();
+        if (main_scene) {
+            var active_scene = main_scene;
             m_scs.schedule_shadow_update(active_scene);
             m_scs.schedule_grass_map_update(active_scene);
         }
@@ -278,6 +314,8 @@ function update_transform(obj) {
 
     for (var i = 0; i < descends.length; i++)
         update_transform(descends[i]);
+
+    render.force_zsort = true;
 }
 
 exports.distance = function(obj1, obj2) {

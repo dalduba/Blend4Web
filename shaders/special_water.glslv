@@ -59,7 +59,7 @@ uniform PRECISION float u_time;
 uniform vec3 u_wind;
 #endif
 
-#if SHORE_SMOOTHING || REFLECTIVE || REFRACTIVE || !DISABLE_FOG
+#if SHORE_SMOOTHING || REFLECTION_TYPE == REFL_PLANE || REFRACTIVE || !DISABLE_FOG
 uniform PRECISION float u_view_max_depth;
 #endif
 
@@ -74,7 +74,7 @@ uniform sampler2D u_shore_dist_map;
 varying vec3 v_eye_dir;
 varying vec3 v_pos_world;
 
-#if !GENERATED_MESH
+#if !GENERATED_MESH && (NUM_NORMALMAPS > 0 || FOAM)
 varying vec2 v_texcoord;
 #endif
 
@@ -93,11 +93,11 @@ varying vec3 v_calm_pos_world;
 varying vec3 v_shore_params;
 #endif
 
-#if SHORE_SMOOTHING || REFLECTIVE || REFRACTIVE 
+#if SHORE_SMOOTHING || REFLECTION_TYPE == REFL_PLANE || REFRACTIVE
 varying vec3 v_tex_pos_clip;
 #endif
 
-#if SHORE_SMOOTHING || REFLECTIVE || REFRACTIVE || !DISABLE_FOG
+#if SHORE_SMOOTHING || REFLECTION_TYPE == REFL_PLANE || REFRACTIVE || !DISABLE_FOG
 varying float v_view_depth;
 #endif
 
@@ -199,7 +199,7 @@ void main(void) {
     vec2 step_xz = u_camera_eye.xz - mod(u_camera_eye.xz, casc_step);
     position.y = WATER_LEVEL;
     position.xz += step_xz;// + vec2(15.0, -15.0);
-#else
+#elif NUM_NORMALMAPS > 0 || FOAM
     v_texcoord = a_texcoord;
 #endif
 
@@ -274,7 +274,7 @@ void main(void) {
     vec4 pos_view = u_view_matrix * vec4(world.position, 1.0);
     vec4 pos_clip = u_proj_matrix * pos_view; 
 
-#if SHORE_SMOOTHING || REFLECTIVE || REFRACTIVE 
+#if SHORE_SMOOTHING || REFLECTION_TYPE == REFL_PLANE || REFRACTIVE
     float xc = pos_clip.x;
     float yc = pos_clip.y;
     float wc = pos_clip.w;
@@ -284,7 +284,7 @@ void main(void) {
     v_tex_pos_clip.z = wc;
 #endif
 
-#if SHORE_SMOOTHING || REFLECTIVE || REFRACTIVE || !DISABLE_FOG
+#if SHORE_SMOOTHING || REFLECTION_TYPE == REFL_PLANE || REFRACTIVE || !DISABLE_FOG
     v_view_depth = -pos_view.z / u_view_max_depth;
 #endif
 

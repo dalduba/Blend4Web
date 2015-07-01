@@ -81,20 +81,23 @@ function change_gems_num(id, num) {
 
         var gem_trans = _vec3_tmp; var gem_quat = _quat4_tmp;
         m_trans.get_translation(ob_gem, gem_trans);
-        m_trans.get_rotation_quat(ob_gem, gem_quat);
+        m_trans.get_rotation(ob_gem, gem_quat);
 
         emitt_shutters(gem_trans, gem_quat);
     }
     _obelisk_stones_num[id] += num;
+    check_capture(id);
+}
 
-
+exports.check_capture = check_capture;
+function check_capture(id) {
     if (is_filled(id) && !m_golems.island_has_golems(id)) {
         var isl_dupli_names = m_conf.ISLES_SHIELD_DUPLI_NAME_LIST;
         isl_dupli_names[2] = "island_shield_" + id;
         var isl_shield = m_scs.get_object_by_dupli_name_list(isl_dupli_names);
         m_anim.play(isl_shield);
 
-        var isl_spk = m_scs.get_object_by_dupli_name(obelisk_name,
+        var isl_spk = m_scs.get_object_by_dupli_name("obelisk_" + id,
                                                      m_conf.ISLAND_SPEAKER);
         m_sfx.play_def(isl_spk);
 

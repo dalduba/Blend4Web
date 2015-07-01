@@ -10,6 +10,7 @@ body {
     left: 0px;
     top: 0px;
     right: 0px;
+    overflow: hidden;
 }
 
 @media all and (min-width: 750px) {
@@ -111,6 +112,8 @@ span.info_corner_text {
 
 .text-wrapper {
     text-align: left;
+    display: inline-block;
+    width: 100%;
 }
 
 .text-wrapper * {
@@ -215,4 +218,15 @@ html .ui-panel-page-container-c {
     margin-top: 3px;
     margin-left: 4px;
     background: url(images/lights.png) right;
+}
+
+div#fps_container {
+    position: absolute;
+    top: 23px;
+    right: 20px;
+    font-size: 45px;
+    line-height: 50px;
+    font-weight: bold;
+    color: #000;
+    z-index: 1;
 }

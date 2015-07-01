@@ -15,28 +15,28 @@ uniform sampler2D u_sampler;
                                GLOBAL UNIFORMS
 ============================================================================*/
 
-uniform vec3  u_horizon_color;
-uniform vec3  u_zenith_color;
 uniform float u_environment_energy;
 
 #if NUM_LIGHTS > 0
 uniform vec3 u_light_positions[NUM_LIGHTS];
 uniform vec3 u_light_directions[NUM_LIGHTS];
 uniform vec3 u_light_color_intensities[NUM_LIGHTS];
-uniform vec4 u_light_factors1[NUM_LIGHTS];
-uniform vec4 u_light_factors2[NUM_LIGHTS];
+uniform vec4 u_light_factors[NUM_LFACTORS];
 #endif
 
 #if !DISABLE_FOG
 uniform vec4 u_fog_color_density;
 #endif
 
-#if SKY_TEXTURE
-uniform samplerCube u_sky_texture;
-#endif
-
 #if TEXTURE_COLOR
 uniform float u_diffuse_color_factor;
+#endif
+
+#if USE_ENVIRONMENT_LIGHT && SKY_TEXTURE
+uniform samplerCube u_sky_texture;
+#elif USE_ENVIRONMENT_LIGHT && SKY_COLOR
+uniform vec3 u_horizon_color;
+uniform vec3 u_zenith_color;
 #endif
 
 /*============================================================================
@@ -60,6 +60,16 @@ varying vec3 v_pos_world;
 #if !DISABLE_FOG
 varying vec4 v_pos_view;
 #endif
+
+/*============================================================================
+                                  FUNCTIONS
+============================================================================*/
+
+#include <environment.glslf>
+
+/*============================================================================
+                                    MAIN
+============================================================================*/
 
 void main(void) {
 
@@ -85,12 +95,11 @@ void main(void) {
 
     vec3 normal = vec3(0.0, 1.0, 0.0);
 
-# if SKY_TEXTURE
-    vec3 environment_color = u_environment_energy * textureCube(u_sky_texture, normal).rgb;
-# else
-    float sky_factor = 0.5;
-    vec3 environment_color = u_environment_energy * mix(u_horizon_color, u_zenith_color, sky_factor);
-# endif //SKY_TEXTURE
+#if USE_ENVIRONMENT_LIGHT && !SKY_TEXTURE && SKY_COLOR
+    vec3 environment_color = u_environment_energy * get_environment_color(vec3(0.0));
+#else
+    vec3 environment_color = u_environment_energy * get_environment_color(normal);
+#endif
 
     vec3 A = u_ambient * environment_color;
 
@@ -102,8 +111,8 @@ void main(void) {
 # if NUM_LIGHTS>0
     lighting_result lresult = lighting(E, A, D, S, v_pos_world, normal, eye_dir,
         spec_params, u_diffuse_params, 1.0, u_light_positions,
-        u_light_directions, u_light_color_intensities, u_light_factors1,
-        u_light_factors2, 0.0, vec4(0.0), 0);
+        u_light_directions, u_light_color_intensities, u_light_factors,
+        0.0, vec4(0.0));
 # else
     lighting_result lresult = lighting_ambient(E, A, D);
 # endif

@@ -43,6 +43,21 @@
 
         
             
+<div class="item_container">
+<div class="item_name">
+
+</div>
+<div class="item_description">
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -100,19 +115,8 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+</div>
+</div>
         
     
     </div>
@@ -126,25 +130,87 @@
      
 
     
+    <h2>Summary</h2>
+    
+    
+        <h3 class="subsection-title">Methods</h3>
+        <ul>
+        
+            
+<li> <a href="#.append_copy_trans">append_copy_trans<span class="signature">(obj, target, offset)</span><span class="type-signature"></span></a></li>
 
+        
+            
+<li> <a href="#.append_follow">append_follow<span class="signature">(obj, target, dist_min, dist_max)</span><span class="type-signature"></span></a></li>
+
+        
+            
+<li> <a href="#.append_semi_soft_cam">append_semi_soft_cam<span class="signature">(obj, target, offset, softness<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></a></li>
+
+        
+            
+<li> <a href="#.append_semi_stiff">append_semi_stiff<span class="signature">(obj, target, offset, rotation_offset<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></a></li>
+
+        
+            
+<li> <a href="#.append_semi_stiff_cam">append_semi_stiff_cam<span class="signature">(obj, target, offset, rotation_offset<span class="signature-attributes">opt</span>, clamp_left, clamp_right, clamp_up, clamp_down)</span><span class="type-signature"></span></a></li>
+
+        
+            
+<li> <a href="#.append_stiff">append_stiff<span class="signature">(obj, target, offset, rotation_offset<span class="signature-attributes">opt</span>, scale_offset<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></a></li>
+
+        
+            
+<li> <a href="#.append_stiff_trans">append_stiff_trans<span class="signature">(obj, target, offset)</span><span class="type-signature"></span></a></li>
+
+        
+            
+<li> <a href="#.append_stiff_trans_rot">append_stiff_trans_rot<span class="signature">(obj, target, offset, rotation_offset<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></a></li>
+
+        
+            
+<li> <a href="#.append_stiff_viewport">append_stiff_viewport<span class="signature">(obj, camobj, x_rel, y_rel, dist)</span><span class="type-signature"></span></a></li>
+
+        
+            
+<li> <a href="#.append_track">append_track<span class="signature">(obj, target)</span><span class="type-signature"></span></a></li>
+
+        
+            
+<li> <a href="#.get_parent">get_parent<span class="signature">(obj)</span><span class="type-signature"></span></a></li>
+
+        
+            
+<li> <a href="#.remove">remove<span class="signature">(obj)</span><span class="type-signature"></span></a></li>
+
+        
+        </ul>
+    
+    
+    <h2>Detailed Description</h2>
     
 
     
         <h3 class="subsection-title">Methods</h3>
-
         
             
+<div class="item_container">
+<div class="item_name">
 
     
 
-    <h4 class="name" id=".append_copy_trans"><span class="type-signature">(static) </span>append_copy_trans<span class="signature">(obj, target, offset)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id=".append_copy_trans">append_copy_trans<span class="signature">(obj, target, offset)</span><span class="type-signature"></span></h4>
 
     
 
-
+</div>
+<div class="item_description">
 
 <div class="description">
-    Append a copy translation constraint.
+    Attach the object to the other object using a copy translation constraint.
+The child object will move together with its parent, but will not rotate.
+Note that the offset is specified in the world space.
+Example: a light source attached to the character.
 </div>
 
 
@@ -186,7 +252,7 @@
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
 
 
             
@@ -196,7 +262,7 @@
 
             
 
-            <td class="description last">Object ID</td>
+            <td class="description last">Object 3D</td>
         </tr>
 
     
@@ -209,7 +275,7 @@
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
 
 
             
@@ -219,7 +285,7 @@
 
             
 
-            <td class="description last">Object ID</td>
+            <td class="description last">Object 3D</td>
         </tr>
 
     
@@ -232,7 +298,7 @@
             <td class="type">
             
                 
-<span class="param-type">Float32Array</span>
+<span class="param-type"><a href="global.html#Vec3">Vec3</a></span>
 
 
             
@@ -242,12 +308,24 @@
 
             
 
-            <td class="description last">Offset in world space</td>
+            <td class="description last">Offset, in the parent's world space</td>
         </tr>
 
     
     </tbody>
 </table>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -283,7 +361,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line100">line 100</a>
+        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line153">line 153</a>
     </li></ul></dd>
     
 
@@ -296,32 +374,27 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+</div>
+</div>
         
             
+<div class="item_container">
+<div class="item_name">
 
     
 
-    <h4 class="name" id=".append_follow"><span class="type-signature">(static) </span>append_follow<span class="signature">(obj, target, offset_min, offset_max)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id=".append_follow">append_follow<span class="signature">(obj, target, dist_min, dist_max)</span><span class="type-signature"></span></h4>
 
     
 
-
+</div>
+<div class="item_description">
 
 <div class="description">
-    Append a follow constraint.
+    Attach the object to the other object using a follow constraint. The child
+object will track and follow its parent position.
+
+Example: a follow-style camera view for the character.
 </div>
 
 
@@ -363,7 +436,7 @@
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
 
 
             
@@ -373,7 +446,7 @@
 
             
 
-            <td class="description last">Object ID</td>
+            <td class="description last">Object 3D</td>
         </tr>
 
     
@@ -386,10 +459,10 @@
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
 |
 
-<span class="param-type">Float32Array</span>
+<span class="param-type"><a href="global.html#Vec3">Vec3</a></span>
 
 
             
@@ -399,14 +472,14 @@
 
             
 
-            <td class="description last">Target object ID or vector</td>
+            <td class="description last">Target object or position vector</td>
         </tr>
 
     
 
         <tr>
             
-                <td class="name"><code>offset_min</code></td>
+                <td class="name"><code>dist_min</code></td>
             
 
             <td class="type">
@@ -422,14 +495,14 @@
 
             
 
-            <td class="description last">Minimum offset</td>
+            <td class="description last">Minimum distance</td>
         </tr>
 
     
 
         <tr>
             
-                <td class="name"><code>offset_max</code></td>
+                <td class="name"><code>dist_max</code></td>
             
 
             <td class="type">
@@ -445,12 +518,24 @@
 
             
 
-            <td class="description last">Maximum offset</td>
+            <td class="description last">Maximum distance</td>
         </tr>
 
     
     </tbody>
 </table>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -486,7 +571,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line142">line 142</a>
+        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line216">line 216</a>
     </li></ul></dd>
     
 
@@ -499,32 +584,26 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+</div>
+</div>
         
             
+<div class="item_container">
+<div class="item_name">
 
     
 
-    <h4 class="name" id=".append_semi_soft_cam"><span class="type-signature">(static) </span>append_semi_soft_cam<span class="signature">(obj, target, offset, softness<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id=".append_semi_soft_cam">append_semi_soft_cam<span class="signature">(obj, target, offset, softness<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
 
     
 
-
+</div>
+<div class="item_description">
 
 <div class="description">
-    Append a semi-soft constraint.
+    Attach the EYE camera to the object using a
+semi-soft constraint. The camera will smoothly follow the object's rear.
+Example: third-person character or vehicle views.
 </div>
 
 
@@ -570,7 +649,7 @@
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
 
 
             
@@ -592,7 +671,7 @@
                 </td>
             
 
-            <td class="description last">Object ID</td>
+            <td class="description last">Object 3D</td>
         </tr>
 
     
@@ -605,10 +684,7 @@
             <td class="type">
             
                 
-<span class="param-type">Object</span>
-|
-
-<span class="param-type">Array</span>
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
 
 
             
@@ -630,7 +706,7 @@
                 </td>
             
 
-            <td class="description last">Object ID or [Armature object ID, Bone Name]</td>
+            <td class="description last">Object 3D</td>
         </tr>
 
     
@@ -643,7 +719,7 @@
             <td class="type">
             
                 
-<span class="param-type">Float32Array</span>
+<span class="param-type"><a href="global.html#Vec3">Vec3</a></span>
 
 
             
@@ -665,7 +741,7 @@
                 </td>
             
 
-            <td class="description last">Offset in parent local space</td>
+            <td class="description last">Offset, in the parent's local space</td>
         </tr>
 
     
@@ -704,12 +780,24 @@
                 </td>
             
 
-            <td class="description last">value of camera's smooth</td>
+            <td class="description last">Camera smoothness ratio</td>
         </tr>
 
     
     </tbody>
 </table>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -745,7 +833,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line71">line 71</a>
+        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line101">line 101</a>
     </li></ul></dd>
     
 
@@ -758,32 +846,27 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+</div>
+</div>
         
             
+<div class="item_container">
+<div class="item_name">
 
     
 
-    <h4 class="name" id=".append_semi_stiff"><span class="type-signature">(static) </span>append_semi_stiff<span class="signature">(obj, target, offset, rotation_offset<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id=".append_semi_stiff">append_semi_stiff<span class="signature">(obj, target, offset, rotation_offset<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
 
     
 
-
+</div>
+<div class="item_description">
 
 <div class="description">
-    Append a semi-stiff constraint.
+    Attach the object to the other object using a
+semi-stiff constraint. The child object will move and rotate together with
+its parent, but it will be still possible to rotate it independently
+in the parent's local space. Example: a tank turret.
 </div>
 
 
@@ -827,7 +910,7 @@
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
 
 
             
@@ -845,7 +928,7 @@
 
             
 
-            <td class="description last">Object ID</td>
+            <td class="description last">Object 3D</td>
         </tr>
 
     
@@ -858,7 +941,7 @@
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
 
 
             
@@ -876,7 +959,7 @@
 
             
 
-            <td class="description last">Object ID or [Armature object ID, Bone Name]</td>
+            <td class="description last">Object 3D</td>
         </tr>
 
     
@@ -889,7 +972,7 @@
             <td class="type">
             
                 
-<span class="param-type">Float32Array</span>
+<span class="param-type"><a href="global.html#Vec3">Vec3</a></span>
 
 
             
@@ -907,7 +990,7 @@
 
             
 
-            <td class="description last">Offset in parent local space</td>
+            <td class="description last">Offset, in the parent's local space</td>
         </tr>
 
     
@@ -920,7 +1003,7 @@
             <td class="type">
             
                 
-<span class="param-type">Float32Array</span>
+<span class="param-type"><a href="global.html#Quat">Quat</a></span>
 
 
             
@@ -940,12 +1023,25 @@
 
             
 
-            <td class="description last">Rotation offset in parent local space</td>
+            <td class="description last">Initial rotation offset, in the
+parent's local space</td>
         </tr>
 
     
     </tbody>
 </table>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -981,7 +1077,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line36">line 36</a>
+        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line45">line 45</a>
     </li></ul></dd>
     
 
@@ -994,32 +1090,29 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+</div>
+</div>
         
             
+<div class="item_container">
+<div class="item_name">
 
     
 
-    <h4 class="name" id=".append_semi_stiff_cam"><span class="type-signature">(static) </span>append_semi_stiff_cam<span class="signature">(obj, target, offset, rotation_offset<span class="signature-attributes">opt</span>, clamp_left, clamp_right, clamp_up, clamp_down)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id=".append_semi_stiff_cam">append_semi_stiff_cam<span class="signature">(obj, target, offset, rotation_offset<span class="signature-attributes">opt</span>, clamp_left, clamp_right, clamp_up, clamp_down)</span><span class="type-signature"></span></h4>
 
     
 
-
+</div>
+<div class="item_description">
 
 <div class="description">
-    Append a semi-stiff constraint with camera rotation clamping.
+    Attach the EYE camera to the object using a
+semi-stiff constraint. Also apply rotation limits to the camera.
+The camera will move and rotate together with
+its parent, but it will be still possible to rotate it independently
+in the parent's local space. The camera's UP vector will be preserved.
+Example: first-person vehicle view.
 </div>
 
 
@@ -1063,7 +1156,7 @@
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
 
 
             
@@ -1081,7 +1174,7 @@
 
             
 
-            <td class="description last">Object ID</td>
+            <td class="description last">Object 3D</td>
         </tr>
 
     
@@ -1094,10 +1187,7 @@
             <td class="type">
             
                 
-<span class="param-type">Object</span>
-|
-
-<span class="param-type">Array</span>
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
 
 
             
@@ -1115,7 +1205,7 @@
 
             
 
-            <td class="description last">Object ID or [Armature object ID, Bone Name]</td>
+            <td class="description last">Object 3D</td>
         </tr>
 
     
@@ -1128,7 +1218,7 @@
             <td class="type">
             
                 
-<span class="param-type">Float32Array</span>
+<span class="param-type"><a href="global.html#Vec3">Vec3</a></span>
 
 
             
@@ -1146,7 +1236,7 @@
 
             
 
-            <td class="description last">Offset in parent local space</td>
+            <td class="description last">Offset, in the parent's local space</td>
         </tr>
 
     
@@ -1159,7 +1249,7 @@
             <td class="type">
             
                 
-<span class="param-type">Float32Array</span>
+<span class="param-type"><a href="global.html#Quat">Quat</a></span>
 
 
             
@@ -1179,7 +1269,8 @@
 
             
 
-            <td class="description last">Rotation offset in parent local space</td>
+            <td class="description last">Initial rotation offset, in the
+parent's local space</td>
         </tr>
 
     
@@ -1210,7 +1301,7 @@
 
             
 
-            <td class="description last">Clamp camera rotation left for the azimuth angle</td>
+            <td class="description last">Left camera rotation limit, in radians</td>
         </tr>
 
     
@@ -1241,7 +1332,7 @@
 
             
 
-            <td class="description last">Clamp camera rotation right for the azimuth angle</td>
+            <td class="description last">Right camera rotation limit, in radians</td>
         </tr>
 
     
@@ -1272,7 +1363,7 @@
 
             
 
-            <td class="description last">Clamp camera rotation up for the elevation angle</td>
+            <td class="description last">Upward camera rotation limit, in radians</td>
         </tr>
 
     
@@ -1303,12 +1394,24 @@
 
             
 
-            <td class="description last">Clamp camera rotation down for the elevation angle</td>
+            <td class="description last">Downward camera rotation limit, in radians</td>
         </tr>
 
     
     </tbody>
 </table>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1344,12 +1447,19 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line50">line 50</a>
+        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line65">line 65</a>
     </li></ul></dd>
     
 
     
 
+    
+    <dt class="tag-see">See:</dt>
+    <dd class="tag-see">
+        <ul>
+            <li><a href="https://www.blend4web.com/doc/en/camera.html#api">https://www.blend4web.com/doc/en/camera.html#api</a></li>
+        </ul>
+    </dd>
     
 
     
@@ -1357,32 +1467,27 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+</div>
+</div>
         
             
+<div class="item_container">
+<div class="item_name">
 
     
 
-    <h4 class="name" id=".append_stiff"><span class="type-signature">(static) </span>append_stiff<span class="signature">(obj, target, offset, rotation_offset<span class="signature-attributes">opt</span>, scale_offset<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id=".append_stiff">append_stiff<span class="signature">(obj, target, offset, rotation_offset<span class="signature-attributes">opt</span>, scale_offset<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
 
     
 
-
+</div>
+<div class="item_description">
 
 <div class="description">
-    Append a stiff constraint.
+    Attach the object to the other object or to the armature bone using a
+stiff constraint. The child object will move, rotate and scale
+together with its parent. Examples: a sword is parented to the
+character's hand; the character is sitting in a vehicle.
 </div>
 
 
@@ -1410,6 +1515,8 @@
         
 
         
+        <th>Default</th>
+        
 
         <th class="last">Description</th>
     </tr>
@@ -1426,7 +1533,7 @@
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
 
 
             
@@ -1443,8 +1550,12 @@
             
 
             
+                <td class="default">
+                
+                </td>
+            
 
-            <td class="description last">Object ID</td>
+            <td class="description last">Object 3D</td>
         </tr>
 
     
@@ -1457,7 +1568,7 @@
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
 |
 
 <span class="param-type">Array</span>
@@ -1477,8 +1588,12 @@
             
 
             
+                <td class="default">
+                
+                </td>
+            
 
-            <td class="description last">Object ID or [Armature object ID, Bone Name]</td>
+            <td class="description last">Object 3D or [Armature object, Bone Name]</td>
         </tr>
 
     
@@ -1491,7 +1606,7 @@
             <td class="type">
             
                 
-<span class="param-type">Float32Array</span>
+<span class="param-type"><a href="global.html#Vec3">Vec3</a></span>
 
 
             
@@ -1508,8 +1623,12 @@
             
 
             
+                <td class="default">
+                
+                </td>
+            
 
-            <td class="description last">Offset in parent local space</td>
+            <td class="description last">Offset, in the parent's local space.</td>
         </tr>
 
     
@@ -1522,7 +1641,7 @@
             <td class="type">
             
                 
-<span class="param-type">Float32Array</span>
+<span class="param-type"><a href="global.html#Quat">Quat</a></span>
 
 
             
@@ -1541,8 +1660,15 @@
             
 
             
+                <td class="default">
+                
+                    null
+                
+                </td>
+            
 
-            <td class="description last">Rotation offset in parent local space</td>
+            <td class="description last">Rotation offset, in the
+parent's local space.</td>
         </tr>
 
     
@@ -1574,13 +1700,31 @@
             
 
             
+                <td class="default">
+                
+                    1
+                
+                </td>
+            
 
-            <td class="description last">Scale offset in parent local space</td>
+            <td class="description last">Scale offset, in the parent's local space.</td>
         </tr>
 
     
     </tbody>
 </table>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1616,7 +1760,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line13">line 13</a>
+        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line15">line 15</a>
     </li></ul></dd>
     
 
@@ -1629,32 +1773,33 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+</div>
+</div>
         
             
+<div class="item_container">
+<div class="item_name">
 
     
 
-    <h4 class="name" id=".append_stiff_trans"><span class="type-signature">(static) </span>append_stiff_trans<span class="signature">(obj, target, offset)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id=".append_stiff_trans">append_stiff_trans<span class="signature">(obj, target, offset)</span><span class="type-signature"></span></h4>
 
     
 
-
+</div>
+<div class="item_description">
 
 <div class="description">
-    Append a stiff translation constraint.
+    Attach the object to the other object using a
+stiff translation constraint. The child object will move together with
+its parent, but will not rotate. It will be still possible to rotate it
+independently from the parent.
+
+Example: attaching the camera to the physics character in order to
+implement the first-person character view. Another example: the character
+jumps in water and splashes' particle emitter is attached to the
+first-person camera using this constraint - the bubbles will follow the
+character but will not be rotated with the camera.
 </div>
 
 
@@ -1696,7 +1841,7 @@
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
 
 
             
@@ -1706,7 +1851,7 @@
 
             
 
-            <td class="description last">Object ID</td>
+            <td class="description last">Object 3D</td>
         </tr>
 
     
@@ -1719,7 +1864,7 @@
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
 
 
             
@@ -1729,7 +1874,7 @@
 
             
 
-            <td class="description last">Object ID</td>
+            <td class="description last">Object 3D</td>
         </tr>
 
     
@@ -1742,7 +1887,7 @@
             <td class="type">
             
                 
-<span class="param-type">Float32Array</span>
+<span class="param-type"><a href="global.html#Vec3">Vec3</a></span>
 
 
             
@@ -1752,12 +1897,24 @@
 
             
 
-            <td class="description last">Offset in target local space</td>
+            <td class="description last">Offset, in the parent's local space</td>
         </tr>
 
     
     </tbody>
 </table>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1793,7 +1950,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line87">line 87</a>
+        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line129">line 129</a>
     </li></ul></dd>
     
 
@@ -1806,32 +1963,30 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+</div>
+</div>
         
             
+<div class="item_container">
+<div class="item_name">
 
     
 
-    <h4 class="name" id=".append_stiff_trans_rot"><span class="type-signature">(static) </span>append_stiff_trans_rot<span class="signature">(obj, target, offset, rotation_offset)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id=".append_stiff_trans_rot">append_stiff_trans_rot<span class="signature">(obj, target, offset, rotation_offset<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
 
     
 
-
+</div>
+<div class="item_description">
 
 <div class="description">
-    Append a stiff translation/rotation constraint.
+    Attach the object to the other object using a
+stiff translation/rotation constraint. The child object will move and rotate
+together with its parent, but will not scale. It will be still possible to
+scale it independently from the parent.
+
+Example: smoke emitter attached to the tractor pipe; exhaustion effects
+are achieved by scaling the emitter.
 </div>
 
 
@@ -1855,6 +2010,8 @@
         <th>Type</th>
 
         
+        <th>Attributes</th>
+        
 
         
 
@@ -1873,17 +2030,25 @@
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
 
 
             
             </td>
 
             
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
 
             
 
-            <td class="description last">Object ID</td>
+            <td class="description last">Object 3D</td>
         </tr>
 
     
@@ -1896,17 +2061,25 @@
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
 
 
             
             </td>
 
             
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
 
             
 
-            <td class="description last">Object ID</td>
+            <td class="description last">Object 3D</td>
         </tr>
 
     
@@ -1919,17 +2092,25 @@
             <td class="type">
             
                 
-<span class="param-type">Float32Array</span>
+<span class="param-type"><a href="global.html#Vec3">Vec3</a></span>
 
 
             
             </td>
 
             
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
 
             
 
-            <td class="description last">Offset in world space</td>
+            <td class="description last">Offset, in the parent's local space</td>
         </tr>
 
     
@@ -1942,22 +2123,45 @@
             <td class="type">
             
                 
-<span class="param-type">Float32Array</span>
+<span class="param-type"><a href="global.html#Quat">Quat</a></span>
 
 
             
             </td>
 
             
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
 
             
 
-            <td class="description last">Rotation offset in world space</td>
+            <td class="description last">Rotation offset, in
+the parent's local space</td>
         </tr>
 
     
     </tbody>
 </table>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1993,7 +2197,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line113">line 113</a>
+        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line171">line 171</a>
     </li></ul></dd>
     
 
@@ -2006,32 +2210,24 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+</div>
+</div>
         
             
+<div class="item_container">
+<div class="item_name">
 
     
 
-    <h4 class="name" id=".append_track"><span class="type-signature">(static) </span>append_track<span class="signature">(obj, target)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id=".append_stiff_viewport">append_stiff_viewport<span class="signature">(obj, camobj, x_rel, y_rel, dist)</span><span class="type-signature"></span></h4>
 
     
 
-
+</div>
+<div class="item_description">
 
 <div class="description">
-    Append a track constraint.
+    Append a stiff viewport constraint.
 </div>
 
 
@@ -2073,7 +2269,7 @@
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
 
 
             
@@ -2083,23 +2279,20 @@
 
             
 
-            <td class="description last">Object ID</td>
+            <td class="description last">Object 3D</td>
         </tr>
 
     
 
         <tr>
             
-                <td class="name"><code>target</code></td>
+                <td class="name"><code>camobj</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">Object</span>
-|
-
-<span class="param-type">Float32Array</span>
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
 
 
             
@@ -2109,12 +2302,93 @@
 
             
 
-            <td class="description last">Target object ID or vector</td>
+            <td class="description last">Camera object.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>x_rel</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Number</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">X offset as fraction to camera height.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>y_rel</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Number</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Y offset as fraction to camera height.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>dist</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Number</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Distance from the camera</td>
         </tr>
 
     
     </tbody>
 </table>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2150,7 +2424,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line127">line 127</a>
+        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line239">line 239</a>
     </li></ul></dd>
     
 
@@ -2163,29 +2437,322 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+</div>
+</div>
         
             
+<div class="item_container">
+<div class="item_name">
 
     
 
-    <h4 class="name" id=".remove"><span class="type-signature">(static) </span>remove<span class="signature">(obj)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id=".append_track">append_track<span class="signature">(obj, target)</span><span class="type-signature"></span></h4>
 
     
 
+</div>
+<div class="item_description">
 
+<div class="description">
+    Make the object "looking" at the target object or the position. The object's
+facing direction is considered to be the -Y axis (-Z in Blender coordinates),
+that is vertically downwards.
+
+Example: a spot light which is tracking the character; both objects can be
+moved via API or animated.
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>obj</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Object 3D</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>target</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
+|
+
+<span class="param-type"><a href="global.html#Vec3">Vec3</a></span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Target object or position vector</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line194">line 194</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+</div>
+</div>
+        
+            
+<div class="item_container">
+<div class="item_name">
+
+    
+
+    <h4 class="name" id=".get_parent">get_parent<span class="signature">(obj)</span><span class="type-signature"></span></h4>
+
+    
+
+</div>
+<div class="item_description">
+
+<div class="description">
+    Get object's parent object.
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>obj</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Object 3D</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line265">line 265</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+</div>
+</div>
+        
+            
+<div class="item_container">
+<div class="item_name">
+
+    
+
+    <h4 class="name" id=".remove">remove<span class="signature">(obj)</span><span class="type-signature"></span></h4>
+
+    
+
+</div>
+<div class="item_description">
 
 <div class="description">
     Remove the object's constraint (if any).
@@ -2230,7 +2797,7 @@
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type"><a href="global.html#Object3D">Object3D</a></span>
 
 
             
@@ -2240,12 +2807,24 @@
 
             
 
-            <td class="description last">Object ID</td>
+            <td class="description last">Object 3D</td>
         </tr>
 
     
     </tbody>
 </table>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2281,7 +2860,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line159">line 159</a>
+        <a href="ext_constraints.js.html">ext/constraints.js</a>, <a href="ext_constraints.js.html#line255">line 255</a>
     </li></ul></dd>
     
 
@@ -2294,19 +2873,8 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+</div>
+</div>
         
     
 
@@ -2323,13 +2891,13 @@
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-animation.html">animation</a></li><li><a href="module-app.html">app</a></li><li><a href="module-assets.html">assets</a></li><li><a href="module-camera.html">camera</a></li><li><a href="module-camera_anim.html">camera_anim</a></li><li><a href="module-config.html">config</a></li><li><a href="module-constraints.html">constraints</a></li><li><a href="module-controls.html">controls</a></li><li><a href="module-data.html">data</a></li><li><a href="module-debug.html">debug</a></li><li><a href="module-geometry.html">geometry</a></li><li><a href="module-gyroscope.html">gyroscope</a></li><li><a href="module-hud.html">hud</a></li><li><a href="module-lights.html">lights</a></li><li><a href="module-main.html">main</a></li><li><a href="module-mat3.html">mat3</a></li><li><a href="module-mat4.html">mat4</a></li><li><a href="module-material.html">material</a></li><li><a href="module-mixer.html">mixer</a></li><li><a href="module-mouse.html">mouse</a></li><li><a href="module-npc_ai.html">npc_ai</a></li><li><a href="module-ns_compat.html">ns_compat</a></li><li><a href="module-objects.html">objects</a></li><li><a href="module-particles.html">particles</a></li><li><a href="module-physics.html">physics</a></li><li><a href="module-preloader.html">preloader</a></li><li><a href="module-quat.html">quat</a></li><li><a href="module-scenes.html">scenes</a></li><li><a href="module-screenshooter.html">screenshooter</a></li><li><a href="module-sfx.html">sfx</a></li><li><a href="module-shaders.html">shaders</a></li><li><a href="module-storage.html">storage</a></li><li><a href="module-textures.html">textures</a></li><li><a href="module-transform.html">transform</a></li><li><a href="module-util.html">util</a></li><li><a href="module-vec3.html">vec3</a></li><li><a href="module-vec4.html">vec4</a></li><li><a href="module-version.html">version</a></li></ul><h3>Namespaces</h3><ul><li><a href="b4w.html">b4w</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-anchors.html">anchors</a></li><li><a href="module-animation.html">animation</a></li><li><a href="module-app.html">app</a></li><li><a href="module-assets.html">assets</a></li><li><a href="module-camera.html">camera</a></li><li><a href="module-camera_anim.html">camera_anim</a></li><li><a href="module-config.html">config</a></li><li><a href="module-constraints.html">constraints</a></li><li><a href="module-container.html">container</a></li><li><a href="module-controls.html">controls</a></li><li><a href="module-data.html">data</a></li><li><a href="module-debug.html">debug</a></li><li><a href="module-geometry.html">geometry</a></li><li><a href="module-gyroscope.html">gyroscope</a></li><li><a href="module-hud.html">hud</a></li><li><a href="module-lights.html">lights</a></li><li><a href="module-main.html">main</a></li><li><a href="module-mat3.html">mat3</a></li><li><a href="module-mat4.html">mat4</a></li><li><a href="module-material.html">material</a></li><li><a href="module-mixer.html">mixer</a></li><li><a href="module-mouse.html">mouse</a></li><li><a href="module-nla.html">nla</a></li><li><a href="module-npc_ai.html">npc_ai</a></li><li><a href="module-ns_compat.html">ns_compat</a></li><li><a href="module-objects.html">objects</a></li><li><a href="module-particles.html">particles</a></li><li><a href="module-physics.html">physics</a></li><li><a href="module-preloader.html">preloader</a></li><li><a href="module-quat.html">quat</a></li><li><a href="module-rgb.html">rgb</a></li><li><a href="module-rgba.html">rgba</a></li><li><a href="module-scenes.html">scenes</a></li><li><a href="module-screenshooter.html">screenshooter</a></li><li><a href="module-sfx.html">sfx</a></li><li><a href="module-shaders.html">shaders</a></li><li><a href="module-storage.html">storage</a></li><li><a href="module-textures.html">textures</a></li><li><a href="module-time.html">time</a></li><li><a href="module-transform.html">transform</a></li><li><a href="module-tsr.html">tsr</a></li><li><a href="module-util.html">util</a></li><li><a href="module-vec3.html">vec3</a></li><li><a href="module-vec4.html">vec4</a></li><li><a href="module-version.html">version</a></li></ul><h3>Namespaces</h3><ul><li><a href="b4w.html">b4w</a></li></ul><h3><a href="global.html">Global</a></h3>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0-dev</a> on Wed Feb 25 2015 10:34:06 GMT+0300 (MSK)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0-dev</a> on Tue Jun 30 2015 17:18:02 GMT+0300 (MSK)
 </footer>
 
 <script> prettyPrint(); </script>

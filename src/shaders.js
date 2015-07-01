@@ -140,17 +140,22 @@ exports.set_default_directives = function(sinfo) {
         "SHADOW_TEX_RES",
         "MAIN_BEND_COL",
         "MAX_BONES",
+        "NODES_GLOW",
         "NUM_NORMALMAPS",
         "PARALLAX",
         "PARALLAX_STEPS",
+        "PERSPECTIVE_SHADOW_CAST",
         "PROCEDURAL_FOG",
+        "PROCEDURAL_SKYDOME",
         "REFLECTION",
         "REFLECTION_PASS",
-        "REFLECTIVE",
+        "REFLECTION_TYPE",
         "REFRACTIVE",
         "USE_REFRACTION",
+        "USE_REFRACTION_CORRECTION",
         "SHORE_SMOOTHING",
         "SKINNED",
+        "SKY_COLOR",
         "SKY_TEXTURE",
         "SSAO_HEMISPHERE",
         "SSAO_BLUR_DEPTH",
@@ -158,7 +163,6 @@ exports.set_default_directives = function(sinfo) {
         "SSAO_WHITE",
         "STATIC_BATCH",
         "TEXTURE_COLOR",
-        "TEXTURE_MIRROR",
         "TEXTURE_NORM",
         "TEXTURE_SPEC",
         "TEXTURE_STENCIL_ALPHA_MASK",
@@ -171,12 +175,14 @@ exports.set_default_directives = function(sinfo) {
         "SHORE_PARAMS",
         "ALPHA_AS_SPEC",
         "DEPTH_RGBA",
+        "MTEX_NEGATIVE",
+        "MTEX_RGBTOINT",
         "NUM_LIGHTS",
+        "NUM_LFACTORS",
         "NUM_LAMP_LIGHTS",
         "MAX_STEPS",
         "BILLBOARD_ALIGN",
-        "SHADOW_SRC",
-        "SHADOW_DST",
+        "SHADOW_USAGE",
         "POST_EFFECT",
         "SSAO_QUALITY",
         "TEXTURE_BLEND_TYPE",
@@ -187,6 +193,15 @@ exports.set_default_directives = function(sinfo) {
         "BILLBOARD_RANDOM",
         "PRECISION",
         "EPSILON",
+        "USE_ENVIRONMENT_LIGHT",
+        "WO_SKYBLEND",
+        "WO_SKYPAPER",
+        "WO_SKYREAL",
+        "WO_SKYTEX",
+        "WOMAP_BLEND",
+        "WOMAP_HORIZ",
+        "WOMAP_ZENUP",
+        "WOMAP_ZENDOWN",
         "WIREFRAME_QUALITY",
         "SIZE_RAMP_LENGTH",
         "COLOR_RAMP_LENGTH",
@@ -221,18 +236,26 @@ exports.set_default_directives = function(sinfo) {
         case "BILLBOARD_JITTERED":
         case "MAIN_BEND_COL":
         case "MAX_BONES":
+        case "MTEX_NEGATIVE":
+        case "MTEX_RGBTOINT":
+        case "NODES_GLOW":
         case "NUM_LIGHTS":
+        case "NUM_LFACTORS":
         case "NUM_NORMALMAPS":
         case "PARALLAX":
         case "PARALLAX_STEPS":
+        case "PERSPECTIVE_SHADOW_CAST":
         case "PROCEDURAL_FOG":
+        case "PROCEDURAL_SKYDOME":
         case "REFLECTION":
         case "REFLECTION_PASS":
-        case "REFLECTIVE":
+        case "REFLECTION_TYPE":
         case "REFRACTIVE":
         case "USE_REFRACTION":
+        case "USE_REFRACTION_CORRECTION":
         case "SHORE_SMOOTHING":
         case "SKINNED":
+        case "SKY_COLOR":
         case "SKY_TEXTURE":
         case "SSAO_HEMISPHERE":
         case "SSAO_BLUR_DEPTH":
@@ -240,7 +263,6 @@ exports.set_default_directives = function(sinfo) {
         case "SSAO_WHITE":
         case "STATIC_BATCH":
         case "TEXTURE_COLOR":
-        case "TEXTURE_MIRROR":
         case "TEXTURE_NORM":
         case "TEXTURE_SPEC":
         case "TEXTURE_STENCIL_ALPHA_MASK":
@@ -253,6 +275,15 @@ exports.set_default_directives = function(sinfo) {
         case "BILLBOARD":
         case "BILLBOARD_RANDOM":
         case "HAIR_BILLBOARD":
+        case "USE_ENVIRONMENT_LIGHT":
+        case "WO_SKYBLEND":
+        case "WO_SKYPAPER":
+        case "WO_SKYREAL":
+        case "WO_SKYTEX":
+        case "WOMAP_BLEND":
+        case "WOMAP_HORIZ":
+        case "WOMAP_ZENUP":
+        case "WOMAP_ZENDOWN":
         case "WIREFRAME_QUALITY":
         case "SIZE_RAMP_LENGTH":
         case "COLOR_RAMP_LENGTH":
@@ -295,11 +326,8 @@ exports.set_default_directives = function(sinfo) {
         case "POST_EFFECT":
             val = "POST_EFFECT_NONE";
             break;
-        case "SHADOW_SRC":
-            val = "SHADOW_SRC_NONE";
-            break;
-        case "SHADOW_DST":
-            val = "SHADOW_DST_NONE";
+        case "SHADOW_USAGE":
+            val = "NO_SHADOWS";
             break;
         case "SSAO_QUALITY":
             val = "SSAO_QUALITY_32";
@@ -368,9 +396,9 @@ exports.get_compiled_shader = get_compiled_shader;
  * @param shader_id JSONified shaders_info object
  * @methodOf shaders
  */
-function get_compiled_shader(shaders_info, node_elements) {
+function get_compiled_shader(shaders_info) {
 
-    var shader_id = JSON.stringify(shaders_info) + JSON.stringify(node_elements);
+    var shader_id = JSON.stringify(shaders_info);
 
     var compiled_shader = _compiled_shaders[shader_id];
     if (compiled_shader)
@@ -386,11 +414,8 @@ function get_compiled_shader(shaders_info, node_elements) {
     if (!vshader_ast || !fshader_ast)
         return null;
 
-    // prepend by define directives
-
-    var directives = shaders_info.directives || [];
-    var vshader_text = preprocess_shader("vert", vshader_ast, directives, node_elements);
-    var fshader_text = preprocess_shader("frag", fshader_ast, directives, node_elements);
+    var vshader_text = preprocess_shader("vert", vshader_ast, shaders_info);
+    var fshader_text = preprocess_shader("frag", fshader_ast, shaders_info);
 
     // compile
     _compiled_shaders[shader_id] = compiled_shader =
@@ -426,7 +451,13 @@ function get_shader_ast(dir, filename) {
     return ast;
 }
 
-function preprocess_shader(type, ast, dirs_arr, node_elements) {
+function preprocess_shader(type, ast, shaders_info) {
+
+    var node_elements = shaders_info.node_elements;
+    var lights_info = shaders_info.lights_info;
+    // prepend by define directives
+    var dirs_arr = shaders_info.directives || [];
+
     // output GLSL lines
     var lines = [];
     // set with predefined macros {"name": tokens}
@@ -440,6 +471,7 @@ function preprocess_shader(type, ast, dirs_arr, node_elements) {
     var fdirs = {};
 
     var shader_nodes = {};
+    var shader_lamp_nodes = {};
 
     var usage_inputs = [];
     for (var i in node_elements)
@@ -459,6 +491,7 @@ function preprocess_shader(type, ast, dirs_arr, node_elements) {
 
     function process_group(elem) {
         var parts = elem.parts;
+
         for (var i = 0; i < parts.length; i++) {
             var pelem = parts[i];
             switch(pelem.type) {
@@ -506,6 +539,13 @@ function preprocess_shader(type, ast, dirs_arr, node_elements) {
                 break;
             case "nodes_main":
                 process_nodes_main(node_elements);
+                break;
+
+            case "lamp":
+                process_lamp(pelem);
+                break;
+            case "lamps_main":
+                process_lamps_main(lights_info, pelem);
                 break;
 
             case "textline":
@@ -662,7 +702,9 @@ function preprocess_shader(type, ast, dirs_arr, node_elements) {
             param_index = 0;
 
             process_node_declaration(nelem, node_parts.declarations, replaces, node_dirs);
+            lines.push("{");
             process_node_statements(nelem, node_parts.statements, replaces, node_dirs);
+            lines.push("}");
         }
     }
 
@@ -680,8 +722,11 @@ function preprocess_shader(type, ast, dirs_arr, node_elements) {
                     //       case of using is_optional flag
                     // input_index === 3 --- normal_in
                     if ((nelem.id == "MATERIAL" && input_index === 3 
-                            || nelem.id == "MATERIAL_EXT" && input_index === 3) 
+                            || nelem.id == "MATERIAL_EXT" && input_index === 3
+                            || nelem.id == "TEXTURE_COLOR" || nelem.id == "TEXTURE_NORMAL") 
                             && decl.is_optional) {
+
+                        replaces[decl.name] = nelem.input_values[input_index];
                         input_index++;
                         continue;
                     }
@@ -792,6 +837,59 @@ function preprocess_shader(type, ast, dirs_arr, node_elements) {
         var tokens = elem.tokens;
         lines.push(expand_macro(tokens, dirs, fdirs, false));
     }
+
+    function process_lamp(elem) {
+        shader_lamp_nodes[elem.name] = elem;
+    }
+
+    function process_lamps_main(lights_info, elem) {
+        for (var i = 0; i < lights_info.length; i++) {
+            var linfo = lights_info[i];
+
+            if (!linfo.is_on)
+                continue;
+
+            lines.push("{");
+            var lamp_node = shader_lamp_nodes[linfo.type];
+            var statements = lamp_node.statements;
+
+            for (var j = 0; j < statements.length; j++) {
+                var part = statements[j];
+
+                var tokens = [];
+                for (var k = 0; k < part.tokens.length; k++) {
+                    var tok = part.tokens[k];
+                    switch (tok) {
+                    case "LAMP_IND":
+                        tok = linfo.index;
+                        break;
+                    case "LAMP_LIGHT_FACT_IND":
+                        tok = linfo.lfac_index;
+                        break;
+                    case "LAMP_FAC_CHANNELS":
+                        tok = linfo.lfac_channels;
+                        break;
+                    case "LAMP_SPOT_SIZE":
+                        tok = glsl_value(linfo.spot_size);
+                        break;
+                    case "LAMP_SPOT_BLEND":
+                        tok = glsl_value(linfo.spot_blend || 0.01);
+                        break;
+                    case "LAMP_LIGHT_DIST":
+                        tok = glsl_value(linfo.distance);
+                        break;
+                    case "LAMP_SHADOW_MAP_IND":
+                        tok = linfo.gen_shadow ? 1: 0;
+                        break;
+                    }
+                    tokens.push(tok);
+                }
+                var line = tokens.join(" ");
+                lines.push(line);
+            }
+            lines.push("}");
+        }
+    }
 }
 
 /**
@@ -804,7 +902,6 @@ function expand_macro(tokens, dirs, fdirs, empty_as_zero, node_dirs) {
     expand_macro_iter(tokens, dirs, fdirs, empty_as_zero, result, node_dirs);
     return result.join(" ");
 }
-
 
 function expand_macro_iter(tokens, dirs, fdirs, empty_as_zero, result, node_dirs) {
     for (var i = 0; i < tokens.length; i++) {
@@ -840,7 +937,7 @@ function init_shader(gl, vshader_text, fshader_text,
 
     gl.validateProgram(program);
     if (gl.getProgramParameter(program, gl.VALIDATE_STATUS) == gl.FALSE)
-        m_print.error("B4W Error - shader program is not valid", shader_id);
+        m_print.error("shader program is not valid", shader_id);
 
     m_debug.check_shader_linking(program, shader_id, vshader, fshader,
         vshader_text, fshader_text);

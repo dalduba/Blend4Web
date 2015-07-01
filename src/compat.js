@@ -13,10 +13,15 @@ var m_ext   = require("__extensions");
 var m_print = require("__print");
 var m_util  = require("__util");
 
-var VECTORS_RESERVED = 50;
-var MIN_VERTEX_UNIFORMS_SUPPORTED = 128;
 var MIN_VARYINGS_REQUIRED = 10;
 var MIN_FRAGMENT_UNIFORMS_SUPPORTED = 128;
+
+exports.detect_tegra_invalid_enum_issue = function(gl) {
+    // this hardware don't like context.antialias = true
+    // get and ignore such error
+    if (gl.getError() == gl.INVALID_ENUM)
+        m_print.warn("Possible Tegra invalid enum issue detected, ignoring");
+}
 
 exports.set_hardware_defaults = function(gl) {
     var cfg_anim = m_cfg.animation;
@@ -25,15 +30,12 @@ exports.set_hardware_defaults = function(gl) {
     var cfg_scs = m_cfg.scenes;
     var cfg_sfx = m_cfg.sfx;
 
+    cfg_def.max_vertex_uniform_vectors = gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS);
+
     cfg_def.max_texture_size = gl.getParameter(gl.MAX_TEXTURE_SIZE);
     cfg_def.max_cube_map_size = gl.getParameter(gl.MAX_CUBE_MAP_TEXTURE_SIZE);
 
     var depth_tex_available = Boolean(m_ext.get_depth_texture());
-
-    if (check_user_agent("Firefox") && m_cfg.is_built_in_data()) {
-        m_print.warn("Firefox detected for single HTML version, disable video textures.");
-        cfg_def.firefox_disable_html_video_tex_hack = true;
-    }
 
     // HACK: fix depth issue in Firefox 28
     if (check_user_agent("Firefox/28.0") &&
@@ -43,9 +45,9 @@ exports.set_hardware_defaults = function(gl) {
     }
     if (check_user_agent("iPad") || check_user_agent("iPhone")) {
         m_print.warn("iOS detected, applying alpha hack, applying vertex "
-                + "animation mix normals hack and disable smaa. Disable ssao " +
-                "for performance. Disable video textures. Initialize WebAudio context " +
-                "with empty sound.");
+                + "animation mix normals hack, applying ios depth hack and " 
+                + "disable smaa. Disable ssao for performance. Disable video " 
+                + "textures. Initialize WebAudio context with empty sound.");
         if (!cfg_ctx.alpha)
             cfg_def.background_color[3] = 1.0;
         cfg_def.vert_anim_mix_normals_hack = true;
@@ -53,6 +55,7 @@ exports.set_hardware_defaults = function(gl) {
         cfg_def.ssao = false;
         cfg_def.precision = "highp";
         cfg_def.init_wa_context_hack = true;
+        cfg_def.ios_depth_hack = true;
 
     } else if (check_user_agent("Mac OS X") && check_user_agent("Safari")
             && !check_user_agent("Chrome")) {
@@ -71,9 +74,14 @@ exports.set_hardware_defaults = function(gl) {
         cfg_def.clear_procedural_sky_hack = true;
     }
 
+    if (check_user_agent("Mac OS X")) {
+        m_print.warn("OS X detected, disable texture reusing.");
+        cfg_def.macos_tex_reuse_hack = true;
+        cfg_def.glow_materials = false;
+    }
+
     if (detect_mobile()) {
-        m_print.warn("Mobile detected, applying glsl loops unroll hack, applying various hacks for video textures.");
-        cfg_def.glsl_unroll_hack = true;
+        m_print.warn("Mobile detected, applying various hacks for video textures.");
         cfg_def.is_mobile_device = true;
         if (!(check_user_agent("iPad") || check_user_agent("iPhone"))) {
             m_print.warn("Mobile (not iOS) detected, disable playback rate for video textures.");
@@ -102,9 +110,13 @@ exports.set_hardware_defaults = function(gl) {
     if (rinfo) {
         if (check_user_agent("Macintosh")
                 && gl.getParameter(rinfo.UNMASKED_RENDERER_WEBGL).indexOf("Intel HD Graphics 3000") > -1) {
-            m_print.warn("OS X / Intel HD 3000 detected, applying depth and glsl loops unroll hacks");
+            m_print.warn("OS X / Intel HD 3000 detected, applying depth hack");
             depth_tex_available = false;
-            cfg_def.glsl_unroll_hack = true;
+        }
+        if (check_user_agent("Windows") && check_user_agent("Chrome")
+                && gl.getParameter(rinfo.UNMASKED_RENDERER_WEBGL).indexOf("Intel") > -1) {
+            m_print.warn("Chrome / Windows / Intel GPU detected, applying cubemap mipmap/rgb hack");
+            cfg_def.intel_cubemap_hack = true;
         }
         if (gl.getParameter(rinfo.UNMASKED_VENDOR_WEBGL).indexOf("ARM") > -1
                 && gl.getParameter(rinfo.UNMASKED_RENDERER_WEBGL).indexOf("Mali-400") > -1) {
@@ -116,11 +128,12 @@ exports.set_hardware_defaults = function(gl) {
                 && gl.getParameter(rinfo.UNMASKED_RENDERER_WEBGL).indexOf("Mali-T604") > -1) {
             m_print.warn("ARM Mali-T604 detected, set \"highp\" precision and disable shadows.");
             cfg_def.precision = "highp";
-            cfg_def.shadows = "NONE";
+            cfg_def.shadows = false;
         }
         if (gl.getParameter(rinfo.UNMASKED_VENDOR_WEBGL).indexOf("ARM") > -1
                 && gl.getParameter(rinfo.UNMASKED_RENDERER_WEBGL).indexOf("Mali-T760") > -1) {
-            m_print.warn("ARM Mali-T760 detected, disable SSAO.");
+            m_print.warn("ARM Mali-T760 detected, set \"highp\" precision and disable SSAO.");
+            cfg_def.precision = "highp";
             cfg_def.ssao = false;
         }
         if (gl.getParameter(rinfo.UNMASKED_VENDOR_WEBGL).indexOf("Qualcomm") > -1
@@ -152,7 +165,7 @@ exports.set_hardware_defaults = function(gl) {
     // no need on HIDPI displays
     if (cfg_def.allow_hidpi && window.devicePixelRatio > 1) {
         m_print.log("%cENABLE HIDPI MODE", "color: #00a");
-        cfg_def.resolution_factor = 1;
+        cfg_def.render_resolution_factor = 1;
         cfg_def.smaa = false;
     }
 
@@ -163,22 +176,11 @@ exports.set_hardware_defaults = function(gl) {
         cfg_def.water_dynamic =   false;
         cfg_def.shore_smoothing = false;
         cfg_def.shore_distance =  false;
-        cfg_def.refractions =     false;
         cfg_def.smaa =            false;
     }
 
     cfg_def.use_dds = Boolean(m_ext.get_s3tc());
     cfg_def.depth_tex_available = depth_tex_available;
-
-    var max_vert_uniforms = gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS);
-    var num_supported = m_util.clamp(max_vert_uniforms,
-            MIN_VERTEX_UNIFORMS_SUPPORTED, Infinity);
-
-    // NOTE: need proper uniform counting (lights, wind bending, etc)
-    cfg_def.max_bones =
-            m_util.trunc((num_supported - VECTORS_RESERVED) / 4);
-    cfg_def.max_bones_no_blending =
-            m_util.trunc((num_supported - VECTORS_RESERVED) / 2);
 
     // webglreport.com
     var high = gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT);
@@ -193,10 +195,20 @@ exports.set_hardware_defaults = function(gl) {
         cfg_scs.cubemap_tex_size = 512;
     }
 
+    if (is_ie11() && check_user_agent("Touch")) {
+        m_print.warn("IE11 and touchscreen detected. Behaviour of the mouse move sensor will be changed.");
+        cfg_def.ie11_touchscreen_hack = true;
+    }
+
     if (gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS) <= MIN_FRAGMENT_UNIFORMS_SUPPORTED) {
         m_print.warn("Not enough fragment uniforms, force low quality for " 
                     + "B4W_LEVELS_OF_QUALITY nodes.");
         cfg_def.force_low_quality_nodes = true;
+    }
+
+    if (check_user_agent("Chrome")) {
+        m_print.log("Chrome detected. Some of deprecated functions related to the Doppler effect won't be called.");
+        cfg_def.chrome_disable_doppler_effect_hack = true;
     }
 }
 

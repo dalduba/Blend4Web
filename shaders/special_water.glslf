@@ -2,6 +2,7 @@
 #var WATER_LEVEL 0.0
 #var SSS_STRENGTH 6.0
 #var SSS_WIDTH 0.0
+#var PRECISION lowp
 
 /*============================================================================
                                   INCLUDES
@@ -25,24 +26,25 @@
 
 uniform float u_time;
 
-uniform vec3  u_zenith_color;
-uniform float u_environment_energy;
-
-#if SKY_TEXTURE
+#if USE_ENVIRONMENT_LIGHT && SKY_TEXTURE
 uniform samplerCube u_sky_texture;
+#elif USE_ENVIRONMENT_LIGHT && SKY_COLOR
+uniform vec3 u_horizon_color;
+uniform vec3 u_zenith_color;
 #endif
+
+uniform float u_environment_energy;
 
 #if NUM_LIGHTS > 0
 uniform vec3 u_light_positions[NUM_LIGHTS];
 uniform vec3 u_light_directions[NUM_LIGHTS];
 uniform vec3 u_light_color_intensities[NUM_LIGHTS];
-uniform vec4 u_light_factors1[NUM_LIGHTS];
-uniform vec4 u_light_factors2[NUM_LIGHTS];
+uniform vec4 u_light_factors[NUM_LFACTORS];
 #endif
 uniform vec3 u_sun_intensity;
 uniform vec3 u_sun_direction;
 
-#if REFLECTIVE || REFRACTIVE || WATER_EFFECTS
+#if REFLECTION_TYPE == REFL_PLANE || REFRACTIVE || WATER_EFFECTS
 uniform float u_cam_water_depth;
 #endif
 
@@ -69,14 +71,14 @@ uniform sampler2D u_normalmap0;
 uniform sampler2D u_refractmap;
 #endif
 
-#if REFLECTIVE
-uniform sampler2D u_reflectmap;
-#elif TEXTURE_MIRROR
+#if REFLECTION_TYPE == REFL_PLANE
+uniform sampler2D u_plane_reflection;
+#elif REFLECTION_TYPE == REFL_MIRRORMAP
 uniform samplerCube u_mirrormap;
 #endif
 
 #if SHORE_SMOOTHING
-uniform sampler2D u_scene_depth;
+uniform PRECISION sampler2D u_scene_depth;
 #endif
 
 #if FOAM
@@ -114,7 +116,7 @@ uniform vec2 u_normalmap3_scale;
 # endif
 #endif
 
-#if TEXTURE_MIRROR
+#if REFLECTION_TYPE == REFL_MIRRORMAP
 uniform float u_mirror_factor;
 #else
 uniform float u_reflect_factor;
@@ -152,7 +154,7 @@ uniform vec3 u_wireframe_edge_color;
 varying vec3 v_eye_dir;
 varying vec3 v_pos_world;
 
-#if !GENERATED_MESH
+#if (NUM_NORMALMAPS > 0 || FOAM) && !GENERATED_MESH
 varying vec2 v_texcoord;
 #endif
 
@@ -171,11 +173,11 @@ varying vec3 v_calm_pos_world;
 varying vec3 v_shore_params;
 #endif
 
-#if SHORE_SMOOTHING || REFLECTIVE || REFRACTIVE
+#if SHORE_SMOOTHING || REFLECTION_TYPE == REFL_PLANE || REFRACTIVE
 varying vec3 v_tex_pos_clip;
 #endif
 
-#if SHORE_SMOOTHING || REFLECTIVE || REFRACTIVE || !DISABLE_FOG
+#if SHORE_SMOOTHING || REFLECTION_TYPE == REFL_PLANE || REFRACTIVE || !DISABLE_FOG
 varying float v_view_depth;
 #endif
 
@@ -183,16 +185,25 @@ varying float v_view_depth;
 varying vec3 v_barycentric;
 #endif
 
-#if REFRACTIVE && SHORE_SMOOTHING
+/*============================================================================
+                                  FUNCTIONS
+============================================================================*/
+
+#include <environment.glslf>
+
+#if REFRACTIVE && SHORE_SMOOTHING && USE_REFRACTION_CORRECTION
 #include <refraction.glslf>
 #endif
 
 vec3 reflection (in vec2 screen_coord, in vec3 normal, in vec3 eye_dir,
                  in vec3 light_energies, out float mirror_factor) {
 
+    // NOTE: set up out variables to prevent IE 11 linking crash
+    mirror_factor = 0.0;
+
     vec3 eye_reflected = reflect(-eye_dir, normal);
 
-#if REFLECTIVE
+#if REFLECTION_TYPE == REFL_PLANE
     vec2 reflect_coord = screen_coord.xy + normal.xz * REFL_BUMP
                                                   / v_view_depth;
     mirror_factor = u_reflect_factor;
@@ -207,18 +218,18 @@ vec3 reflection (in vec2 screen_coord, in vec3 normal, in vec3 eye_dir,
         float eye_dot_norm = dot(eye_dir, normal);
         mirror_factor *= max(1.0 - 1.0 / eye_dot_norm, 1.0);
     } else {
-        reflect_color = texture2D(u_reflectmap, reflect_coord).rgb;
+        reflect_color = texture2D(u_plane_reflection, reflect_coord).rgb;
         srgb_to_lin(reflect_color);
     }
-#elif TEXTURE_MIRROR
+#elif REFLECTION_TYPE == REFL_MIRRORMAP
     mirror_factor = u_mirror_factor;
     vec3 reflect_color = light_energies * textureCube(u_mirrormap, eye_reflected).rgb;
     srgb_to_lin(reflect_color);
-#else // REFLECTIVE
+#else // REFLECTION_TYPE == REFL_PLANE
     mirror_factor = u_reflect_factor;
     vec3 reflect_color = light_energies * vec3(0.3,0.5,1.0);
     srgb_to_lin(reflect_color);
-#endif // REFLECTIVE
+#endif // REFLECTION_TYPE == REFL_PLANE
 
     // calculate mirror factor using fresnel
     vec3 reflected_halfway = normalize(eye_reflected + eye_dir);
@@ -257,14 +268,16 @@ void main(void) {
     float dist_to_water = v_pos_world.y - WATER_LEVEL;
 #endif
 
-#if GENERATED_MESH
-# if DYNAMIC
+#if NUM_NORMALMAPS > 0 || FOAM
+# if GENERATED_MESH
+#  if DYNAMIC
     vec2 texcoord = vec2(v_calm_pos_world.x, -v_calm_pos_world.z) + 0.5;
-# else
+#  else
     vec2 texcoord = vec2(v_pos_world.x, -v_pos_world.z) + 0.5;
-# endif // DYNAMIC
-#else
+#  endif // DYNAMIC
+# else
     vec2 texcoord = v_texcoord;
+# endif
 #endif
 
 #if NUM_NORMALMAPS > 0
@@ -332,7 +345,7 @@ void main(void) {
 
     vec3 eye_dir = normalize(v_eye_dir);
 
-#if REFLECTIVE || REFRACTIVE
+#if REFLECTION_TYPE == REFL_PLANE || REFRACTIVE
     vec2 screen_coord = v_tex_pos_clip.xy/v_tex_pos_clip.z;
 #endif
 
@@ -351,6 +364,7 @@ void main(void) {
     vec2 refract_coord = screen_coord + normal.xz * u_refr_bump
                                                   / v_view_depth;
     float scene_depth_refr = refraction_correction(scene_depth, refract_coord, screen_coord);
+
     float delta_refr = max(scene_depth_refr - v_view_depth, 0.0);
     float depth_diff_refr = u_view_max_depth / ABSORB * delta_refr;
 
@@ -381,7 +395,8 @@ void main(void) {
 
 # if REFRACTIVE
     float refract_factor = 1.0 - alpha;
-    vec2 refract_coord = screen_coord + normal.xz * REFR_BUMP / v_view_depth;
+    vec2 refract_coord = screen_coord + normal.xz * u_refr_bump
+                                                  / v_view_depth;
 # endif
 #endif // SHORE_SMOOTHING
 
@@ -439,17 +454,14 @@ void main(void) {
     vec3 S = specint * u_specular_color;
 
     // ambient
-#if SKY_TEXTURE
-    vec3 environment_color = u_environment_energy * textureCube(u_sky_texture, normal).rgb;
-#else
-    vec3 environment_color = u_environment_energy * u_zenith_color;
-#endif
+    vec3 environment_color = u_environment_energy * get_environment_color(normal);
+
     vec3 A = u_ambient * environment_color;
 
     vec3 light_energies = A + u_sun_intensity;
 
     float mirror_factor;
-#if REFLECTIVE
+#if REFLECTION_TYPE == REFL_PLANE
     vec3 reflect_color = reflection(screen_coord, normal, eye_dir,
                                     light_energies, mirror_factor);
 #else
@@ -467,7 +479,7 @@ void main(void) {
     lighting_result lresult = lighting(vec3(0.0), vec3(0.0), color, S, v_pos_world,
         normal, eye_dir, spec_params, u_diffuse_params, 1.0,
         u_light_positions, u_light_directions, u_light_color_intensities,
-        u_light_factors1, u_light_factors2, 0.0, vec4(0.0), 0);
+        u_light_factors, 0.0, vec4(0.0));
 #else
     lighting_result lresult = lighting_ambient(vec3(0.0), vec3(0.0), color);
 #endif

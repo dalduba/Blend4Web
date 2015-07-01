@@ -134,12 +134,16 @@ exports.attach_scene_sfx = function(scene) {
         }
 
         var listener = _wa.listener;
-        listener.dopplerFactor = scene["audio_doppler_factor"];
-        listener.speedOfSound = scene["audio_doppler_speed"];
+        scene_sfx.disable_doppler = m_cfg.defaults.chrome_disable_doppler_effect_hack;
+        if (!scene_sfx.disable_doppler) {
+            listener.dopplerFactor = scene["audio_doppler_factor"];
+            listener.speedOfSound = scene["audio_doppler_speed"];
+        }
 
         scene_sfx.muted = false;
         scene_sfx.volume = 1;
         scene_sfx.duck_time = 0;
+
     }
 }
 
@@ -152,11 +156,11 @@ function create_wa_context() {
         if (ctx.createGain) {
             return ctx;
         } else {
-            m_print.warn("B4W warning: deprecated WebAudio implementation");
+            m_print.warn("deprecated WebAudio implementation");
             return null;
         }
     } else {
-        m_print.warn("B4W warning: WebAudio is not supported");
+        m_print.warn("WebAudio is not supported");
         return null;
     }
 }
@@ -223,7 +227,7 @@ exports.detect_video_container = function(hint) {
 
 /**
  * Init and add speaker object to sfx
- * @param {Object} obj Object ID, must be of type "SPEAKER"
+ * @param {Object3D} obj Object 3D, must be of type "SPEAKER"
  */
 exports.append_object = function(obj, scene) {
 
@@ -252,7 +256,8 @@ exports.append_object = function(obj, scene) {
     if (!speaker["sound"])
         obj._sfx.behavior = "NONE";
 
-    obj._sfx.disable_doppler = speaker["b4w_disable_doppler"];
+    obj._sfx.disable_doppler = speaker["b4w_disable_doppler"] 
+            && m_cfg.defaults.chrome_disable_doppler_effect_hack;
 
     obj._sfx.muted = speaker["muted"];
     obj._sfx.volume = speaker["volume"];
@@ -305,14 +310,14 @@ function check_media_element_node() {
     if (window.MediaElementAudioSourceNode) {
         return true;
     } else {
-        m_print.warn("B4W warning: MediaElementAudioSourceNode not found");
+        m_print.warn("MediaElementAudioSourceNode not found");
         return false;
     }
 }
 
 /**
  * Returns audio source type for given object (AST_*)
- * @param {Object} obj Object ID
+ * @param {Object3D} obj Object 3D
  */
 exports.source_type = function(obj) {
     if (obj["type"] != "SPEAKER")
@@ -334,7 +339,7 @@ exports.source_type = function(obj) {
 
 /**
  * Updates speaker object with loaded sound data
- * @param {Object} obj Object ID
+ * @param {Object3D} obj Object 3D
  * @param {ArrayBuffer|<audio>} sound_data Sound Data
  */
 exports.update_spkobj = function(obj, sound_data) {
@@ -444,8 +449,9 @@ exports.update = function(timeline, elapsed) {
     }
 
     // handle playlist
-    if (_playlist && (_playlist.active == -1 || timeline >
-            _playlist.active_start_time + _playlist.durations[_playlist.active]))
+    if (_playlist && _playlist.speakers.length && (_playlist.active == -1 
+            || timeline > _playlist.active_start_time 
+            + _playlist.durations[_playlist.active]))
         playlist_switch_next(_playlist, timeline);
 }
 
@@ -849,7 +855,7 @@ function stop_audio_element(obj) {
 exports.stop = stop;
 /**
  * Stop to play from given speaker
- * @param sobj Object ID
+ * @param sobj Object 3D
  * @methodOf sfx
  */
 function stop(sobj) {
@@ -1076,7 +1082,7 @@ exports.listener_update_transform = function(scene, trans, quat, elapsed) {
     listener.setOrientation(front[0], front[1], front[2], up[0], up[1], up[2]);
     scene._sfx.listener_direction.set(front);
 
-    if (elapsed) {
+    if (!scene._sfx.disable_doppler && elapsed) {
         var speed = _vec3_tmp3;
 
         speed[0] = (trans[0] - scene._sfx.listener_last_eye[0])/elapsed;
@@ -1098,7 +1104,7 @@ exports.listener_reset_speed = function(speed, dir) {
     if (!_wa)
         return;
 
-    if (!_active_scene._sfx)
+    if (!_active_scene._sfx || _active_scene._sfx.disable_doppler)
         return;
 
     var velocity = _vec3_tmp;
@@ -1155,7 +1161,7 @@ exports.speaker_update_transform = function(obj, elapsed) {
 exports.speaker_reset_speed = function(obj, speed, dir) {
     var sfx = obj._sfx;
 
-    if (!(spk_is_active(obj) && sfx.behavior == "POSITIONAL"))
+    if (!(spk_is_active(obj) && sfx.behavior == "POSITIONAL") || sfx.disable_doppler)
         return;
 
     var velocity = _vec3_tmp;
@@ -1426,7 +1432,7 @@ exports.apply_playlist = function(objs, delay, random) {
         var duration = get_duration(obj);
 
         if (duration == 0) {
-            m_print.warn("B4W warning: Ignoring speaker with zero duration: " + obj["name"]);
+            m_print.warn("Ignoring speaker with zero duration: " + obj["name"]);
             continue;
         }
 

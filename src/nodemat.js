@@ -28,7 +28,7 @@ var _vec4_tmp = new Float32Array(4);
 var cfg_def = m_config.defaults;
 
 exports.compose_nmat_graph = compose_nmat_graph;
-function compose_nmat_graph(node_tree, graph_id, is_node_group) {
+function compose_nmat_graph(node_tree, graph_id, is_node_group, mat_name, is_glow_output) {
 
     if (graph_id in _composed_node_graphs)
         return _composed_node_graphs[graph_id];
@@ -41,12 +41,12 @@ function compose_nmat_graph(node_tree, graph_id, is_node_group) {
 
     for (var i = 0; i < bpy_nodes.length; i++) {
         var bpy_node = bpy_nodes[i];
-        if (!append_nmat_node(graph, bpy_node, 0, anim_data)) {
+        if (!append_nmat_node(graph, bpy_node, 0, anim_data, mat_name)) {
             _composed_node_graphs[graph_id] = null;
             return null;
         }
     }
-
+    
     if (is_node_group)
         if (find_node_id(node_tree, graph, "GROUP_OUTPUT", "group") == -1)
             return null;
@@ -57,7 +57,6 @@ function compose_nmat_graph(node_tree, graph_id, is_node_group) {
 
     if (is_node_group)
         return graph;
-
 
     for (var i = 0; i < links.length; i++) {
         var link = links[i];
@@ -86,12 +85,15 @@ function compose_nmat_graph(node_tree, graph_id, is_node_group) {
 
     complete_edges(graph);
 
-    var output_id = find_node_id(node_tree, graph, "OUTPUT", "material");
-    if (output_id == -1) {
-        _composed_node_graphs[graph_id] = null;
-        return null;
+    if (is_glow_output) {
+        var output_id = find_node_id(node_tree, graph, "B4W_GLOW_OUTPUT", "material", true);
+    } else {
+        var output_id = find_node_id(node_tree, graph, "OUTPUT", "material", false, true);
     }
-
+    if (output_id == -1) {
+        graph = create_default_graph();
+        output_id = 0;
+    }
     nmat_cleanup_graph(graph);
     var graph_out = m_graph.subgraph_node_conn(graph, output_id, m_graph.BACKWARD_DIR);
 
@@ -100,8 +102,37 @@ function compose_nmat_graph(node_tree, graph_id, is_node_group) {
     merge_nodes(graph_out);
     optimize_geometry_vcol(graph_out);
 
+    fix_socket_types(graph_out, anim_data, mat_name);
+
     _composed_node_graphs[graph_id] = graph_out;
     return graph_out;
+}
+
+function create_default_graph() {
+    var graph = m_graph.create();
+    var input_color = {
+        "default_value" : new Float32Array([0, 0, 0]),
+        "identifier": "Color",
+        "is_linked": false,
+        "name": "Color"
+    };
+    var input_alpha = {
+        "default_value" : 1,
+        "identifier": "Alpha",
+        "is_linked": false,
+        "name": "Alpha"
+    }
+    var node = {
+        data: null,
+        dirs: [],
+        params: [],
+        inputs: [input_color, input_alpha],
+        outputs: [],
+        type: "OUTPUT",
+        vparams: []
+    };
+    m_graph.append_node(graph, 0, node);
+    return graph;
 }
 
 function clean_sockets_linked_property(graph) {
@@ -132,6 +163,50 @@ function fix_socket_property(graph, connection, id, num, check_in_edge) {
 
         if (clear_linked)
             connection.is_linked = false;
+    }
+}
+
+function fix_socket_types(graph, anim_data, mat_name) {
+    var edge_data = [];
+    m_graph.traverse_edges(graph, function(in_edge, out_edge, sockets) {
+        var in_node = m_graph.get_node_attr(graph, in_edge);
+        var out_node = m_graph.get_node_attr(graph, out_edge);
+
+        var is_output_vec = m_util.is_vector(in_node.outputs[sockets[0]].default_value);
+        var is_input_vec = m_util.is_vector(out_node.inputs[sockets[1]].default_value);
+        if (is_output_vec != is_input_vec) {    
+            var trans_node;
+
+            var vector = {
+                "default_value": [0, 0, 0],
+                "identifier": "Vector",
+                "is_linked": true,
+                "name": "Vector"
+            };
+
+            var value = {
+                "default_value": 0,
+                "identifier": "Value",
+                "is_linked": true,
+                "name": "Value"
+            }
+
+            if (is_output_vec && !is_input_vec)
+                trans_node = init_bpy_node("vector_to_scalar", "B4W_VECTOSCAL", 
+                        [vector], [value]);
+            else if (!is_output_vec && is_input_vec)
+                trans_node = init_bpy_node("scalar_to_vector", "B4W_SCALTOVEC", 
+                        [value], [vector]);
+            
+            append_nmat_node(graph, trans_node, 0, anim_data, mat_name);
+            edge_data.push([in_edge, out_edge, graph.nodes[graph.nodes.length - 2], sockets])
+        }
+    });
+
+    for (var i = 0; i < edge_data.length; ++i) {
+        m_graph.remove_edge(graph, edge_data[i][0], edge_data[i][1], -1);
+        m_graph.append_edge(graph, edge_data[i][0], edge_data[i][2], [edge_data[i][3][0], 0]);
+        m_graph.append_edge(graph, edge_data[i][2], edge_data[i][1], [0, edge_data[i][3][1]]);
     }
 }
 
@@ -267,15 +342,144 @@ function get_in_edge_by_input_num(graph, node, input_num) {
 function merge_nodes(graph) {
     merge_geometry(graph);
     merge_textures(graph);
+    merge_uvs(graph);
+    // console.log(m_graph.debug_dot(graph));
+}
+
+function merge_uvs(graph) {
+    var id_attr = [];
+    var uv_0 = "";
+    var uv_1 = "";
+    var uv_counter = {};
+    m_graph.traverse(graph, function(id, attr) {
+        if (attr.type == "GEOMETRY_UV" || attr.type == "UVMAP"
+                || attr.type == "TEX_COORD_UV") {
+            id_attr.push(id, attr);
+            var curr_uv_layer = attr.data.value;
+            if (!uv_0) {
+                uv_0 = curr_uv_layer;
+                uv_counter[uv_0] = 0;
+            } else if (uv_0 != curr_uv_layer && !uv_1) {
+                uv_1 = curr_uv_layer;
+                uv_counter[uv_1] = 0;
+            }
+            uv_counter[curr_uv_layer]++;
+        }
+    });
+    //NOTE: we do not need to merge single UV
+    for (var curr_uv_layer in uv_counter)
+        if (uv_counter[curr_uv_layer] < 2) {
+            for (var i = 0; i < id_attr.length; i = i + 2)
+                if (id_attr[i + 1].data.value == curr_uv_layer)
+                    id_attr.splice(i, 2);
+            delete uv_counter[curr_uv_layer];
+            if (uv_0 == curr_uv_layer) {
+                uv_0 = uv_1;
+                uv_1 = "";
+            }
+            if (uv_1 == curr_uv_layer)
+                uv_1 = "";
+        }
+
+    if (id_attr.length < 3)
+        return;
+
+    var node_name = "";
+    var UV_geom = {
+        "default_value": [0, 0, 0],
+        "identifier": "UV_geom",
+        "is_linked": false,
+        "name": "UV_geom"
+    };
+    var UV_cycles = {
+        "default_value": [0, 0, 0],
+        "identifier": "UV_cycles",
+        "is_linked": false,
+        "name": "UV_cycles"
+    };
+
+    var uv_0_node = init_bpy_node("merged_uv", "UV_MERGED", 
+                        [], [UV_geom, UV_cycles]);
+    uv_0_node["uv_layer"] = uv_0;
+    append_nmat_node(graph, uv_0_node, 0, null, "");
+    var uv_0_node_id = graph.nodes[graph.nodes.length - 2];
+    uv_0_node = graph.nodes[graph.nodes.length - 1];
+
+    if (uv_1) {
+        var uv_1_node = init_bpy_node("merged_uv", "UV_MERGED", 
+                            [], [UV_geom, UV_cycles]);
+        uv_1_node["uv_layer"] = uv_1;
+        append_nmat_node(graph, uv_1_node, 0, null, "");
+        var uv_1_node_id = graph.nodes[graph.nodes.length - 2];
+        uv_1_node = graph.nodes[graph.nodes.length - 1];
+    } else
+        var uv_1_node = null;
+
+    var unode_id = -1;
+    var unode = null;
+
+    for (var i = 0; i < id_attr.length; i+=2) {
+        var id_current = id_attr[i];
+        var attr_current = id_attr[i+1];
+
+        if (can_merge_nodes_uv(attr_current, id_attr[1])) {
+            unode_id = uv_0_node_id;
+            unode = uv_0_node;
+        } else if (uv_1_node) {
+            unode_id = uv_1_node_id;
+            unode = uv_1_node;
+        }
+
+        var removed_edges = [];
+        var out_num = m_graph.out_edge_count(graph, id_current);
+
+        var edges_out_counter = {};
+        for (k = 0; k < out_num; k++) {
+            
+            var out_id = m_graph.get_out_edge(graph, id_current, k);
+
+            if (!(out_id in edges_out_counter))
+                edges_out_counter[out_id] = 0;
+
+            var edge_attr = m_graph.get_edge_attr(graph, id_current, out_id,
+                    edges_out_counter[out_id]++);
+
+            
+
+            removed_edges.push(id_current, out_id, edge_attr);
+
+            var new_edge_attr = edge_attr.splice(0, edge_attr.length);
+
+            switch (attr_current.type) {
+                case "GEOMETRY_UV":
+                    new_edge_attr[0] = 0;
+                    unode.outputs[0].is_linked = true;
+                    break;
+                case "UVMAP":
+                case "TEX_COORD_UV":
+                    new_edge_attr[0] = 1;
+                    unode.outputs[1].is_linked = true;
+                    break;
+            }
+            m_graph.append_edge(graph, unode_id, out_id, new_edge_attr);
+        }
+
+        for (var k = 0; k < removed_edges.length; k += 3)
+            m_graph.remove_edge(graph, removed_edges[k],
+                    removed_edges[k + 1], 0);
+
+        m_graph.remove_node(graph, id_current);
+    }
 }
 
 function merge_geometry(graph) {
 
     var id_attr = [];
     m_graph.traverse(graph, function(id, attr) {
-        if (attr.type == "GEOMETRY_VC" || attr.type == "GEOMETRY_UV"
-                || attr.type == "GEOMETRY_NO" || attr.type == "GEOMETRY_FB"
-                || attr.type == "GEOMETRY_VW" || attr.type == "GEOMETRY_GL")
+        if (attr.type == "GEOMETRY_VC" || attr.type == "GEOMETRY_NO" 
+                || attr.type == "GEOMETRY_FB" || attr.type == "GEOMETRY_VW" 
+                || attr.type == "GEOMETRY_GL" || attr.type == "GEOMETRY_LO" 
+                || attr.type == "GEOMETRY_OR")
             id_attr.push(id, attr);
     });
 
@@ -328,6 +532,32 @@ function merge_geometry(graph) {
     }
 }
 
+function get_attrs_ascendants(graph) {
+    var attrs_ascendants = {};
+
+    for (var i = 0; i < graph.nodes.length; i += 2) {
+        var id = graph.nodes[i];
+        attrs_ascendants[id] = [];
+    }
+
+    for (var i = 0; i < graph.edges.length; i += 3) {
+        var id_from = graph.edges[i];
+        var id_to = graph.edges[i + 1];
+
+        attrs_ascendants[id_to].push(id_from);
+        attrs_ascendants[id_to].push(attrs_ascendants[id_from]);
+    }
+
+    for (var id in attrs_ascendants) {
+        // NOTE: non-unique indices
+        attrs_ascendants[id] = JSON.stringify(attrs_ascendants[id]).match(/\d+/g) || [];
+        // NOTE: attrs_ascendants[id].map(parseInt); - doesn't work
+        attrs_ascendants[id] = attrs_ascendants[id].map(function(str){return parseInt(str)});
+    }
+
+    return attrs_ascendants;
+}
+
 function merge_textures(graph) {
 
     var id_attr = [];
@@ -335,6 +565,11 @@ function merge_textures(graph) {
         if (attr.type == "TEXTURE_COLOR" || attr.type == "TEXTURE_NORMAL")
             id_attr.push(id, attr);
     });
+
+    if (!id_attr.length)
+        return;
+
+    var ascs = get_attrs_ascendants(graph);
 
     var unique_nodes = [];
 
@@ -346,64 +581,83 @@ function merge_textures(graph) {
 
         for (var j = 0; j < unique_nodes.length; j++) {
             var unode = unique_nodes[j];
+
             // NOTE: every 4 texture nodes merged: first found (main) and others
             if (unode.merged_nodes.length >= 3)
                 continue;
 
             // check nodes coincidence
-            if (can_merge_nodes(attr_current, unode.attr)) {
-                var removed_edges_in = [];
-                var in_num = m_graph.in_edge_count(graph, id_current);
+            if (!can_merge_nodes(attr_current, unode.attr))
+                continue;
 
-                // process every ingoing edge
-                var edges_in_counter = {}
-                for (k = 0; k < in_num; k++) {
-                    var in_id = m_graph.get_in_edge(graph, id_current, k);
-
-                    if (!(in_id in edges_in_counter))
-                        edges_in_counter[in_id] = 0;
-                    var edge_attr = m_graph.get_edge_attr(graph, in_id,
-                            id_current, edges_in_counter[in_id]++);
-
-                    // removing edges affects graph traversal; save edge_attr
-                    // for further merging
-                    removed_edges_in.push(in_id, id_current, edge_attr);
+            // merged nodes can't be reachable from the each other in a directed graph
+            if (ascs[id_current].indexOf(unode.id) > -1 || 
+                    ascs[unode.id].indexOf(id_current) > -1)
+                continue;
+            var is_reachable = false;
+            for (var k = 0; k < unode.merged_nodes.length; k++) {
+                var merged_id = unode.merged_nodes[k].id;
+                if (ascs[id_current].indexOf(merged_id) > -1 || 
+                    ascs[merged_id].indexOf(id_current) > -1) {
+                    is_reachable = true;
+                    break;
                 }
-
-                var removed_edges_out = [];
-                var out_num = m_graph.out_edge_count(graph, id_current);
-
-                // process every outgoing edge
-                var edges_out_counter = {}
-                for (k = 0; k < out_num; k++) {
-                    var out_id = m_graph.get_out_edge(graph, id_current, k);
-
-                    if (!(out_id in edges_out_counter))
-                        edges_out_counter[out_id] = 0;
-                    var edge_attr = m_graph.get_edge_attr(graph, id_current,
-                            out_id, edges_out_counter[out_id]++);
-
-                    // removing edges affects graph traversal; save edge_attr
-                    // for further merging
-                    removed_edges_out.push(id_current, out_id, edge_attr);
-                }
-
-                var removed_edges = removed_edges_in.concat(removed_edges_out);
-                for (var k = 0; k < removed_edges.length; k += 3)
-                    m_graph.remove_edge(graph, removed_edges[k],
-                            removed_edges[k + 1], 0);
-                m_graph.remove_node(graph, id_current);
-
-                var mnode = {
-                    attr: attr_current,
-                    edges_in: removed_edges_in,
-                    edges_out: removed_edges_out
-                }
-                unode.merged_nodes.push(mnode);
-
-                is_unique = false;
-                break;
             }
+            if (is_reachable)
+                continue;
+
+            var removed_edges_in = [];
+            var in_num = m_graph.in_edge_count(graph, id_current);
+
+            // process every ingoing edge
+            var edges_in_counter = {}
+            for (k = 0; k < in_num; k++) {
+                var in_id = m_graph.get_in_edge(graph, id_current, k);
+
+                if (!(in_id in edges_in_counter))
+                    edges_in_counter[in_id] = 0;
+                var edge_attr = m_graph.get_edge_attr(graph, in_id,
+                        id_current, edges_in_counter[in_id]++);
+
+                // removing edges affects graph traversal; save edge_attr
+                // for further merging
+                removed_edges_in.push(in_id, id_current, edge_attr);
+            }
+
+            var removed_edges_out = [];
+            var out_num = m_graph.out_edge_count(graph, id_current);
+
+            // process every outgoing edge
+            var edges_out_counter = {}
+            for (k = 0; k < out_num; k++) {
+                var out_id = m_graph.get_out_edge(graph, id_current, k);
+
+                if (!(out_id in edges_out_counter))
+                    edges_out_counter[out_id] = 0;
+                var edge_attr = m_graph.get_edge_attr(graph, id_current,
+                        out_id, edges_out_counter[out_id]++);
+
+                // removing edges affects graph traversal; save edge_attr
+                // for further merging
+                removed_edges_out.push(id_current, out_id, edge_attr);
+            }
+
+            var removed_edges = removed_edges_in.concat(removed_edges_out);
+            for (var k = 0; k < removed_edges.length; k += 3)
+                m_graph.remove_edge(graph, removed_edges[k],
+                        removed_edges[k + 1], 0);
+            m_graph.remove_node(graph, id_current);
+
+            var mnode = {
+                id: id_current,
+                attr: attr_current,
+                edges_in: removed_edges_in,
+                edges_out: removed_edges_out
+            }
+            unode.merged_nodes.push(mnode);
+
+            is_unique = false;
+            break;
         }
 
         if (is_unique) {
@@ -421,8 +675,6 @@ function merge_textures(graph) {
         var unode = unique_nodes[i];
 
         var mnodes_count = unode.merged_nodes.length;
-        var in_num = unode.attr.inputs.length;
-        var out_num = unode.attr.outputs.length;
 
         // NOTE: merge similar nodes and unique node
         for (var j = 0; j < mnodes_count; j++) {
@@ -431,41 +683,29 @@ function merge_textures(graph) {
             var edges_in = merged_data.edges_in;
             var edges_out = merged_data.edges_out;
 
-            unode.attr.inputs = unode.attr.inputs.concat(mnode.inputs);
-            unode.attr.outputs = unode.attr.outputs.concat(mnode.outputs);
-
-            for (var k = 0; k < unode.attr.inputs.length; k++)
-                unode.attr.inputs[k].identifier += m_util.trunc(k / in_num) + 1;
-            for (var k = 0; k < unode.attr.outputs.length; k++)
-                unode.attr.outputs[k].identifier += m_util.trunc(k / out_num) + 1;
+            unode.attr.inputs[j + 1].is_linked = mnode.inputs[0].is_linked;
+            unode.attr.inputs[j + 1].default_value = mnode.inputs[0].default_value;
+            unode.attr.outputs[2 * (j + 1)].is_linked = mnode.outputs[0].is_linked;
+            unode.attr.outputs[2 * (j + 1)].default_value = mnode.outputs[0].default_value;
+            unode.attr.outputs[2 * (j + 1) + 1].is_linked = mnode.outputs[1].is_linked;
+            unode.attr.outputs[2 * (j + 1) + 1].default_value = mnode.outputs[1].default_value;
 
             // NOTE: change edge attributes indices for similar links
             for (var k = 0; k < edges_in.length; k += 3) {
                 var in_id = edges_in[k];
                 var edge_attr = edges_in[k + 2];
-                edge_attr[1] += (j + 1) * in_num;
+                edge_attr[1] += (j + 1);
                 m_graph.append_edge(graph, in_id, unode.id, edge_attr);
             }
 
             for (var k = 0; k < edges_out.length; k += 3) {
                 var out_id = edges_out[k + 1];
                 var edge_attr = edges_out[k + 2];
-                edge_attr[0] += (j + 1) * out_num;
+                edge_attr[0] += (j + 1) * 2;
                 m_graph.append_edge(graph, unode.id, out_id, edge_attr);
             }
-        }
 
-        // NOTE: change node type by additional merged nodes
-        switch (mnodes_count) {
-        case 1:
-            unode.attr.type += "2";
-            break;
-        case 2:
-            unode.attr.type += "3";
-            break;
-        case 3:
-            unode.attr.type += "4";
-            break;
+            unode.attr.dirs.push(["USE_uv" + (j + 2), 1]);
         }
 
         m_graph.remove_node(graph, unode.id);
@@ -479,12 +719,13 @@ function can_merge_nodes(attr1, attr2) {
 
     switch (attr1.type) {
     case "GEOMETRY_VC":
-    case "GEOMETRY_UV":
         return attr1.data.value == attr2.data.value;
     case "GEOMETRY_NO":
     case "GEOMETRY_FB":
     case "GEOMETRY_VW":
     case "GEOMETRY_GL":
+    case "GEOMETRY_LO":
+    case "GEOMETRY_OR":
         return true;
     case "TEXTURE_COLOR":
     case "TEXTURE_NORMAL":
@@ -492,6 +733,15 @@ function can_merge_nodes(attr1, attr2) {
     default:
         return false;
     }
+}
+
+function can_merge_nodes_uv(attr1, attr2) {
+
+    var permissible_types = ["GEOMETRY_UV", "TEX_COORD_UV", "UVMAP"];
+    if (permissible_types.indexOf(attr1.type) != -1 
+            && permissible_types.indexOf(attr2.type) != -1)
+        return attr1.data.value == attr2.data.value;
+    return false;
 }
 
 function optimize_geometry_vcol(graph) {
@@ -592,22 +842,29 @@ function optimize_geometry_vcol(graph) {
     }
 }
 
-function find_node_id(node_tree, graph, type, source_type) {
+function find_node_id(node_tree, graph, type, source_type, is_group_node, 
+        suppress_errors) {
     var bpy_nodes = node_tree["nodes"];
 
     // find last OUTPUT
     var last_output_node = null;
-
+    
     // search in original bpy_nodes
     for (var i = 0; i < bpy_nodes.length; i++) {
         var bpy_node = bpy_nodes[i];
 
-        if (bpy_node["type"] == type)
-            last_output_node = bpy_node;
+        if (is_group_node) {
+            if (bpy_node["type"] == "GROUP" && bpy_node["node_tree_name"] == type)
+                last_output_node = bpy_node;
+        } else {
+            if (bpy_node["type"] == type)
+                last_output_node = bpy_node;
+        }
     }
 
     if (!last_output_node) {
-        m_print.error("No \"" + type + "\" node in node " + source_type);
+        if (!suppress_errors)
+            m_print.error("No \"" + type + "\" node in node " + source_type);
         return -1;
     }
 
@@ -635,11 +892,10 @@ function init_bpy_link(from_node, from_socket, to_node, to_socket) {
     return link;
 }
 
-function append_nmat_node(graph, bpy_node, geometry_output_num, anim_data) {
+function append_nmat_node(graph, bpy_node, output_num, anim_data,
+                          mat_name) {
     var name = bpy_node["name"];
     var type = bpy_node["type"];
-    var bpy_inputs = bpy_node["inputs"];
-    var bpy_outputs = bpy_node["outputs"];
 
     var vparams = [];
     var inputs = [];
@@ -648,9 +904,94 @@ function append_nmat_node(graph, bpy_node, geometry_output_num, anim_data) {
 
     var data = null;
 
-    var dirs = []; 
+    var dirs = [];
 
     switch(type) {
+    case "BSDF_ANISOTROPIC":
+    case "BSDF_DIFFUSE":
+    case "BSDF_GLOSSY":
+    case "BSDF_GLASS":
+    case "BSDF_HAIR":
+    case "BSDF_TRANSPARENT":
+    case "BSDF_TRANSLUCENT":
+    case "BSDF_REFRACTION":
+    case "BSDF_TOON":
+    case "BSDF_VELVET":
+    case "SUBSURFACE_SCATTERING":
+    case "EMISSION":
+    case "AMBIENT_OCCLUSION":
+    case "VOLUME_ABSORPTION":
+    case "VOLUME_SCATTER":
+    case "BUMP":
+    case "NORMAL_MAP":
+    case "VECT_TRANSFORM":
+    case "BLACKBODY":
+    case "WAVELENGTH":
+    case "SEPXYZ":
+    case "COMBXYZ":
+    case "LIGHT_FALLOFF":
+    case "TEX_IMAGE":
+    case "TEX_ENVIRONMENT":
+    case "TEX_SKY":
+    case "TEX_NOISE":
+    case "TEX_WAVE":
+    case "TEX_VORONOI":
+    case "TEX_MUSGRAVE":
+    case "TEX_GRADIENT":
+    case "TEX_MAGIC":
+    case "TEX_CHECKER":
+    case "TEX_BRICK":
+    case "WIREFRAME":
+    case "LAYER_WEIGHT":
+    case "TANGENT":
+    case "LIGHT_PATH":
+    case "ATTRIBUTE":
+    case "HOLDOUT":
+    case "PARTICLE_INFO":
+    case "HAIR_INFO":
+    case "OBJECT_INFO":
+    case "SCRIPT":
+        inputs = node_inputs_bpy_to_b4w(bpy_node);
+        outputs = node_outputs_bpy_to_b4w(bpy_node);
+        m_print.warn(type + " node is not fully supported.");
+        break;
+    case "BRIGHTCONTRAST":
+    case "ADD_SHADER":
+    case "MIX_SHADER":
+        inputs = node_inputs_bpy_to_b4w(bpy_node);
+        outputs = node_outputs_bpy_to_b4w(bpy_node);
+        break;
+    case "UVMAP":
+        var uv_name = shader_ident("param_" + type + "_a");
+        var uv_tra_name = shader_ident("param_" + type + "_v");
+
+        vparams.push(node_param(uv_name));
+        vparams.push(node_param(uv_tra_name));
+
+        outputs = node_outputs_bpy_to_b4w(bpy_node);
+        params.push(node_param(uv_tra_name));
+
+        data = {
+            name: uv_name,
+            value: bpy_node["uv_layer"]
+        }
+        break;
+    case "UV_MERGED":
+        var uv_name = shader_ident("param_UV_MERGED_a");
+        var uv_tra_name = shader_ident("param_UV_MERGED_v");
+
+        vparams.push(node_param(uv_name));
+        vparams.push(node_param(uv_tra_name));
+
+        outputs.push(node_output_by_ident(bpy_node, "UV_geom"));
+        outputs.push(node_output_by_ident(bpy_node, "UV_cycles"));
+        params.push(node_param(uv_tra_name));
+
+        data = {
+            name: uv_name,
+            value: bpy_node["uv_layer"]
+        }
+        break;
     case "CAMERA":
         inputs = [];
         outputs = node_outputs_bpy_to_b4w(bpy_node);
@@ -660,12 +1001,22 @@ function append_nmat_node(graph, bpy_node, geometry_output_num, anim_data) {
         inputs = node_inputs_bpy_to_b4w(bpy_node);
         outputs = node_outputs_bpy_to_b4w(bpy_node);
         break;
+    case "CURVE_RGB":
+        inputs = node_inputs_bpy_to_b4w(bpy_node);
+        outputs = node_outputs_bpy_to_b4w(bpy_node);
+        m_print.warn("CURVE_RGB node is not fully supported.");
+        break;
+    case "CURVE_VEC":
+        inputs = node_inputs_bpy_to_b4w(bpy_node);
+        outputs = node_outputs_bpy_to_b4w(bpy_node);
+        m_print.warn("CURVE_VEC node is not fully supported.");
+        break;
     case "GEOMETRY":
 
-        if (!check_geometry_node_outputs(bpy_node))
+        if (!check_input_node_outputs(bpy_node))
             return true;
 
-        type = geometry_node_type(bpy_node, geometry_output_num);
+        type = geometry_node_type(bpy_node, output_num);
         if (!type) {
             m_print.error("Geometry output is not supported");
             return false;
@@ -673,7 +1024,7 @@ function append_nmat_node(graph, bpy_node, geometry_output_num, anim_data) {
 
         switch (type) {
         case "GEOMETRY_UV":
-
+            // NOTE: check UV layers for compatibility
             if (!bpy_node["uv_layer"]) {
                 m_print.error("Missing uv layer in node \"", bpy_node["name"],"\"");
                 return false;
@@ -695,7 +1046,7 @@ function append_nmat_node(graph, bpy_node, geometry_output_num, anim_data) {
             }
             break;
         case "GEOMETRY_VC":
-
+            // NOTE: check VC for compatibility
             if (!bpy_node["color_layer"]) {
                 m_print.error("Missing vertex color layer in node ", bpy_node["name"]);
                 return false;
@@ -728,6 +1079,72 @@ function append_nmat_node(graph, bpy_node, geometry_output_num, anim_data) {
         case "GEOMETRY_GL":
             outputs.push(node_output_by_ident(bpy_node, "Global"));
             break;
+        case "GEOMETRY_LO":
+            outputs.push(node_output_by_ident(bpy_node, "Local"));
+            break;
+        case "GEOMETRY_OR":
+            var or_tra_name = shader_ident("param_GEOMETRY_OR_v");
+            vparams.push(node_param(or_tra_name));
+
+            outputs.push(node_output_by_ident(bpy_node, "Orco"));
+            params.push(node_param(or_tra_name));
+            break;
+        }
+        break;
+    case "TEX_COORD":
+
+        if (!check_input_node_outputs(bpy_node))
+            return true;
+
+        type = tex_coord_node_type(bpy_node, output_num);
+        if (!type) {
+            m_print.error("Texture coordinate output is not supported");
+            return false;
+        }
+
+        switch (type) {
+        case "TEX_COORD_UV":
+
+            var uv_name = shader_ident("param_TEX_COORD_UV_a");
+            var uv_tra_name = shader_ident("param_TEX_COORD_UV_v");
+
+            vparams.push(node_param(uv_name));
+            vparams.push(node_param(uv_tra_name));
+
+            outputs.push(node_output_by_ident(bpy_node, "UV"));
+
+            params.push(node_param(uv_tra_name));
+
+            data = {
+                name: uv_name,
+                value: bpy_node["uv_layer"]
+            }
+            break;
+        case "TEX_COORD_NO":
+            outputs.push(node_output_by_ident(bpy_node, "Normal"));
+            break;
+        case "TEX_COORD_GE":
+            var ge_tra_name = shader_ident("param_TEX_COORD_GE_v");
+            vparams.push(node_param(ge_tra_name));
+
+            outputs.push(node_output_by_ident(bpy_node, "Generated"));
+            params.push(node_param(ge_tra_name));
+            break;
+        case "TEX_COORD_OB":
+            outputs.push(node_output_by_ident(bpy_node, "Object"));
+            m_print.warn("Output \"Object\" of node \"Texture Coordinate\" doesn't supported fully.")
+            break;
+        case "TEX_COORD_CA":
+            outputs.push(node_output_by_ident(bpy_node, "Camera"));
+            break;
+        case "TEX_COORD_WI":
+            outputs.push(node_output_by_ident(bpy_node, "Window"));
+            m_print.warn("Output \"Window\" of node \"Texture Coordinate\" doesn't supported fully.")
+            break;
+        case "TEX_COORD_RE":
+            outputs.push(node_output_by_ident(bpy_node, "Reflection"));
+            m_print.warn("Output \"Reflection\" of node \"Texture Coordinate\" doesn't supported fully.")
+            break;
         }
         break;
     case "GROUP":
@@ -735,7 +1152,7 @@ function append_nmat_node(graph, bpy_node, geometry_output_num, anim_data) {
         switch (node_name) {
         case "B4W_LINEAR_TO_SRGB":
             if (!validate_custom_node_group(bpy_node, [1], [1])) {
-                data = process_node_group(bpy_node);
+                data = process_node_group(bpy_node, mat_name);
                 break;
             }
             type = "B4W_LINEAR_TO_SRGB";
@@ -743,76 +1160,74 @@ function append_nmat_node(graph, bpy_node, geometry_output_num, anim_data) {
         case "B4W_NORMAL_VIEW":
         case "B4W_VECTOR_VIEW":
             if (!validate_custom_node_group(bpy_node, [1], [1])) {
-                data = process_node_group(bpy_node);
+                data = process_node_group(bpy_node, mat_name);
                 break;
             }
             type = "B4W_VECTOR_VIEW";
             break;
         case "B4W_SRGB_TO_LINEAR":
             if (!validate_custom_node_group(bpy_node, [1], [1])) {
-                data = process_node_group(bpy_node);
+                data = process_node_group(bpy_node, mat_name);
                 break;
             }
             type = "B4W_SRGB_TO_LINEAR";
             break;
         case "B4W_REFLECT":
             if (!validate_custom_node_group(bpy_node, [1,1], [1])) {
-                data = process_node_group(bpy_node);
+                data = process_node_group(bpy_node, mat_name);
                 break;
             }
             type = "B4W_REFLECT";
             break;
         case "B4W_REFRACTION":
             if (!validate_custom_node_group(bpy_node, [1,0], [1])) {
-                data = process_node_group(bpy_node);
+                data = process_node_group(bpy_node, mat_name);
                 break;
             }
             type = "B4W_REFRACTION";
             break;
         case "B4W_PARALLAX":
             if (!validate_custom_node_group(bpy_node, [1,1,0,0,0], [1])) {
-                data = process_node_group(bpy_node);
+                data = process_node_group(bpy_node, mat_name);
                 break;
             }
             type = "B4W_PARALLAX";
-            // NOTE: empty texture container (overwritten in nmat_cleanup_graph)
-            if (!bpy_node["inputs"][1]["is_linked"]) {
-                m_print.error("Missing texture in node \"", bpy_node["name"],"\"");
-                return false;
-            }
             var tex_name = shader_ident("temp_texture");
             params.push(node_param(tex_name));
             break;
         case "B4W_CLAMP":
             if (!validate_custom_node_group(bpy_node, [1], [1])) {
-                data = process_node_group(bpy_node);
+                data = process_node_group(bpy_node, mat_name);
                 break;
             }
             type = "B4W_CLAMP";
             break;
         case "B4W_TRANSLUCENCY":
             if (!validate_custom_node_group(bpy_node, [0,0,0,0,0], [0])) {
-                data = process_node_group(bpy_node);
+                data = process_node_group(bpy_node, mat_name);
                 break;
             }
             type = "B4W_TRANSLUCENCY";
             break;
         case "B4W_TIME":
             if (!validate_custom_node_group(bpy_node, [], [0])) {
-                data = process_node_group(bpy_node);
+                data = process_node_group(bpy_node, mat_name);
                 break;
             }
             type = "B4W_TIME";
             break;
         case "B4W_SMOOTHSTEP":
             if (!validate_custom_node_group(bpy_node, [0,0,0], [0])) {
-                data = process_node_group(bpy_node);
+                data = process_node_group(bpy_node, mat_name);
                 break;
             }
             type = "B4W_SMOOTHSTEP";
             break;
+        case "B4W_GLOW_OUTPUT":
+            type = "B4W_GLOW_OUTPUT";
+            break;
         default:
-            data = process_node_group(bpy_node);
+            data = process_node_group(bpy_node, mat_name);
         }
         inputs = node_inputs_bpy_to_b4w(bpy_node);
         outputs = node_outputs_bpy_to_b4w(bpy_node);
@@ -835,9 +1250,9 @@ function append_nmat_node(graph, bpy_node, geometry_output_num, anim_data) {
         outputs.push(node_output_by_ident(bpy_node, "Visibility Factor"));
         if (!(lamp["uuid"] in _lamp_indexes)) {
             _lamp_indexes[lamp["uuid"]] = _lamp_index;
-            params.push(node_param(shader_ident("param_LAMP_lamp_index"), _lamp_index++, 1));
+            dirs.push(["LAMP_INDEX", String(_lamp_index++)]);
         } else
-            params.push(node_param(shader_ident("param_LAMP_lamp_index"), _lamp_indexes[lamp["uuid"]], 1));
+            dirs.push(["LAMP_INDEX", String(_lamp_indexes[lamp["uuid"]])]);
         data = _lamp_indexes;
         break;
     case "NORMAL":
@@ -982,13 +1397,29 @@ function append_nmat_node(graph, bpy_node, geometry_output_num, anim_data) {
                 inputs.push(default_node_inout(input.name, input.identifier, input.default_value));
 
             // INPUT 7
-            var input = node_input_by_ident(bpy_node, "Ray Mirror");
+
+            // NOTE: Blender version >= 2.74: Reflectivity 
+            // Blender version < 2.74: Ray Mirror
+            var input_new = node_input_by_ident(bpy_node, "Reflectivity");
+            var input_old = node_input_by_ident(bpy_node, "Ray Mirror");
+
+            if (input_new) {
+                input = input_new;
+                var input_name = "Reflectivity";
+            } else if (input_old) {
+                input = input_old;
+                var input_name = "Ray Mirror";
+            } else {
+                input = input_new;
+                var input_name = "Reflectivity";
+            }
+
             if (input)
                 inputs.push(input);
             else
-                inputs.push(default_node_inout("Ray Mirror", "Ray Mirror", 0));
+                inputs.push(default_node_inout(input_name, input_name, 0));
 
-            // INPUT 7
+            // INPUT 8
             var input = node_input_by_ident(bpy_node, "SpecTra");
             if (input)
                 inputs.push(input);
@@ -1014,7 +1445,7 @@ function append_nmat_node(graph, bpy_node, geometry_output_num, anim_data) {
             spec_param_1 = bpy_node["specular_toon_smooth"];
             break;
         default:
-            m_print.error("B4W Error: unsupported specular shader: " +
+            m_print.error("unsupported specular shader: " +
                 bpy_node["specular_shader"] + " (material \"" +
                 bpy_node["material_name"] + "\")");
             spec_param_0 = bpy_node["specular_hardness"];
@@ -1037,7 +1468,7 @@ function append_nmat_node(graph, bpy_node, geometry_output_num, anim_data) {
             diffuse_param2 = bpy_node["diffuse_fresnel_factor"];
             break;
         default:
-            m_print.error("B4W Error: unsupported diffuse shader: " +
+            m_print.error("unsupported diffuse shader: " +
                 bpy_node["diffuse_shader"] + " (material \"" +
                 bpy_node["material_name"] + "\")");
             diffuse_param = 0.0;
@@ -1211,10 +1642,15 @@ function append_nmat_node(graph, bpy_node, geometry_output_num, anim_data) {
         outputs = [];
         break;
     case "RGB":
-        var output = node_output_by_ident(bpy_node, "Color");
-        outputs.push(output);
+        var param_name = mat_name + "%join%" + bpy_node["name"];
+        var param = {
+            name: "-1",
+            value: param_name
+        }
+        params.push(param);
 
-        params.push(node_param(shader_ident("param_RGB_Color"), output.default_value, 3));
+        outputs.push(node_output_by_ident(bpy_node, "Color"));
+
         break;
     case "SEPRGB":
     case "SEPHSV":
@@ -1223,26 +1659,52 @@ function append_nmat_node(graph, bpy_node, geometry_output_num, anim_data) {
         break;
     case "TEXTURE":
 
-        if (!bpy_node["texture"]) {
-            m_print.error("No texture attached to node: " + bpy_node["name"]);
-            return false;
-        }
         type = texture_node_type(bpy_node);
 
-        inputs.push(node_input_by_ident(bpy_node, "Vector"));
-
-        if (type == "TEXTURE_COLOR" || type == "TEXTURE_ENVIRONMENT" ) {
+        if (type == "TEXTURE_EMPTY") {
             outputs.push(node_output_by_ident(bpy_node, "Color"));
-            outputs.push(node_output_by_ident(bpy_node, "Value"));
-        }
-
-        if (type == "TEXTURE_NORMAL") {
-            if (bpy_node["texture"]["type"] == "ENVIRONMENT_MAP") {
-                m_print.error("Wrong output for ENVIRONMENT_MAP texture: " + bpy_node["name"]);
-                return false;
-            }
             outputs.push(node_output_by_ident(bpy_node, "Normal"));
             outputs.push(node_output_by_ident(bpy_node, "Value"));
+        } else if (type == "TEXTURE_ENVIRONMENT") {
+            inputs.push(node_input_by_ident(bpy_node, "Vector"));
+            outputs.push(node_output_by_ident(bpy_node, "Color"));
+            outputs.push(node_output_by_ident(bpy_node, "Value"));
+        } else {
+            if (type == "TEXTURE_NORMAL") {
+                if (bpy_node["texture"]["type"] == "ENVIRONMENT_MAP") {
+                    m_print.error("Wrong output for ENVIRONMENT_MAP texture: " + bpy_node["name"]);
+                    return false;
+                }
+            }
+
+            for (var i = 0; i < 4; ++i) {
+                var input, output1, output2;
+
+                if (i) {
+                    input = default_node_inout("Vector" + i, "Vector" + i, [0,0,0]);
+                    if (type == "TEXTURE_COLOR") {
+                        output1 = default_node_inout("Color" + i, "Color" + i, [0,0,0]);
+                        output2 = default_node_inout("Value" + i, "Value" + i, 0);
+                    }
+                    if (type == "TEXTURE_NORMAL") {
+                        output1 = default_node_inout("Normal" + i, "Normal" + i, [0,0,0]);
+                        output2 = default_node_inout("Value" + i, "Value" + i, 0); 
+                    }
+                } else {
+                    input = node_input_by_ident(bpy_node, "Vector");
+                    if (type == "TEXTURE_COLOR") {
+                        output1 = node_output_by_ident(bpy_node, "Color");
+                        output2 = node_output_by_ident(bpy_node, "Value");
+                    }    
+                    if (type == "TEXTURE_NORMAL") {
+                        output1 = node_output_by_ident(bpy_node, "Normal");
+                        output2 = node_output_by_ident(bpy_node, "Value");   
+                    }
+                }
+                inputs.push(input);
+                outputs.push(output1);
+                outputs.push(output2);
+            }
         }
 
         var tex_name = shader_ident("param_TEXTURE_texture");
@@ -1252,35 +1714,25 @@ function append_nmat_node(graph, bpy_node, geometry_output_num, anim_data) {
             name: tex_name,
             value: bpy_node["texture"]
         }
+        
+        break;
+    case "VALTORGB":
+        inputs = node_inputs_bpy_to_b4w(bpy_node);
+        outputs = node_outputs_bpy_to_b4w(bpy_node);
+        m_print.warn("VALTORGB node is not fully supported.");
         break;
     case "VALUE":
 
-        var anim_param_name = get_value_node_anim_param(anim_data, bpy_node);
+        type = "VALUE";
 
-        var output = node_output_by_ident(bpy_node, "Value");
-
-        if (anim_param_name) {
-            type = "ANIM_VALUE";
-            var val_name = shader_ident("param_ANIM_VALUE_Value");
-            var param = {
-                name: val_name,
-                value: String(0)
-            }
-            params.push(param);
-
-            var param = {
-                name: "-1",
-                value: anim_param_name
-            }
-            params.push(param);
-
-        } else {
-            // consider node as simple VALUE node if there is no animation
-            type = "VALUE";
-            params.push(node_param(shader_ident("param_value_value"),
-                        output.default_value, 1))
+        var param_name = mat_name + "%join%" + bpy_node["name"];
+        var param = {
+            name: "-1",
+            value: param_name
         }
-        outputs.push(output);
+        params.push(param);
+
+        outputs.push(node_output_by_ident(bpy_node, "Value"));
 
         break;
     case "VECT_MATH":
@@ -1336,10 +1788,11 @@ function append_nmat_node(graph, bpy_node, geometry_output_num, anim_data) {
 
     m_graph.append_node(graph, m_graph.gen_node_id(graph), attr);
 
-    // recursively split GEOMETRY node
-    if (bpy_node["type"] == "GEOMETRY" &&
-            geometry_check_next(bpy_node, geometry_output_num))
-        if (!append_nmat_node(graph, bpy_node, ++geometry_output_num, anim_data))
+    // recursively split GEOMETRY or TEX_COORD node
+    if ((bpy_node["type"] == "GEOMETRY" || bpy_node["type"] == "TEX_COORD") &&
+            node_output_check_next(bpy_node, output_num))
+        if (!append_nmat_node(graph, bpy_node, ++output_num, anim_data,
+                              mat_name))
             return false;
 
     return true;
@@ -1355,7 +1808,7 @@ function validate_custom_node_group(bpy_node, inputs_map, outputs_map) {
         var input = bpy_inputs[i];
         var need_vec_in = inputs_map[i];
         if (!input || input["default_value"] instanceof Array != need_vec_in) {
-            m_print.warn("B4W Warning: Wrong inputs for custom node group \"" +
+            m_print.warn("Wrong inputs for custom node group \"" +
                 bpy_node["name"] + "\" of type: \"", node_name, "\"." +
                 "Processing as general node group.");
             return false;
@@ -1365,7 +1818,7 @@ function validate_custom_node_group(bpy_node, inputs_map, outputs_map) {
         var output = bpy_outputs[i];
         var need_vec_out = outputs_map[i];
         if (!output || output["default_value"] instanceof Array != need_vec_out) {
-            m_print.warn("B4W Warning: Wrong outputs for custom node group \"" +
+            m_print.warn("Wrong outputs for custom node group \"" +
                 bpy_node["name"] + "\" of type: \"", node_name, "\"." +
                 "Processing as general node group.");
             return false;
@@ -1375,7 +1828,7 @@ function validate_custom_node_group(bpy_node, inputs_map, outputs_map) {
     return true;
 }
 
-function process_node_group(bpy_node) {
+function process_node_group(bpy_node, mat_name) {
     var node_tree = clone_node_tree(bpy_node["node_group"]["node_tree"]);
 
     var node_name = bpy_node["node_tree_name"];
@@ -1397,7 +1850,9 @@ function process_node_group(bpy_node) {
     }
 
     rename_node_group_nodes(bpy_node["name"], node_tree);
-    var node_group_graph = compose_nmat_graph(node_tree, bpy_node["node_group"]["uuid"], true);
+    var node_group_graph = compose_nmat_graph(node_tree,
+                                              bpy_node["node_group"]["uuid"],
+                                              true, mat_name);
     var data = {
         node_group_graph: node_group_graph,
         node_group_links: node_tree["links"]
@@ -1456,7 +1911,7 @@ function shader_ident(name_base) {
     return name;
 }
 
-function check_geometry_node_outputs(bpy_node) {
+function check_input_node_outputs(bpy_node) {
     var outputs = bpy_node["outputs"];
     for (var i = 0; i < outputs.length; i++) {
         var output = outputs[i];
@@ -1491,13 +1946,50 @@ function geometry_node_type(bpy_node, output_num) {
             return "GEOMETRY_VW";
         case "Global":
             return "GEOMETRY_GL";
+        case "Local":
+            return "GEOMETRY_LO";
+        case "Orco":
+            return "GEOMETRY_OR";
         default:
             return null;
         }
     }
 }
 
-function geometry_check_next(bpy_node, output_num) {
+function tex_coord_node_type(bpy_node, output_num) {
+    var outputs = bpy_node["outputs"];
+    var out_counter = 0;
+    for (var i = 0; i < outputs.length; i++) {
+        var output = outputs[i];
+
+        if (!output["is_linked"])
+            continue;
+
+        if ((out_counter++) < output_num)
+            continue;
+
+        switch (output["identifier"]) {
+        case "Camera":
+            return "TEX_COORD_CA";
+        case "Generated":
+            return "TEX_COORD_GE";
+        case "Normal":
+            return "TEX_COORD_NO";
+        case "Object":
+            return "TEX_COORD_OB";
+        case "Reflection":
+            return "TEX_COORD_RE";
+        case "UV":
+            return "TEX_COORD_UV";
+        case "Window":
+            return "TEX_COORD_WI";
+        default:
+            return null;
+        }
+    }
+}
+
+function node_output_check_next(bpy_node, output_num) {
     var outputs = bpy_node["outputs"];
     var out_counter = 0;
     for (var i = 0; i < outputs.length; i++) {
@@ -1516,8 +2008,13 @@ function geometry_check_next(bpy_node, output_num) {
 
 
 function texture_node_type(bpy_node) {
+    if (!bpy_node["texture"])
+        return "TEXTURE_EMPTY";
+
     var outputs = bpy_node["outputs"];
-    var node_value = false;
+    var node_color  = false;
+    var node_normal = false;
+    var node_value  = false;
     for (var i = 0; i < outputs.length; i++) {
         var output = outputs[i];
 
@@ -1528,12 +2025,11 @@ function texture_node_type(bpy_node) {
 
         switch (ident) {
         case "Color":
-            if (bpy_node["texture"]["type"] == "ENVIRONMENT_MAP")
-                return "TEXTURE_ENVIRONMENT";
-            else
-                return "TEXTURE_COLOR";
+            node_color = true;
+            break;
         case "Normal":
-            return "TEXTURE_NORMAL";
+            node_normal = true;
+            break;
         case "Value":
             node_value = true;
             break;
@@ -1541,11 +2037,26 @@ function texture_node_type(bpy_node) {
             throw "Unknown texture output";
         }
     }
-    if (node_value)
+
+    if (node_color) {
+        if (node_normal)
+            m_print.warn("Node \"" + bpy_node["name"] + "\" has both Color " +
+                         "and Normal outputs. Normal will be omitted");
+
         if (bpy_node["texture"]["type"] == "ENVIRONMENT_MAP")
             return "TEXTURE_ENVIRONMENT";
         else
             return "TEXTURE_COLOR";
+
+    } else if (node_normal) {
+        return "TEXTURE_NORMAL"
+
+    } else if (node_value) {
+        if (bpy_node["texture"]["type"] == "ENVIRONMENT_MAP")
+            return "TEXTURE_ENVIRONMENT";
+        else
+            return "TEXTURE_COLOR";
+    }
 }
 
 function node_input_by_ident(bpy_node, ident) {
@@ -1788,7 +2299,7 @@ function init_node_elem(mat_node) {
         params: fparams,
         param_values: fparam_values,
         vparams: vparams,
-        dirs: mat_node.dirs
+        dirs: JSON.parse(JSON.stringify(mat_node.dirs)) // deep copy
     }
 
     return elem;
@@ -1799,7 +2310,7 @@ function create_new_name(type, group_name, name) {
         return group_name + "*GI*" + name;      // for search
     else if (type == "GROUP_OUTPUT")
         return group_name + "*GO*" + name;
-    return group_name + "*" + name;
+    return group_name + "%join%" + name;
 }
 
 function rename_node_group_nodes(node_group_name, node_tree) {
@@ -1960,39 +2471,14 @@ function change_node_groups_links(node, links, graph) {
     }
 }
 
-function get_value_node_anim_param(anim_data, bpy_node) {
-
-    if (!anim_data)
-        return null
-
-    var action = anim_data["action"];
-    if (action) {
-        var act_params = action._render.params;
-        for (var act_param in act_params) {
-            // extract text between "[" and "]" which is exactly a node name
-            var node_inside_anim = act_param.match(/"(.*?)"/ )[1];
-            if (node_inside_anim == bpy_node["name"]) {
-                return(action["name"] + "_" + act_param);
-            }
+exports.check_material_glow_output = function(mat) {
+    if (mat["node_tree"])
+        for (var i = 0; i < mat["node_tree"]["nodes"].length; i++) {
+            var node = mat["node_tree"]["nodes"][i]
+            if (node.type == "GROUP" && node["node_tree_name"] == "B4W_GLOW_OUTPUT")
+                return true;
         }
-    }
-
-    var nla_tracks = anim_data["nla_tracks"]
-    for (var j = 0; j < nla_tracks.length; j++) {
-        var nla_strips = nla_tracks[j]["strips"];
-        for (var k = 0; k <nla_tracks[j]["strips"].length; k++) {
-            var strip = nla_strips[k];
-            var action = strip["action"];
-            var act_params = action._render.params;
-            for (var act_param in act_params) {
-                // extract text between "[" and "]" which is exactly a node name
-                var node_inside_anim = act_param.match(/"(.*?)"/ )[1];
-                if (node_inside_anim == bpy_node["name"]) {
-                    return(action["name"] + "_" + act_param);
-                }
-            }
-        }
-    }
+    return false;
 }
 
 exports.cleanup = cleanup;

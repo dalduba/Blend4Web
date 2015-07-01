@@ -5,6 +5,8 @@ import os, subprocess, shutil, getopt, sys, re
 from pathlib import Path
 from html.parser import HTMLParser
 
+import mimetypes
+
 
 _os_norm = os.path.normpath
 _os_join = os.path.join
@@ -55,12 +57,12 @@ _version = None
 
 
 class HTMLProcessor(HTMLParser):
-    def __init__(self, app_path, app_path_name):
+    def __init__(self, app_path, app_path_name, js_ignore, css_ignore):
         HTMLParser.__init__(self)
 
         self.js = []
-        self.ext_js = []
         self.css = []
+        self.favicon = []
         self.meta = []
         self.start_body = 0
         self.end_body = 0
@@ -69,6 +71,8 @@ class HTMLProcessor(HTMLParser):
         self.meta_list = []
         self.title = []
         self.is_title = False
+        self.js_ignore = js_ignore
+        self.css_ignore = css_ignore
 
     def handle_endtag(self, tag):
         if tag == "body":
@@ -82,19 +86,37 @@ class HTMLProcessor(HTMLParser):
             self.start_body = self.getpos()
 
         if tag == "script":
+            script = {}
+
             for attr in attrs:
+                script[attr[0]] = attr[1]
+
                 if attr[0] == "src":
                     if (attr[1].startswith("https://") or
-                        attr[1].startswith("http://") or
-                        attr[1].startswith("//")):
-                        self.ext_js.append(attr[1])
+                            attr[1].startswith("http://") or
+                            attr[1].startswith("//") or
+                            os.path.basename(attr[1]) in self.js_ignore):
+                        script["no_compile"] = True
 
-                    self.js.append(_os_norm(attr[1]))
+            self.js.append(script)
 
         if tag == "link":
+            link = {}
+
             for attr in attrs:
+                link[attr[0]] = attr[1]
+
                 if attr[0] == "href":
-                    self.css.append(_os_norm(attr[1]))
+                    mime_type = mimetypes.guess_type(attr[1])[0]
+
+                    if mime_type == "text/css":
+
+                        if os.path.basename(attr[1]) in self.css_ignore:
+                            link["no_compile"] = True
+
+                        self.css.append(link)
+                    elif mime_type == "image/png":
+                        self.favicon.append(link)
 
         if tag == "meta":
             self.meta_list.append(attrs)
@@ -112,7 +134,7 @@ def run():
 
     try:
         opts, args = getopt.getopt(sys.argv[1:],
-                            "hb:o:a:d:s:p:v:",
+                            "hb:o:a:d:s:p:v:j:c:",
                            ["help",
                             "b4w=",
                             "optimization=",
@@ -120,7 +142,9 @@ def run():
                             "dir=",
                             "assets=",
                             "assets_path=",
-                            "version="])
+                            "version=",
+                            "js_ignore=",
+                            "css_ignore="])
     except getopt.GetoptError as err:
         sys.exit(1)
 
@@ -133,21 +157,27 @@ def run():
     engine_type = False
     ext_path    = False
     only_copy   = False
+    only_single = False
+    b4w_single  = False
     assets_path = ""
 
     global _apps_path, _version
 
-    assets_paths = []
+    assets_paths     = []
+    js_ignore_match  = []
+    css_ignore_match = []
 
     for o, a in opts:
         if o == "--b4w" or o == "-b":
             if a == "copy":
                 engine_type = "COPY"
+                b4w_single = True
             elif a == "combine":
                 engine_type = "COMBINE"
             elif a == "compile":
                 engine_type = "COMPILE"
             elif a == "external":
+                b4w_single = True
                 pass
             else:
                 help("Arg '" + a +
@@ -176,6 +206,11 @@ def run():
             _apps_path = a
             ext_path = True
             only_copy = True
+        elif o == "--js_ignore" or o == "-j":
+            js_ignore_match.append(a)
+            only_single = True
+        elif o == "--css_ignore" or o == "-c":
+            css_ignore_match.append(a)
         elif o == "--help" or o == "-h":
             help()
             sys.exit(0)
@@ -205,7 +240,7 @@ def run():
     JS_CP_PARAMS.append("--compilation_level=" + opt_level)
 
     compile_app(app_name, engine_type, opt_level,
-                assets_paths, ext_path, assets_path)
+                assets_paths, ext_path, assets_path, js_ignore_match, css_ignore_match)
 
 
 def check_sdk_resources():
@@ -250,7 +285,7 @@ def check_app_struct(app_path):
 
 
 def compile_app(app_path, engine_type, opt_level,
-                assets_paths, ext_path, app_assets_path):
+                assets_paths, ext_path, app_assets_path, js_ignore_match, css_ignore_match):
     app_path_obj = Path(app_path)
     app_path_name = app_path_obj.parts[-1]
 
@@ -280,13 +315,27 @@ def compile_app(app_path, engine_type, opt_level,
     html_file = str([f for f in html_files
                                 if str(f.parent) == new_app_path][0])
 
-    parser, src_lines = parse_html_file(new_app_path, html_file, app_path_name)
+    js_ignore = []
+    css_ignore = []
+
+    for ignore in css_ignore_match:
+        css_ignore.extend(new_app_path_obj.rglob(ignore))
+
+    for ignore in js_ignore_match:
+        js_ignore.extend(new_app_path_obj.rglob(ignore))
+
+    css_ignore = [ignore.name for ignore in css_ignore]
+    js_ignore = [ignore.name for ignore in js_ignore]
+
+    parser, src_lines = parse_html_file(new_app_path, html_file,
+                                        app_path_name, js_ignore, css_ignore)
+
     new_body_lines = parse_body(parser.start_body, parser.end_body, src_lines)
 
     css_files = list(new_app_path_obj.rglob('*.css'))
-    css_paths = exist_files(parser.css,
-                                         css_files,
-                                         app_path_name)
+
+    css_paths = exist_css(parser.css, css_files,
+                            app_path_name)
 
     out_css_file_path = _os_norm(_os_join(
                                      new_app_path, app_path_name + ".min.css"))
@@ -296,9 +345,9 @@ def compile_app(app_path, engine_type, opt_level,
 
     js_files = list(new_app_path_obj.rglob('*.js'))
 
-    js_paths = exist_files(parser.js,
-                                       js_files,
-                                       app_path_name)
+    js_paths = exist_js(parser.js, js_files,
+                           app_path_name)
+
     out_js_file_path = _os_norm(_os_join(
                                     new_app_path, app_path_name + ".min.js"))
 
@@ -309,8 +358,8 @@ def compile_app(app_path, engine_type, opt_level,
                  parser, engine_type, new_app_path, ext_path, app_assets_path)
 
 
-def parse_html_file(new_app_path, html_file, app_path_name):
-    parser = HTMLProcessor(new_app_path, app_path_name)
+def parse_html_file(new_app_path, html_file, app_path_name, js_ignore, css_ignore):
+    parser = HTMLProcessor(new_app_path, app_path_name, js_ignore, css_ignore)
     src_file = open(html_file)
     src_text = src_file.read()
     src_file.seek(0)
@@ -344,6 +393,7 @@ def compile_html(app_path_name, css_paths, js_paths, body_lines,
                  parser, engine_type, new_app_path, ext_path, assets_path):
     meta = parser.meta_list
     title = parser.title
+    favicons = parser.favicon
 
     suffix = ""
 
@@ -414,6 +464,11 @@ def compile_html(app_path_name, css_paths, js_paths, body_lines,
         shutil.copyfile(phys_path, _os_norm(_os_join(
                                     new_app_path, "uranium.js")))
 
+        phys_mem_path = phys_path + ".mem"
+        if os.path.isfile(phys_mem_path):
+            shutil.copyfile(phys_mem_path, _os_norm(_os_join(
+                                            new_app_path, "uranium.js.mem")))
+
         if engine_type == "COPY":
             engine_src = "b4w.full.min.js"
             new_engine_path = _os_norm(_os_join(new_app_path, "b4w.full.min.js"))
@@ -453,6 +508,11 @@ def compile_html(app_path_name, css_paths, js_paths, body_lines,
     inner_text.append(
         "\n    <title>" + title_text + "</title>")
 
+
+    for favicon in favicons:
+        inner_text.append(
+            "\n    <link rel='shortcut icon' href='" + favicon["href"] + "' />")
+
     for parent in css_paths:
         rel = os.path.relpath(parent, start=new_app_path)
 
@@ -461,10 +521,38 @@ def compile_html(app_path_name, css_paths, js_paths, body_lines,
             _os_norm(_os_join(rel, app_path_name)) +
             ".min.css" + suffix + "'/>")
 
+    for css in parser.css:
+        if "no_compile" in css:
+            css_string = "\n    <link"
+
+            for attr in css:
+                if attr == "no_compile":
+                    continue
+
+                css_string += " " + attr + "='" + css[attr] + "'"
+
+            css_string += "/>"
+
+            inner_text.append(css_string)
+
     if engine_src:
         inner_text.append(
             "\n    <script type='text/javascript' src='" +
             engine_src + suffix + "'></script>")
+
+    for js in parser.js:
+        if "no_compile" in js:
+            js_string = "\n    <script"
+
+            for attr in js:
+                if attr == "no_compile":
+                    continue
+
+                js_string += " " + attr + "='" + js[attr] + "'"
+
+            js_string += "></script>"
+
+            inner_text.append(js_string)
 
     for parent in js_paths:
         rel = os.path.relpath(parent, start=new_app_path)
@@ -473,11 +561,8 @@ def compile_html(app_path_name, css_paths, js_paths, body_lines,
             "\n    <script type='text/javascript' src='" +
             _os_norm(_os_join(rel, app_path_name)) + ".min.js" + suffix + "'></script>")
 
-    for js in parser.ext_js:
-        inner_text.append(
-            "\n    <script type='text/javascript' src='" + js + suffix + "'></script>")
 
-    inner_text.append("\n</head>")
+    inner_text.append("\n</head>\n")
     inner_text.extend(body_lines)
     inner_text.append("\n</html>")
 
@@ -624,34 +709,55 @@ def check_file_modules(module, module_names, reserved_mods, pattern_1):
                                    reserved_mods, pattern_1)
 
 
-def exist_files(included_files, files, app_path_name):
+def exist_css(included_files, files, app_path_name):
     """
-    Checks files are included in html and exists in application directory.
+    Checks css files are included in html and exists in application directory.
     """
     processed_files = {}
-    extern_files = []
-
-    src_path_obj = Path(SRC_PATH)
-    src_obj_files = list(src_path_obj.rglob('*.js'))
-    src_file_paths = [str(x) for x in src_obj_files]
-
-    file_paths = [str(x) for x in files]
 
     for item in included_files:
-        for item_file in files:
-            if _os_norm(
-                _os_join(_apps_path,
-                        app_path_name, item)) == _os_norm(str(item_file)):
+        css_src = _os_norm(_os_join(_apps_path, app_path_name, item["href"]))
 
+        if "no_compile" in item:
+            continue
+
+        for item_file in files:
+            css_file = _os_norm(str(item_file))
+
+            if css_src == css_file:
                 parent = str(item_file.parent)
 
                 if parent in processed_files:
-                    processed_files[parent].append(
-                        _os_norm(
-                            _os_join(_apps_path, app_path_name, item)))
+                    processed_files[parent].append(css_file)
                 else:
-                    processed_files[parent] = [_os_norm(
-                        _os_join(_apps_path, app_path_name, item))]
+                    processed_files[parent] = [css_file]
+                break
+
+    return processed_files
+
+
+def exist_js(included_files, files, app_path_name):
+    """
+    Checks js files are included in html and exists in application directory.
+    """
+    processed_files = {}
+
+    for item in included_files:
+        js_src = _os_norm(_os_join(_apps_path, app_path_name, item["src"]))
+
+        if "no_compile" in item:
+            continue
+
+        for item_file in files:
+            js_file = _os_norm(str(item_file))
+
+            if js_src == js_file:
+                parent = str(item_file.parent)
+
+                if parent in processed_files:
+                    processed_files[parent].append(js_file)
+                else:
+                    processed_files[parent] = [js_file]
                 break
 
     return processed_files
@@ -684,20 +790,24 @@ def help(err=""):
         print("Arguments:")
         print("    -a, --app=APP              \
             application directory name")
-        print("    -o, --optimization=TYPE    \
-            javaScript optimization type: 'whitespace', 'simple' or 'advanced'")
         print("    -b, --b4w=TYPE             \
             b4w engine type: 'external', 'copy', 'combine', 'compile' ")
+        print("    -c, --css_ignore           \
+            no compile css file")
         print("    -d, --dir                  \
             choose application directory")
-        print("    -s, --assets               \
-            choose assets directory")
-        print("    -p, --assets_path               \
-            choose assets path for compiled app")
-        print("    -v, --version               \
-            add version to js and css files")
         print("    -h, --help                 \
             give this help list")
+        print("    -j, --js_ignore            \
+            no compile js file")
+        print("    -o, --optimization=TYPE    \
+            javaScript optimization type: 'whitespace', 'simple' or 'advanced'")
+        print("    -p, --assets_path          \
+            choose assets path for compiled app")
+        print("    -s, --assets               \
+            choose assets directory")
+        print("    -v, --version              \
+            add version to js and css files")
 
 if __name__ == "__main__":
     run()

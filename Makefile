@@ -4,8 +4,8 @@ APPDIR = apps_dev
 APIDOCRESDIR = doc_src/api_doc/jsdoc_resources
 SCRIPTSDIR = scripts
 TUTORIALS_DIR = deploy/tutorials
-#VERSION=`sed -e "s/.\+/\0\_pre/" VERSION`
-VERSION=`sed -e "s/.\+/\0\_rc/" VERSION`
+#VERSION=`sed -e 's/ *[^ ]\+ *//' -e 's/ \+.*/_pre/' VERSION`
+VERSION=`sed -e 's/ *[^ ]\+ *//' -e 's/ \+.*/_rc/' VERSION`
 
 .PHONY: all
 all: build
@@ -19,12 +19,12 @@ compile: compile_shaders compile_b4w compile_apps build_tutorials
 .PHONY: compile_shaders
 compile_shaders:
 	@echo "Compiling b4w shaders"
-	@`which node || which nodejs` tools/glsl/compiler/compile_shader_texts.js
+	@`which node || which nodejs` tools/glsl/compiler/compile_shader_texts.js --opt_decl --obf --rem_braces
 
 .PHONY: verify_shaders
 verify_shaders:
 	@echo "Verifying b4w shaders"
-	@`which node || which nodejs` tools/glsl/compiler/compile_shader_texts.js --dry-run
+	@`which node || which nodejs` tools/glsl/compiler/compile_shader_texts.js --dry --opt_decl --obf --rem_braces
 
 .PHONY: compile_b4w
 compile_b4w:
@@ -89,15 +89,24 @@ report_broken_exports:
 .PHONY: dist
 dist:
 	@echo "Creating $(VERSION) family of distributions"
-	@$(SH) ./$(SCRIPTSDIR)/make_dist.py -i -v $(VERSION) $(SCRIPTSDIR)/blend4web.lst
+	@$(SH) ./$(SCRIPTSDIR)/make_dist.py -v $(VERSION) $(SCRIPTSDIR)/blend4web.lst
 	@$(SH) ./$(SCRIPTSDIR)/make_dist.py -v $(VERSION) $(SCRIPTSDIR)/blend4web_sdk_free.lst
 	@$(SH) ./$(SCRIPTSDIR)/make_dist.py -v $(VERSION) $(SCRIPTSDIR)/blend4web_sdk_pro.lst
 
 .PHONY: dist_force
 dist_force:
 	@echo "Creating $(VERSION) family of distributions (overwrite mode)"
-	@$(SH) ./$(SCRIPTSDIR)/make_dist.py -f -i -v $(VERSION) $(SCRIPTSDIR)/blend4web.lst
+	@$(SH) ./$(SCRIPTSDIR)/make_dist.py -f -v $(VERSION) $(SCRIPTSDIR)/blend4web.lst
 	@$(SH) ./$(SCRIPTSDIR)/make_dist.py -f -v $(VERSION) $(SCRIPTSDIR)/blend4web_sdk_free.lst
 	@$(SH) ./$(SCRIPTSDIR)/make_dist.py -f -v $(VERSION) $(SCRIPTSDIR)/blend4web_sdk_pro.lst
+
+dist_addon_force:
+	@$(SH) ./$(SCRIPTSDIR)/make_dist.py -f -v $(VERSION) $(SCRIPTSDIR)/blend4web.lst
+
+resave:
+	@$(SH) ./$(SCRIPTSDIR)/resaver.py
+
+asan:
+	@$(SH) ./$(SCRIPTSDIR)/asan.py
 
 # vim: set noet ts=4 sw=4:

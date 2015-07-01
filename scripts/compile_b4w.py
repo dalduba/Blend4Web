@@ -18,7 +18,7 @@ COMMON_DIR        = _os_join(BASE_DIR, "..", "deploy", "apps", "common")
 ENGINE_NAME       = "b4w.min.js"
 ENGINE_NAME_FULL  = "b4w.full.min.js"
 
-CURRENT_DATE      = datetime.datetime.now().strftime("%d.%m.%Y %I:%M:%S")
+CURRENT_DATE      = "new Date({d.year}, {d.month}-1, {d.day}, {d.hour}, {d.minute}, {d.second})".format(d = datetime.datetime.now())
 
 COMPILER_PARAMS   = ['java',
                      '-jar',
@@ -48,9 +48,11 @@ EXTERNS           = ["tools/closure-compiler/extern_fullscreen.js",
 SRC_FILES         = ['src/b4w.js',
                      'version_rel.js',
                      'config_rel.js',
+                     'src/anchors.js',
                      'src/boundings.js',
                      'src/compat.js',
                      'src/constraints.js',
+                     'src/container.js',
                      'src/controls.js',
                      'src/curve.js',
                      'src/dds.js',
@@ -88,11 +90,13 @@ SRC_FILES         = ['src/b4w.js',
                      'src/sfx.js']
 
 SRC_EXT_FILES     = ['src/ext/animation.js',
+                     'src/ext/anchors.js',
                      'src/ext/assets.js',
                      'src/ext/camera.js',
                      'src/ext/config.js',
                      'src/ext/controls.js',
                      'src/ext/constraints.js',
+                     'src/ext/container.js',
                      'src/ext/data.js',
                      'src/ext/debug.js',
                      'src/ext/geometry.js',
@@ -101,15 +105,19 @@ SRC_EXT_FILES     = ['src/ext/animation.js',
                      'src/ext/material.js',
                      'src/ext/particles.js',
                      'src/ext/physics.js',
+                     'src/ext/rgb.js',
                      'src/ext/scenes.js',
                      'src/ext/sfx.js',
                      'src/ext/shaders.js',
                      'src/ext/textures.js',
+                     'src/ext/time.js',
                      'src/ext/transform.js',
+                     'src/ext/tsr.js',
                      'src/ext/util.js',
                      'src/ext/version.js',
                      'src/ext/objects.js',
-                     'src/ext/main.js']
+                     'src/ext/main.js',
+                     'src/ext/nla.js']
 
 SRC_LIBS_FILES    = ['src/libs/gl-matrix2.js',
                      'src/libs/gpp_eval.js',
@@ -335,10 +343,12 @@ def refact_version():
     Changes meta data in version.js file for working in compiled engine
     """
     version_file = open(_os_join(BASE_DIR, "..", "VERSION"))
-    version_text = version_file.read()
+    version_text = version_file.read().split()[1]
     version_file.close()
     verc_text_regex = re.compile('\s')
-    version_text = verc_text_regex.sub('', version_text)
+    version_arr = map(lambda x: str(int(x)), verc_text_regex.sub('', version_text).split("."))
+    version_text = "[" + ",".join(version_arr) + "]"
+
 
     version_js_file = open(_os_join(BASE_DIR, "..", "src", "version.js"))
     version_js_text = version_js_file.readlines()
@@ -352,12 +362,12 @@ def refact_version():
 
     for line in version_js_text:
         pattern_1 = r'(var\sTYPE\s=\s[\'|\"])+(DEBUG)'
-        pattern_2 = r'(var\sVERSION\s=\s[\"|\'])+( *|\s)'
-        pattern_3 = r'(var\sDATE\s=\s[\"|\'])+( *|\s)'
+        pattern_2 = r'(var\sVERSION\s=\s)null'
+        pattern_3 = r'(var\sDATE\s=\s)null'
 
         line = re.sub(pattern_1, r'\1RELEASE', line)
-        line = re.sub(pattern_2, r'\g<1>' + version_text, line)
-        line = re.sub(pattern_3, r'\g<1>' + CURRENT_DATE, line)
+        line = re.sub(pattern_2, r'\1' + version_text, line)
+        line = re.sub(pattern_3, r'\1' + CURRENT_DATE, line)
 
         version_rel_js_file.write(line)
 

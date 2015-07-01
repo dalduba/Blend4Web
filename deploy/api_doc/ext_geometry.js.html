@@ -43,14 +43,14 @@ var m_render = require("__renderer");
 /**
  * Extract the vertex array from the object.
  * @method module:geometry.extract_vertex_array
- * @param {Object} obj Object ID
+ * @param {Object3D} obj Object 3D
  * @param {String} mat_name Material name
  * @param {String} attrib_name Attribute name (a_position, a_normal, a_tangent)
  * @returns {Float32Array} Vertex array
  */
 exports.extract_vertex_array = function(obj, mat_name, attrib_name) {
 
-    if (!has_dyn_geom(obj)) {
+    if (!m_geom.has_dyn_geom(obj)) {
         m_print.error("Wrong object:", obj["name"]);
         return null;
     }
@@ -72,23 +72,16 @@ exports.extract_vertex_array = function(obj, mat_name, attrib_name) {
     }
 }
 
-function has_dyn_geom(obj) {
-    if (obj &amp;&amp; obj._render &amp;&amp; obj._render.dynamic_geometry)
-        return true;
-    else
-        return false;
-}
-
 /**
  * Extract the array of triangulated face indices from the given object.
  * @method module:geometry.extract_index_array
- * @param {Object} obj Object ID
+ * @param {Object3D} obj Object 3D
  * @param {String} mat_name Material name
  * @returns {Uint16Array|Uint32Array} Array of triangle indices
  */
 exports.extract_index_array = function(obj, mat_name) {
 
-    if (!has_dyn_geom(obj)) {
+    if (!m_geom.has_dyn_geom(obj)) {
         m_print.error("Wrong object:", obj["name"]);
         return null;
     }
@@ -113,7 +106,7 @@ exports.extract_index_array = function(obj, mat_name) {
 /**
  * Update the vertex array for the given object.
  * @method module:geometry.update_vertex_array
- * @param {Object} obj Object ID
+ * @param {Object3D} obj Object 3D
  * @param {String} mat_name Material name
  * @param {String} attrib_name Attribute name (a_position, a_normal, a_tangent)
  * @param {Float32Array} array The new array
@@ -121,7 +114,7 @@ exports.extract_index_array = function(obj, mat_name) {
 exports.update_vertex_array = function(obj, mat_name, attrib_name, array) {
     var types = ["MAIN", "NODES", "DEPTH", "COLOR_ID"];
 
-    if (!has_dyn_geom(obj)) {
+    if (!m_geom.has_dyn_geom(obj)) {
         m_print.error("Wrong object:", obj["name"]);
         return;
     }
@@ -144,7 +137,7 @@ exports.update_vertex_array = function(obj, mat_name, attrib_name, array) {
 /**
  * Override geometry for the given object.
  * @method module:geometry.override_geometry
- * @param {Object} obj Object ID
+ * @param {Object3D} obj Object 3D
  * @param {String} mat_name Material name
  * @param {Uint16Array|Uint32Array} ibo_array Array of triangle indices
  * @param {Float32Array} positions_array New vertex positions array
@@ -155,7 +148,7 @@ exports.override_geometry = function(obj, mat_name, ibo_array,
 
     var types = ["MAIN", "NODES", "DEPTH", "COLOR_ID"];
 
-    if (!has_dyn_geom(obj)) {
+    if (!m_geom.has_dyn_geom(obj)) {
         m_print.error("Wrong object:", obj["name"]);
         return;
     }
@@ -249,16 +242,80 @@ exports.override_geometry = function(obj, mat_name, ibo_array,
                 m_render.assign_attribute_setters(batch);
 
                 // NOTE: process child batches if bufs_data was copied not by link
-                if (batch.childs)
-                    for (var j = 0; j &lt; batch.childs.length; j++) {
-                        var child_batch = batch.childs[j];
+                var child_batch = m_batch.find_batch_material_forked(obj, batch);
+                if (child_batch &amp;&amp; child_batch.bufs_data)
+                    child_batch.bufs_data = bufs_data;
 
-                        if (child_batch &amp;&amp; child_batch.bufs_data)
-                            child_batch.bufs_data = bufs_data;
-                    }
             }
         }
     }
+}
+/**
+ * Apply shape key to the object.
+ * @method module:geometry.set_shape_key_value
+ * @param {Object3D} obj Object 3D
+ * @param {String} key_name Shape key name
+ * @param {Number} value Shape key value
+ */
+exports.set_shape_key_value = function(obj, key_name, value) {
+    if (!m_geom.check_shape_keys(obj)) {
+        m_print.error("Wrong object:", obj["name"]);
+        return null;
+    }
+
+    if (!m_geom.has_shape_key(obj, key_name)) {
+        m_print.error("Wrong key name:", key_name);
+        return null;
+    }
+
+    var float_value = parseFloat(value);
+
+    m_geom.apply_shape_key(obj, key_name, float_value);
+}
+/**
+ * Check if object has got shape keys.
+ * @method module:geometry.check_shape_keys
+ * @param {Object3D} obj Object 3D
+ * @returns {Boolean} Checking result.
+ */
+exports.check_shape_keys = function(obj) {
+    return m_geom.check_shape_keys(obj);
+}
+/**
+ * Return all available shape keys names.
+ * @method module:geometry.get_shape_keys_names
+ * @param {Object3D} obj Object 3D
+ * @returns {String[]} Array of animation names
+ */
+exports.get_shape_keys_names = function(obj) {
+
+    if (!m_geom.check_shape_keys(obj)) {
+        m_print.error("Wrong object:", obj["name"]);
+        return null;
+    }
+
+    return m_geom.get_shape_keys_names(obj);
+}
+/**
+ * Return shape key current value.
+ * @method module:geometry.get_shape_key_value
+ * @param {Object3D} obj Object 3D
+ * @param {String} key_name Shape key name
+ * @returns {Number} value Shape key value
+ */
+exports.get_shape_key_value = function(obj, key_name) {
+
+    if (!m_geom.check_shape_keys(obj)) {
+        m_print.error("Wrong object:", obj["name"]);
+        return null;
+    }
+
+    if (!m_geom.has_shape_key(obj, key_name)) {
+        m_print.error("Wrong key name:", key_name);
+        return null;
+    }
+
+    return m_geom.get_shape_key_value(obj, key_name);
 }
 
 }
@@ -272,13 +329,13 @@ exports.override_geometry = function(obj, mat_name, ibo_array,
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-animation.html">animation</a></li><li><a href="module-app.html">app</a></li><li><a href="module-assets.html">assets</a></li><li><a href="module-camera.html">camera</a></li><li><a href="module-camera_anim.html">camera_anim</a></li><li><a href="module-config.html">config</a></li><li><a href="module-constraints.html">constraints</a></li><li><a href="module-controls.html">controls</a></li><li><a href="module-data.html">data</a></li><li><a href="module-debug.html">debug</a></li><li><a href="module-geometry.html">geometry</a></li><li><a href="module-gyroscope.html">gyroscope</a></li><li><a href="module-hud.html">hud</a></li><li><a href="module-lights.html">lights</a></li><li><a href="module-main.html">main</a></li><li><a href="module-mat3.html">mat3</a></li><li><a href="module-mat4.html">mat4</a></li><li><a href="module-material.html">material</a></li><li><a href="module-mixer.html">mixer</a></li><li><a href="module-mouse.html">mouse</a></li><li><a href="module-npc_ai.html">npc_ai</a></li><li><a href="module-ns_compat.html">ns_compat</a></li><li><a href="module-objects.html">objects</a></li><li><a href="module-particles.html">particles</a></li><li><a href="module-physics.html">physics</a></li><li><a href="module-preloader.html">preloader</a></li><li><a href="module-quat.html">quat</a></li><li><a href="module-scenes.html">scenes</a></li><li><a href="module-screenshooter.html">screenshooter</a></li><li><a href="module-sfx.html">sfx</a></li><li><a href="module-shaders.html">shaders</a></li><li><a href="module-storage.html">storage</a></li><li><a href="module-textures.html">textures</a></li><li><a href="module-transform.html">transform</a></li><li><a href="module-util.html">util</a></li><li><a href="module-vec3.html">vec3</a></li><li><a href="module-vec4.html">vec4</a></li><li><a href="module-version.html">version</a></li></ul><h3>Namespaces</h3><ul><li><a href="b4w.html">b4w</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-anchors.html">anchors</a></li><li><a href="module-animation.html">animation</a></li><li><a href="module-app.html">app</a></li><li><a href="module-assets.html">assets</a></li><li><a href="module-camera.html">camera</a></li><li><a href="module-camera_anim.html">camera_anim</a></li><li><a href="module-config.html">config</a></li><li><a href="module-constraints.html">constraints</a></li><li><a href="module-container.html">container</a></li><li><a href="module-controls.html">controls</a></li><li><a href="module-data.html">data</a></li><li><a href="module-debug.html">debug</a></li><li><a href="module-geometry.html">geometry</a></li><li><a href="module-gyroscope.html">gyroscope</a></li><li><a href="module-hud.html">hud</a></li><li><a href="module-lights.html">lights</a></li><li><a href="module-main.html">main</a></li><li><a href="module-mat3.html">mat3</a></li><li><a href="module-mat4.html">mat4</a></li><li><a href="module-material.html">material</a></li><li><a href="module-mixer.html">mixer</a></li><li><a href="module-mouse.html">mouse</a></li><li><a href="module-nla.html">nla</a></li><li><a href="module-npc_ai.html">npc_ai</a></li><li><a href="module-ns_compat.html">ns_compat</a></li><li><a href="module-objects.html">objects</a></li><li><a href="module-particles.html">particles</a></li><li><a href="module-physics.html">physics</a></li><li><a href="module-preloader.html">preloader</a></li><li><a href="module-quat.html">quat</a></li><li><a href="module-rgb.html">rgb</a></li><li><a href="module-rgba.html">rgba</a></li><li><a href="module-scenes.html">scenes</a></li><li><a href="module-screenshooter.html">screenshooter</a></li><li><a href="module-sfx.html">sfx</a></li><li><a href="module-shaders.html">shaders</a></li><li><a href="module-storage.html">storage</a></li><li><a href="module-textures.html">textures</a></li><li><a href="module-time.html">time</a></li><li><a href="module-transform.html">transform</a></li><li><a href="module-tsr.html">tsr</a></li><li><a href="module-util.html">util</a></li><li><a href="module-vec3.html">vec3</a></li><li><a href="module-vec4.html">vec4</a></li><li><a href="module-version.html">version</a></li></ul><h3>Namespaces</h3><ul><li><a href="b4w.html">b4w</a></li></ul><h3><a href="global.html">Global</a></h3>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0-dev</a> on Wed Feb 25 2015 10:34:05 GMT+0300 (MSK)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0-dev</a> on Tue Jun 30 2015 17:18:01 GMT+0300 (MSK)
 </footer>
 
 <script> prettyPrint(); </script>

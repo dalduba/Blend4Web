@@ -10,10 +10,11 @@ import re
 BAKED_SUFFIX = "_B4W_BAKED"
 
 class B4W_Anim_Baker(bpy.types.Operator):
-    '''Bake animation for selected armature object'''
+    '''Bake animation for the selected armature object'''
 
-    bl_idname = "b4w.animation_bake"
-    bl_label = "B4W Animation Bake"
+    bl_idname  = "b4w.animation_bake"
+    bl_label   = "Bake Skeletal Animation"
+    bl_options = {"INTERNAL"}
 
     def execute(self, context):
         armobj = context.active_object
@@ -26,71 +27,66 @@ class B4W_Anim_Baker(bpy.types.Operator):
             self.report({'INFO'}, "No animation data")
             return {'CANCELLED'}
 
-        # save current state to restore after (just for convenience)
-        current_action = armobj.animation_data.action
+        if armobj.library is not None:
+            self.report({'INFO'}, "Armature object is linked")
+            return {'CANCELLED'}
 
-        # save auto keyframes tool mode
-        use_kia = bpy.context.scene.tool_settings.use_keyframe_insert_auto
-        bpy.context.scene.tool_settings.use_keyframe_insert_auto = False
-
-        nla_mute_states = self.set_nla_tracks_mute_state(armobj)
-
-        current_frame = bpy.context.scene.frame_current
-        current_active_obj = bpy.context.scene.objects.active
-
-        # save valid armature actions 
         valid_actions = self.get_valid_actions(armobj)
 
-        # save poses, modes, actions
-        buf_action = None
-        armatures = []
-        current_modes = []
-        current_poselibs = []
+        if armobj.b4w_use_bpy_anim_baker:
+            for action in valid_actions:
+                # grabs armobj from the context
+                self.process_action_bpy(action)
+        else:
+            # save current state to restore after (just for convenience)
+            current_action = armobj.animation_data.action
 
-        for obj in bpy.data.objects:
-            if obj.type == "ARMATURE" and obj.library is None:
-                bpy.context.scene.objects.active = obj
-                current_modes.append(obj.mode)
-                bpy.ops.object.mode_set(mode='POSE')
-                current_poselibs.append(obj.pose_library)
+            # save auto keyframes tool mode
+            use_kia = bpy.context.scene.tool_settings.use_keyframe_insert_auto
+            bpy.context.scene.tool_settings.use_keyframe_insert_auto = False
 
-                if buf_action is None:
-                    bpy.ops.poselib.new()
-                    buf_action = obj.pose_library
+            nla_mute_states = self.set_nla_tracks_mute_state(armobj)
 
-                armatures.append(obj.name)
-                obj.pose_library = buf_action
-                bpy.ops.poselib.pose_add(frame=len(buf_action.pose_markers))
+            current_frame = bpy.context.scene.frame_current
+            current_active_obj = bpy.context.scene.objects.active
 
-        # create baked actions
-        for action in valid_actions:
-            self.process_action(action, armobj)
+            # save pose, mode, actions
+            current_mode = armobj.mode
+            current_hidden_state = bpy.context.object.hide
+            current_poselib = armobj.pose_library
 
-        armobj.animation_data.action = current_action
-        bpy.context.scene.frame_set(current_frame)
+            bpy.context.object.hide = False
+            bpy.ops.object.mode_set(mode='POSE')
 
-        # restore poses, modes, actions
-        for armname in enumerate(armatures):
-            obj = bpy.data.objects[armname[1]]
-            bpy.context.scene.objects.active = obj
-            obj.pose_library = buf_action
-            bpy.ops.poselib.apply_pose(pose_index=armname[0])
+            bpy.ops.poselib.new()
+            buf_action = armobj.pose_library
+            bpy.ops.poselib.pose_add(frame=len(buf_action.pose_markers))
+
+            # create baked actions
+            for action in valid_actions:
+                self.process_action(action, armobj)
+
+            # restore pose, mode, action
+            armobj.animation_data.action = current_action
+            bpy.context.scene.frame_set(current_frame)
+
+            armobj.pose_library = buf_action
+            bpy.ops.poselib.apply_pose(0)
             bpy.ops.poselib.unlink()
-            bpy.ops.object.mode_set(mode=current_modes[armname[0]])
-            obj.pose_library = current_poselibs[armname[0]]
-        
-        if buf_action is not None:
-            bpy.data.actions.remove(buf_action)
-            
-        bpy.context.scene.objects.active = current_active_obj
-        del armatures
-        del current_modes
-        del current_poselibs
 
-        # restore auto keyframes tool mode
-        bpy.context.scene.tool_settings.use_keyframe_insert_auto = use_kia
+            bpy.ops.object.mode_set(mode=current_mode)
+            bpy.context.object.hide = current_hidden_state
+            armobj.pose_library = current_poselib
 
-        self.restore_nla_tracks_mute_state(armobj, nla_mute_states)
+            if buf_action is not None:
+                bpy.data.actions.remove(buf_action)
+
+            bpy.context.scene.objects.active = current_active_obj
+
+            # restore auto keyframes tool mode
+            bpy.context.scene.tool_settings.use_keyframe_insert_auto = use_kia
+
+            self.restore_nla_tracks_mute_state(armobj, nla_mute_states)
 
         return {"FINISHED"}
 
@@ -203,15 +199,18 @@ class B4W_Anim_Baker(bpy.types.Operator):
                     # MATH
                     # we need to calc pose transform relative to rest position
                     # normally we get it from pbone.matrix_basis
-                    # but in order to bake constraints and inverse kinematics we 
+                    # but in order to bake constraints and inverse kinematics we
                     # calculate "pseudo" matrix_basis in particular pose/frame
-                    # from matrix_channel which is pose accumulated through hierarchy 
+                    # from matrix_channel which is pose accumulated through
+                    # hierarchy
                     # e.g. channel1 = rest0 * pose0 * rest0.inverted() 
                     #               * rest1 * pose1 * rest1.inverted()
 
                     # we can get matrix_channel from pose_bone.matrix_channel
-                    # but as stated in Blender docs matrix_channel does not include constraints
-                    # hence we calc "pseudo" matrix channel from just "matrix" of pose bone
+                    # but as stated in Blender docs matrix_channel does not
+                    # include constraints
+                    # hence we calc "pseudo" matrix channel from just "matrix"
+                    # of pose bone
                     # which is (i think)
                     # pbone.matrix = rest0 * pose0 * rest0.inverted() 
                     #              * rest1 * pose1
@@ -221,17 +220,19 @@ class B4W_Anim_Baker(bpy.types.Operator):
                     ml = pbone.bone.matrix_local
 
                     # retrieve current matrix and calc "pseudo" matrix channel
-                    mch = pbone.matrix * ml.inverted()
+                    mch = pbone.matrix * ml.inverted_safe()
             
-                    # we need "own" matrix_channel component so remove parent if any
+                    # we need "own" matrix_channel component so remove parent
+                    # if any
                     parent = pbone.parent
                     if parent:
                         rest_par = parent.bone.matrix_local
-                        mch_par = parent.matrix * rest_par.inverted()
-                        mch = mch_par.inverted() * mch
+                        mch_par = parent.matrix * rest_par.inverted_safe()
+                        mch = mch_par.inverted_safe() * mch
                 
-                    # finally get "pseudo" (i.e. baked) matrix basis by reverse operation
-                    mb = ml.inverted() * mch * ml
+                    # finally get "pseudo" (i.e. baked) matrix basis by reverse
+                    # operation
+                    mb = ml.inverted_safe() * mch * ml
 
                     # retrieve components
                     tran = mb.to_translation()
@@ -240,7 +241,8 @@ class B4W_Anim_Baker(bpy.types.Operator):
                     # we've assigned bones' names to groups
                     fcurves = group.channels
 
-                    # in order to perform correct quaternion interpolation we need to keep dot
+                    # in order to perform correct quaternion interpolation we
+                    # need to keep dot
                     # product Q_cur_frame * Q_prev_frame >= 0
                     if pbone.name in prev_frame_quats \
                             and quat.dot(prev_frame_quats[pbone.name]) < 0:
@@ -271,7 +273,8 @@ class B4W_Anim_Baker(bpy.types.Operator):
         bpy.context.area.type = "DOPESHEET_EDITOR"
 
         if armobj.b4w_anim_clean_keys:
-            # NOTE: clean-ups source action, if also assigned to some non-armature object
+            # NOTE: clean-ups source action, if also assigned to some
+            # non-armature object
             bpy.ops.action.clean()
 
         # remove channels having only one unchanged keyframe
@@ -297,19 +300,45 @@ class B4W_Anim_Baker(bpy.types.Operator):
         # Needed for root bones to preserve uniform motion
         self.detect_linear_parts(new_action)
 
-        # try to reduce amount of keyframes
-        # NOTE this operator requires curve_simplify.py addon enabled
-        # XXX hardcoded "problematic" bones   
-        '''
-        ignore_bones = ["hips", "rump", "thigh", "shin", "foot"]
-        for fcurve in new_action.fcurves:
-            fcurve.select = True
-            for bname in ignore_bones:
-                if fcurve.data_path.find(bname) > -1:
-                    fcurve.select = False
-        bpy.ops.graph.simplify(error = 0.03)
-        '''
         bpy.context.area.type = old_area
+
+    def process_action_bpy(self, action):
+        print("processing action " + action.name)
+
+        new_name = action.name + BAKED_SUFFIX
+
+        actions = bpy.data.actions
+        new_action = actions.get(new_name)
+        if new_action:
+            # reuse old action (segfault when deleting actions)
+            fcurves = new_action.fcurves
+            groups = new_action.groups
+            for fcurve in fcurves:
+                fcurves.remove(fcurve)
+            for group in groups:
+                groups.remove(group)
+        else:
+            # create new action
+            new_action = actions.new(new_name)
+
+        # save it
+        new_action.use_fake_user = True
+        frame_range = action.frame_range
+
+        from bpy_extras import anim_utils
+
+        anim_utils.bake_action(round(frame_range[0]),
+                               round(frame_range[1]) + 1,
+                               frame_step=1,
+                               only_selected=False,
+                               do_pose=True,
+                               do_object=False,
+                               do_visual_keying=True,
+                               do_constraint_clear=False,
+                               do_parents_clear=False,
+                               do_clean=True,
+                               action = new_action
+                               )
 
     def near_zero(self, value):
         return abs(value) < 0.0001
@@ -353,14 +382,16 @@ class B4W_Anim_Baker(bpy.types.Operator):
                     y3 = v3[1]
 
                     # File size optimization:
-                    # if NEXT keyframe point is only at 1 frame distance from THIS one
-                    # then THIS keyframe point should have linear interpolation
+                    # if NEXT keyframe point is only at 1 frame distance from
+                    # THIS one, then THIS keyframe point should have linear
+                    # interpolation
                     point_is_neighbour = x3 - x2 == 1
 
                     # Detect linear parts:
-                    # 1. construct line between THIS keyframe point and PREVIOS one
-                    # 2. if NEXT keyframe point is on that line
-                    #    then THIS keyframe point should have linear interpolation
+                    # 1. construct line between THIS keyframe point and PREVIOS
+                    # one
+                    # 2. if NEXT keyframe point is on that line , then THIS
+                    # keyframe point should have linear interpolation
                 
                     k = (y2 - y1) / (x2 - x1)
                     b = y1 - k * x1
@@ -404,6 +435,7 @@ class B4W_Constraints_Muter(bpy.types.Operator):
 
     bl_idname = "b4w.constraints_mute"
     bl_label = "B4W Constraints Mute"
+    bl_options = {"INTERNAL"}
    
     def execute(self, context):
         armobj = context.active_object
@@ -422,6 +454,7 @@ class B4W_Constraints_UnMuter(bpy.types.Operator):
 
     bl_idname = "b4w.constraints_unmute"
     bl_label = "B4W Constraints UnMute"
+    bl_options = {"INTERNAL"}
    
     def execute(self, context):
         armobj = context.active_object
@@ -436,7 +469,7 @@ class B4W_Constraints_UnMuter(bpy.types.Operator):
         return {"FINISHED"}
 
 class B4W_AnimBakerPanel(bpy.types.Panel):
-    bl_label = "B4W Anim Baker"
+    bl_label = "Bake Skeletal Animation"
     bl_idname = "OBJECT_PT_anim_baker"
     bl_space_type = "VIEW_3D"
     bl_region_type = "TOOLS"
@@ -448,15 +481,12 @@ class B4W_AnimBakerPanel(bpy.types.Panel):
             ob = context.active_object
             return (ob.type == 'ARMATURE')
         except AttributeError:
-            return 0
+            return False
 
     def draw(self, context):
         obj = context.active_object
 
         layout = self.layout
-
-        row = layout.row()
-        row.prop(obj, "b4w_anim_clean_keys", text="Clean keyframes")
 
         row = layout.row()
         row.template_list("UI_UL_list", "OBJECT_UL_anim_baker",
@@ -488,11 +518,19 @@ class B4W_AnimBakerPanel(bpy.types.Panel):
             row.prop(anim[anim_index], "name", text="Name", icon=icon)
 
         row = layout.row()
+        row.prop(obj, "b4w_anim_clean_keys", text="Optimize Keyframes")
+
+        row = layout.row()
+        row.prop(obj, "b4w_use_bpy_anim_baker",
+            text="Use Blender's Native Baker")
+
+        row = layout.row()
         row.operator("b4w.animation_bake", text="Bake", icon="REC")
 
-        row = layout.row(align=True)
-        row.operator("b4w.constraints_mute", text="Cons Mute")
-        row.operator("b4w.constraints_unmute", text="Cons Unmute")
+        # NOTE: do we need them?
+        #row = layout.row(align=True)
+        #row.operator("b4w.constraints_mute", text="Cons Mute")
+        #row.operator("b4w.constraints_unmute", text="Cons Unmute")
 
 class B4W_Anim(bpy.types.PropertyGroup):
     # property name is already here
@@ -502,6 +540,7 @@ class B4W_AnimAddOperator(bpy.types.Operator):
     bl_idname      = 'b4w.anim_add'
     bl_label       = "Add animation"
     bl_description = "Add animation"
+    bl_options = {"INTERNAL"}
 
     def invoke(self, context, event):
         obj = context.active_object
@@ -518,6 +557,7 @@ class B4W_AnimRemOperator(bpy.types.Operator):
     bl_idname      = 'b4w.anim_remove'
     bl_label       = "Remove animation"
     bl_description = "Remove animation"
+    bl_options = {"INTERNAL"}
 
     def invoke(self, context, event):
         obj = context.active_object
@@ -544,6 +584,9 @@ def register():
             bpy.props.CollectionProperty(type=B4W_Anim, name="B4W: animation")
     bpy.types.Object.b4w_anim_index =\
             bpy.props.IntProperty(name="B4W: animation index")
+    bpy.types.Object.b4w_use_bpy_anim_baker =\
+            bpy.props.BoolProperty(name="B4W: use bpy anim baker",
+                default = False)
 
 def unregister():
     bpy.utils.unregister_class(B4W_Anim_Baker)

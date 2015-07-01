@@ -50,127 +50,159 @@
   }
 
   function build_listing(units) {
-    // NOTE: for multiple #nodes_main, #nodes_global directives
-    var nodes_cache = {
-      main: null,
-      global: null
+    var listing = "";
+
+    var nodes_collector = {
+      current_node: null,
+      nodes_structure: {},
     }
 
-    var current_node = null;
-    var node_structure = {};
-
-    var listing = "";
+    var lamps_collector = {
+      current_lamp: null,
+      lamps_structure: {}
+    }
 
     for (var i = 0; i < units.length; i++) {
       var unit = units[i][0];
-      if (current_node !== null && unit.type !== "endnode") {
-        if (unit.type == "node_in" || unit.type == "node_out" 
-            || unit.type == "node_param" || unit.type == "textline") {
-          unit.node_parent = current_node;
-          node_structure[current_node].push(unit);
-          continue;
-        } else if (unit.type == "node_condition")
-            // do not move node_condition to nodes_main or nodes_global
-            unit.node_parent = current_node;
-        else {
-          console.error("Error! Outlier directive #" + unit.type 
-              + " in node " + current_node);
-          continue;
-        }
-      }
+
+      // usual directives
       if (unit.node == "directive")
         listing += "/*%directive%" + unit.source_str + "%directive_end%*/\n";
+
+      // includes
       else if (unit.node == "include")
         listing += "/*%" + unit.type + "%" + unit.name + "%*/\n";
-      else if (unit.node == "node_directive") {
 
-        switch (unit.type) {
-          case "node":
-            listing += "/*%" + unit.type + "%" + unit.name + "%*/\n";
-            current_node = unit.name;
-            node_structure[current_node] = [];
-            break;
-          case "endnode":
-            listing += "/*%" + unit.type + "%*/\n";
-            current_node = null;
-            break;
-          case "nodes_main":
-            if (nodes_cache.main === null) {
-              var nodes_main_block = "/*%nodes_main%*/\n";
-              nodes_main_block += build_nodes_main(node_structure);
-              nodes_main_block += "/*%nodes_main_end%*/\n";
-              nodes_cache.main = nodes_main_block;
-            } else {
-              var nodes_main_block = "/*%remove%nodes_main_duplicate%*/\n";
-              nodes_main_block += nodes_cache.main;
-              nodes_main_block += "/*%remove_end%nodes_main_duplicate%*/\n";
-            }
-            listing += nodes_main_block;
-            break;
-          case "nodes_global":
-            if (nodes_cache.global === null) {
-              var nodes_global_block = "/*%nodes_global%*/\n";
-              nodes_global_block += build_nodes_global(node_structure);
-              nodes_global_block += "/*%nodes_global_end%*/\n";
-              nodes_cache.global = nodes_global_block;
-            } else {
-              var nodes_global_block = "/*%remove%nodes_global_duplicate%*/\n";
-              nodes_global_block += nodes_cache.global;
-              nodes_global_block += "/*%remove_end%nodes_global_duplicate%*/\n";
-            }
-            listing += nodes_global_block;
-            break;
-          case "node_condition": 
-            listing += "/*%" + unit.type + "%" + unit.source_str + "%" + 
-                unit.node_parent + "%" + unit.offset + "%*/\n";
-            break;
-        }
-      } else if (unit.node == "text")
-        for (var j = 0; j < unit.result.length; j++)
-          listing += unit.result[j];
+      // import/export tokens
       else if (unit.node == "import" || unit.node == "export")
         listing += build_import_export(unit.node, unit.tokens);
+
+      // simple textlines
+      else if (unit.node == "text")
+        listing += build_textline(unit, nodes_collector, lamps_collector);
+
+      // node directives
+      else if (unit.node == "node_directive")
+        listing += build_node_directive(unit, nodes_collector);
+
+      // lamp directives
+      else if (unit.node == "lamp_directive")
+        listing += build_lamp_directive(unit, lamps_collector);
     }
     
     return listing;
   }
 
+
+
   function build_import_export(type, tokens) {
     return "/*%" + type + "%" + tokens.join() + "%*/";
   }
 
-  function build_nodes_main(node_structure) {
+  function build_textline(unit, nodes_collector, lamps_collector) {
     var listing = "";
-    for (var i in node_structure) {
-      var node = node_structure[i];
+
+    // collect textlines if they are inside a #node or #lamp and append them 
+    // later in #nodes_main or #lamps_main
+    if (nodes_collector.current_node != null)
+      nodes_collector.nodes_structure[nodes_collector.current_node].push(unit);
+    else if (lamps_collector.current_lamp != null)
+      lamps_collector.lamps_structure[lamps_collector.current_lamp].push(unit);
+
+    // append to lisitng immediately if textlines are outside a node
+    else
+      for (var i = 0; i < unit.result.length; i++)
+        listing += unit.result[i];
+
+    return listing;
+  }
+
+  function build_node_directive(unit, nodes_collector) {
+    var listing = "";
+
+    if (unit.type != "node" && unit.type != "endnode" && unit.type != "nodes_global" 
+        && unit.type != "nodes_main" && nodes_collector.current_node == null) {
+      console.error("Warning! Outlier directive #" + unit.type);
+      return listing;
+    }
+    switch (unit.type) {
+      case "node":
+        listing += "/*%" + unit.type + "%" + unit.name + "%*/\n";
+        nodes_collector.current_node = unit.name;
+        nodes_collector.nodes_structure[nodes_collector.current_node] = [];
+        break;
+      case "endnode":
+        listing += "/*%" + unit.type + "%*/\n";
+        nodes_collector.current_node = null;
+        break;
+
+      case "node_in":
+      case "node_out":
+      case "node_param":
+        nodes_collector.nodes_structure[nodes_collector.current_node].push(unit);
+        break;
+      case "node_condition":
+        // do not move node_condition to nodes_main or nodes_global
+        listing += "/*%" + unit.type + "%" + unit.source_str + "%" + 
+            nodes_collector.current_node + "%" + unit.offset + "%*/\n";
+        break;
+
+      case "nodes_main":
+        listing += build_nodes_main(nodes_collector.nodes_structure);
+        break;
+      case "nodes_global":
+        listing += build_nodes_global(nodes_collector.nodes_structure);
+        break;
+    }
+    return listing;
+  }
+
+  function build_nodes_main(nodes_structure) {
+    var listing = "/*%nodes_main%*/\n";
+    var new_scope = true;
+    for (var node_name in nodes_structure) {
+      var node = nodes_structure[node_name];
       for (var j = 0; j < node.length; j++)
         switch (node[j].type) {
           case "node_in":
           case "node_out":
-            listing += build_node_in_out_param(node[j]);
+            listing += build_node_in_out_param(node_name, node[j]);
             break;
           case "textline":
-            listing += build_node_textline(node[j], node);
+            if (new_scope) {
+              listing += "{";
+              new_scope = false;
+            }
+            listing += build_node_textline(node_name, node, node[j]);
             break;
         }
+
+      if (!new_scope) {
+        listing += "}";
+        new_scope = true;
+      }
     }
+    listing += "/*%nodes_main_end%*/\n";
+
     return listing;
   }
 
-  function build_nodes_global(node_structure) {
-    var listing = "";
-    for (var i in node_structure) {
-      var node = node_structure[i];
+  function build_nodes_global(nodes_structure) {
+    var listing = "/*%nodes_global%*/\n";
+    for (var node_name in nodes_structure) {
+      var node = nodes_structure[node_name];
 
       for (var j = 0; j < node.length; j++)
         if (node[j].type == "node_param")
-          listing += build_node_in_out_param(node[j]);
+          listing += build_node_in_out_param(node_name, node[j]);
     }
+    listing += "/*%nodes_global_end%*/\n";
+
     return listing;
   }
 
-  function build_node_textline(ndir, node) {
-    var listing = "/*%node_textline%" + ndir.node_parent + "%*/";
+  function build_node_textline(node_name, node, ndir) {
+    var listing = "/*%node_textline%" + node_name + "%*/";
 
     var text = "";
     for (var i = 0; i < ndir.result.length; i++)
@@ -179,7 +211,7 @@
     for (var i = 0; i < node.length; i++)
       if (node[i].type == "node_in" || node[i].type == "node_out" 
           || node[i].type == "node_param") {
-        var name = "node_" + node[i].node_parent + "_var_" + node[i].identifier.name;
+        var name = "node_" + node_name + "_var_" + node[i].identifier.name;
         var expr_str = "([^0-9a-zA-Z_]|^)(" + node[i].identifier.name + ")(?![0-9a-zA-Z_])";
         var expr = new RegExp(expr_str, "gm");
         text = text.replace(expr, "$1" + name);
@@ -190,7 +222,7 @@
     return listing;
   }
 
-  function build_node_in_out_param(ndir) {
+  function build_node_in_out_param(node_name, ndir) {
     var listing = "/*%" + ndir.type + "%*/";
 
     if (ndir.decl_type.type_qualifier) {
@@ -205,23 +237,70 @@
     if (ndir.decl_type.precision_qualifier)
       listing += ndir.decl_type.precision_qualifier.value.name + " ";
     listing += ndir.decl_type.type_specifier.name.name + " ";
-    listing += "node_" + ndir.node_parent + "_var_" + ndir.identifier.name + ";";
+    listing += "node_" + node_name + "_var_" + ndir.identifier.name + ";";
     listing += "/*%" + ndir.type + "_end%" + ndir.is_optional + "%";
-    listing += ndir.node_parent + "%" + ndir.offset + "%*/\n";
+    listing += node_name + "%" + ndir.offset + "%*/\n";
 
     return listing;
   }
 
+  function build_lamp_directive(unit, lamps_collector) {
+    var listing = "";
+
+    switch (unit.type) {
+      case "lamp":
+        listing += "/*%" + unit.type + "%" + unit.name + "%*/\n";
+        lamps_collector.current_lamp = unit.name;
+        lamps_collector.lamps_structure[lamps_collector.current_lamp] = [];
+        break;
+      case "endlamp":
+        listing += "/*%" + unit.type + "%*/\n";
+        lamps_collector.current_lamp = null;
+        break;
+
+      case "lamps_main":
+        listing += "/*%lamps_main%*/\n";
+        listing += build_lamps_main(lamps_collector.lamps_structure);
+        listing += "/*%lamps_main_end%*/\n";
+        break;
+    }
+
+    return listing;
+  }
+
+  function build_lamps_main(lamps_structure) {
+    var listing = "";
+    for (var lamp_name in lamps_structure) {
+      var lamp_node = lamps_structure[lamp_name];
+      listing += "{";
+      for (var j = 0; j < lamp_node.length; j++)
+        listing += build_lamp_textline(lamp_name, lamp_node[j]);
+      listing += "}";
+    }
+    return listing;
+  }
+
+  function build_lamp_textline(lamp_name, ldir) {
+    var listing = "/*%lamp_textline%" + lamp_name + "%*/";
+
+    for (var i = 0; i < ldir.result.length; i++)
+      listing += ldir.result[i];
+
+    listing += "/*%lamp_textline_end%" + ldir.offset + "%*/\n";
+    return listing;
+  }
+
+  var _is_node_param = false;
 
   // GLSL parsing: read directives
-  var _pp_include_positions = {};
-  var _pp_directives = {};
-  var _pp_node_directives = {};
-  var _pp_vardef_replacements = {};
+  var _pp_node_with_node_condition = [];
   var _pp_vardef_identifiers = [];
-  var _pp_extensions = {};
-  var _pp_to_remove = {};
   var _pp_import_export = {};
+  // {uid: node}
+  var _uid_to_node = {};
+
+  var _pp_insertions = {};
+
   var CURR_INCLUDE = [null];
 
   function check_directive_comment(symbols) {
@@ -230,32 +309,20 @@
     for (var i = 0; i < symbols.length; i++)
       str += symbols[i][1];
     str = str.trim();
-
     if (str.charAt(0) == "%") {
       check_directive(str) || check_replace(str) || check_node_insertion(str)
-      || check_node_borders(str) || check_node_parameters(str) 
-      || check_include(str) || check_remove(str) || check_import_export(str)
-      || check_node_condition(str);
+      || check_node_borders(str) || check_node_parameters(str) || check_node_condition(str)
+      || check_include(str) || check_import_export(str) || check_lamp_insertion(str) 
+      || check_lamp_borders(str) || check_lamp_textlines(str);
     }
-  }
-
-  function check_node_condition(str) {
-    var expr = /^%node_condition.*?%$/i;
-    var res = expr.exec(str);
-
-    if (res) {
-      _pp_node_directives[offset()] = "/*" + str + "*/";
-      return true;
-    }
-    return false; 
   }
 
   function check_directive(str) {
     var expr = /^%directive%(.*?)%directive_end%/i;
     var res = expr.exec(str);
     if (res) {
-      _pp_directives[offset()] = res[1];
-      return check_directive_vardef(res[1]) || check_directive_extension(res[1]);
+      _pp_insertions[offset()] = "\n/*" + str + "*/\n";
+      return check_directive_vardef(res[1]);
     }
     return false;
   }
@@ -270,24 +337,11 @@
     return false;
   }
 
-  function check_directive_extension(str) {
-    var expr = /^ *?# *?(extension) *?([0-9a-z_]+) ?: ?(required|enable|warn|disable)/i;
-    var res = expr.exec(str);
-    if (res) {
-      _pp_extensions[offset()] = {
-        name: res[2],
-        behavior: res[3]
-      };
-      return true;
-    }
-    return false;
-  }
-
   function check_replace(str) {
     var expr = /^%replace((_end)|(%from%.*?%to%.*?))%$/i;
     var res = expr.exec(str);
     if (res) {
-      _pp_vardef_replacements[offset()] = "/*" + str + "*/";
+      _pp_insertions[offset()] = " /*" + str + "*/ ";
       return true;
     }
     return false;
@@ -297,7 +351,7 @@
     var expr = /^%(nodes_global|nodes_main)(_end)?%$/i;
     var res = expr.exec(str);
     if (res) {
-      _pp_node_directives[offset()] = "/*" + str + "*/";
+      _pp_insertions[offset()] = "\n/*" + str + "*/\n";
       return true;
     }
     return false;
@@ -307,17 +361,66 @@
     var expr = /^%((node%.*?)|endnode)%$/i;
     var res = expr.exec(str);
     if (res) {
-      _pp_node_directives[offset()] = "/*" + str + "*/";
+      _pp_insertions[offset()] = "\n/*" + str + "*/\n";
       return true;
     }
     return false; 
   }
 
   function check_node_parameters(str) {
-    var expr = /^%(node_in|node_in_end|node_out|node_out_end|node_param|node_param_end|node_textline|node_textline_end).*?%$/i;
+    var expr = /^%(node_in|node_out|node_param|node_textline)(_end)?.*?%$/i;
+    var res = expr.exec(str);
+
+    if (res) {
+      _pp_insertions[offset()] = "\n/*" + str + "*/\n";
+
+      if (res[1] !== "node_textline")
+        if (res[2])
+          _is_node_param = false;
+        else
+          _is_node_param = true;
+
+      return true;
+    }
+    return false; 
+  }
+
+  function check_node_condition(str) {
+    var expr = /^%node_condition.*?%$/i;
+    var res = expr.exec(str);
+
+    if (res) {
+      _pp_insertions[offset()] = "\n/*" + str + "*/\n";
+      return true;
+    }
+    return false; 
+  }
+
+  function check_lamp_insertion(str) {
+    var expr = /^%lamps_main(_end)?%$/i;
     var res = expr.exec(str);
     if (res) {
-      _pp_node_directives[offset()] = "/*" + str + "*/";
+      _pp_insertions[offset()] = "\n/*" + str + "*/\n";
+      return true;
+    }
+    return false;
+  }
+
+  function check_lamp_borders(str) {
+    var expr = /^%((lamp%.*?)|endlamp)%$/i;
+    var res = expr.exec(str);
+    if (res) {
+      _pp_insertions[offset()] = "\n/*" + str + "*/\n";
+      return true;
+    }
+    return false; 
+  }
+
+  function check_lamp_textlines(str) {
+    var expr = /^%(lamp_textline|lamp_textline_end).*?%$/i;
+    var res = expr.exec(str);
+    if (res) {
+      _pp_insertions[offset()] = "\n/*" + str + "*/\n";
       return true;
     }
     return false; 
@@ -330,12 +433,8 @@
       var type = res[1];
       var name = res[2];
 
-      if (!(name in _pp_include_positions))
-        _pp_include_positions[name] = [];
-
       switch (type) {
       case "include":
-        _pp_include_positions[name].push([offset()])
         CURR_INCLUDE.push(name);
         if (!(name in _pp_import_export))
           _pp_import_export[name] = {
@@ -344,27 +443,11 @@
           }
         break;
       case "include_end":
-        for (var i = _pp_include_positions[name].length - 1; i >= 0; i--)
-          if (_pp_include_positions[name][i].length == 1) {
-            _pp_include_positions[name][i].push(offset());
-            break;
-          } else
-            console.assert(false, "Include integrity is broken");
         CURR_INCLUDE.pop();
         break;
       }
 
-      _pp_directives[offset()] = "/*" + str + "*/";
-      return true;
-    }
-    return false;
-  }
-
-  function check_remove(str) {
-    var expr = /^%(remove|remove_end)%(.*?)%$/;
-    var res = expr.exec(str);
-    if (res) {
-      _pp_to_remove[offset()] = "/*" + str + "*/";
+      _pp_insertions[offset()] = "\n/*" + str + "*/\n";
       return true;
     }
     return false;
@@ -393,13 +476,46 @@
     return false;
   }
 
+  
+
 
   // GLSL parsing: generate special nodes
-  var _node_uid = 0;
+  if (options.init_node_uid)
+    var _node_uid = options.init_node_uid;
+  else
+    var _node_uid = 0;
+
+  function flat_array(data) {
+    var flat = [];
+
+    for (var prop in data)
+      if (data[prop])
+        if (data[prop].constructor == Array)
+          flat.push.apply(flat, flat_array(data[prop]));
+        else if (data[prop].constructor == Object)
+          flat.push(data[prop]);
+    return flat;
+  }
+
+  function get_children_with_uid(parent) {
+    var result = [];
+    var children = flat_array(parent);
+    while (children.length > 0) {
+      var child = children.pop();
+
+      if ("uid" in child)
+        result.push(child);
+      else
+        children.push.apply(children, flat_array(child));
+    }
+    return result;
+  }
 
   function common_node(data) {
     data.offset = offset();
     data.uid = _node_uid++;
+    data.before_comments = [];
+
     return data;
   }
 
@@ -464,6 +580,52 @@
     return common_node(chain_node);
   }
 
+  function parenting_unit(ast) {
+    var nodes = [ast];
+    // {offset: [nodes]}
+    var offset_to_nodes = {};
+    while (nodes.length > 0) {
+      var node = nodes.pop();
+      var children = get_children_with_uid(node);
+
+      _uid_to_node[node.uid] = node;
+      
+      for (var l in children)
+        children[l].parent_uid = node.uid;
+
+      nodes.push.apply(nodes, children);
+
+      if (!offset_to_nodes[node.offset])
+        offset_to_nodes[node.offset] = [];
+      offset_to_nodes[node.offset].push(node.uid);
+    }
+
+    for (var i in offset_to_nodes) {
+      for (var j in offset_to_nodes[i]) {
+        var node_uid = offset_to_nodes[i][j];
+        if (node_uid in _uid_to_node) {
+          var node = _uid_to_node[node_uid];
+          // HACK: don't add before_comments to statement_list
+          if (node.node != "statement_list") {
+            for (var k in _pp_insertions) {
+              if (k < node.offset) {
+                node.before_comments.push(_pp_insertions[k]);
+
+                var expr = /\/\*%node_condition.*?%\*\//i;
+                var res = expr.exec(_pp_insertions[k]);
+                if (res && 
+                    (_pp_node_with_node_condition.indexOf(node_uid) == -1))
+                  _pp_node_with_node_condition.push(node_uid);
+                delete _pp_insertions[k];
+              } else
+                break;
+            }
+          }
+        }
+      }
+    }
+    return ast;
+  }
 }
 
 
@@ -472,33 +634,37 @@
 ============================================================================*/
 // Start
 start
-  = tu:translation_unit
+  = tu:(translation_unit / EOF)
   { 
-    return {
-      result: tu,
-      include_positions: _pp_include_positions,
-      dirs: _pp_directives,
-      node_dirs: _pp_node_directives,
-      vars_repl: _pp_vardef_replacements,
+    var data = {
+      node_with_node_condition: _pp_node_with_node_condition,
       vardef_ids: _pp_vardef_identifiers,
-      extensions: _pp_extensions,
-      to_remove: _pp_to_remove,
-      import_export: _pp_import_export
-    } 
-  }
-  // empty file 
-  / EOF
-  { return {
-      result: []
-    } 
+      import_export: _pp_import_export,
+      uid_to_nodes: _uid_to_node,
+    }
+    
+    if (!tu)
+      tu = [];
+    
+    data.ast = parenting_unit(common_node({
+      node: "root",
+      parts: tu,
+      after_comments: []
+    }));
+
+    for (var i in _pp_insertions) 
+      data.ast.after_comments.push(_pp_insertions[i]);
+
+    return data;
   }
 
 translation_unit
   = __ left:external_declaration __ right:translation_unit*
   { 
-    var result = [left];
-    result.push.apply(result, right[0]);
-    return result;
+    var parts = [left];
+    parts.push.apply(parts, right[0]);
+
+    return parts;
   }
   // file contains comments only
   / (comment line_terminator_sequence?)+
@@ -560,7 +726,7 @@ init_declarator_list
     )*
   { 
     var decl_list = {
-      node: "declarator_list",
+      node: "declarator_list"
     }
     var vars = []
     vars.push(first);
@@ -568,8 +734,6 @@ init_declarator_list
     for (var i = 0; i < others.length; i++) {
       var v = {};
       v.node = "single_declaration_line";
-      v.type = first.type;
-      v.subtype = first.subtype; // simple, invariant
       v.punctuation = { comma: others[i][1] };
       v.identifier = others[i][3];
       v.identifier.is_declaration = true;
@@ -589,7 +753,7 @@ init_declarator_list
           break;
         }
       }
-      vars.push(v);
+      vars.push(common_node(v));
     }
     decl_list.vars = vars;
     return common_node(decl_list);
@@ -619,8 +783,8 @@ single_declaration
       node: "single_declaration",
       subtype: "simple",
       type: type,
+      is_node_inoutparam_decl: _is_node_param
     }
-
     if (id) {
       decl.identifier = id[1];
       decl.identifier.is_declaration = true;
@@ -922,16 +1086,14 @@ expression
   = left:assignment_expression 
     right:((__ c:COMMA __ e:assignment_expression) { e.punctuation = { comma: c }; return e })*
   {
-    if (right.length > 0) {
-      var exp_list = [left];
+    var exp_list = [left];
+
+    if (right.length > 0)
       exp_list.push.apply(exp_list, right);
-      return common_node({
-        node: "expression",
-        list: exp_list
-      });
-    }
-    else
-      return left;
+    return common_node({
+      node: "expression",
+      list: exp_list
+    });
   }
 
 assignment_expression
@@ -945,7 +1107,15 @@ assignment_expression
       right: right
     });
   }
-  / conditional_expression
+  / left:conditional_expression
+  { 
+    return common_node({
+      node: "assignment_expression",
+      left: left,
+      operator: null,
+      right: null
+    });
+  }
 
 constant_expression
   = conditional_expression
@@ -966,7 +1136,16 @@ conditional_expression
         }
       });
     else
-      return left;
+      return common_node({
+        node: "conditional_expression",
+        condition: left,
+        if_true: null,
+        if_false: null,
+        punctuation: {
+          question: null,
+          colon: null
+        }
+      });
   }
 
 logical_or_expression
@@ -1177,10 +1356,11 @@ compound_statement_no_new_scope
 statement_list
   = list:((s:statement_no_new_scope __) { return s; } )*
   { 
-    return common_node({
+    var node = common_node({
       node: "statement_list",
       list: list
     });
+    return node;
   }
 
 statement_no_new_scope
@@ -1202,12 +1382,14 @@ compound_statement_with_scope
         left_brace: lb,
         right_brace: rb
       },
-      new_scope: true
+      new_scope: true,
+      without_braces: false
     });
   }
 
 simple_statement
-  = stat:(declaration_statement  / expression_statement  / selection_statement 
+  // NOTE: declaration_statement / expression_statement --- order of the rule in GLSL ES 1.0
+  = stat:(expression_statement / declaration_statement / selection_statement 
   / iteration_statement  / jump_statement)
   {
     return common_node({
@@ -1236,7 +1418,6 @@ expression_statement
     }
 
     e_node.statement = (exp) ? exp[0] : null;
-
     return common_node(e_node);
   }
 
@@ -1356,18 +1537,26 @@ iteration_statement
   }
 
 condition
-  = type:fully_specified_type MMS id:IDENTIFIER __ op:EQUAL __ init:initializer
+  = cond:(
+      (type:fully_specified_type MMS id:IDENTIFIER __ op:EQUAL __ init:initializer) 
+      {
+        id.is_declaration = true;
+        return common_node({
+          node: "condition_initializer",
+          identifier: id,
+          id_type: type,
+          initializer: init,
+          operation: op
+        });
+      } 
+  / expression
+  )
   {
-    id.is_declaration = true;
     return common_node({
       node: "condition",
-      identifier: id,
-      id_type: type,
-      initializer: init,
-      operation: op
+      condition: cond
     });
   }
-  / expression
 
 for_init_statement
   = stat:(expression_statement / declaration_statement)
@@ -1561,10 +1750,10 @@ IDENTIFIER
 TYPE_NAME
   = id:IDENTIFIER
     { 
-      return {
+      return common_node({
         node: "struct_type",
         identifier: id
-      }
+      });
     }
 
 FLOATCONSTANT
@@ -1846,6 +2035,22 @@ line_no_term_count
 EOF
   = !.
 
+/*============================================================================
+                              ADDITIONAL RULES
+============================================================================*/
+
+expression_statement_start
+  = exp:expression_statement
+  { 
+    return parenting_unit(exp);
+  }
+
+statement_no_new_scope_start
+  = stat: statement_no_new_scope
+  {
+    return parenting_unit(stat);
+  }
+
 
 /*============================================================================
                   PREPROCESSING "#VAR" AND OTHER DIRECTIVES PASS
@@ -1864,6 +2069,7 @@ pp_unit
   / pp_extension
   / pp_directives
   / pp_node_dir
+  / pp_lamps_dir
   / include_dir_comment
   / pp_import_export
   / tokens:(!("#" / "//" / "/*") (IDENTIFIER / RESERVED / . ))+
@@ -2012,6 +2218,39 @@ nodes_parameters
       decl_type: decl_type,
       identifier: id,
       is_optional: Boolean(opt)
+    });
+  }
+
+pp_lamps_dir
+  = lamps_insertion
+  / lamp
+  / endlamp
+
+lamps_insertion
+  = _ "#" _ "lamps_main" till_string_end
+  {
+    return common_node({
+      node: "lamp_directive",
+      type: "lamps_main"
+    });
+  }
+
+lamp
+  = _ "#" _ "lamp" MSS id:IDENTIFIER till_string_end
+  {
+    return common_node({
+      node: "lamp_directive",
+      type: "lamp",
+      name: id.name
+    });
+  }
+
+endlamp
+  = _ "#" _ "endlamp" till_string_end
+  {
+    return common_node({
+      node: "lamp_directive",
+      type: "endlamp",
     });
   }
 
