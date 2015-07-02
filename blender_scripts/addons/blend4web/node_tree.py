@@ -6,6 +6,9 @@ from bpy.props import StringProperty
 # Implementation of custom nodes from Python
 SensorSocketColor = (0.0, 1.0, 0.216, 0.5)
 TargetSocketColor = (1.0, 1.0, 0.216, 0.5)
+OrderSocketColor = (0.9, 0.4, 0.216, 0.5)
+BoolSocketColor = (0.9, 0.4, 0.9, 0.5)
+DataSocketColor = (0.9, 0.99, 0.99, 0.5)
 
 # Derived from the NodeTree base type, similar to Menu, Operator, Panel, etc.
 class B4WLogicNodeTree(NodeTree):
@@ -67,11 +70,11 @@ class TargetSocket(NodeSocket):
     bl_idname = 'TargetSocketType'
     bl_label = 'Target Node Socket'
     def draw(self, context, layout, node, text):
-        if self.is_output or self.is_linked:
-            # layout.prop(self, "ObjectsProperty", text=text)
-            pass
-        else:
-            layout.label(text)
+        # if self.is_output or self.is_linked:
+        #     # layout.prop(self, "ObjectsProperty", text=text)
+        #     pass
+        # else:
+        layout.label(text)
 
     def draw_color(self, context, node):
         return TargetSocketColor
@@ -124,11 +127,7 @@ class FunctionNodeSensorSocket(NodeSocket):
     bl_idname = 'FunctionNodeSensorSocketType'
     bl_label = 'Function Node Sensor Socket'
     def draw(self, context, layout, node, text):
-        if self.is_output or self.is_linked:
-            # layout.prop(self, "ObjectsProperty", text=text)
-            pass
-        else:
-            layout.label(text)
+        layout.label(text)
 
     def draw_color(self, context, node):
         return SensorSocketColor
@@ -164,8 +163,6 @@ class FunctionNode(Node, B4WLogicNode):
     bl_idname = 'FunctionNode'
     bl_label = 'Function'
 
-
-
     def init(self, context):
         self.outputs.new('FunctionSocketType', "")
         self.inputs.new('FunctionNodeSensorSocketType', "")
@@ -190,6 +187,82 @@ class FunctionNode(Node, B4WLogicNode):
 
     def draw_label(self):
         return "Function node"
+
+class OrderSocket(NodeSocket):
+    bl_idname = 'OrderSocketType'
+    bl_label = 'Order Node Socket'
+    def draw(self, context, layout, node, text):
+        layout.label(text)
+    def draw_color(self, context, node):
+        return OrderSocketColor
+
+class BoolSocket(NodeSocket):
+    bl_idname = 'BoolSocketType'
+    bl_label = 'Bool Node Socket'
+    def draw(self, context, layout, node, text):
+        layout.label(text)
+    def draw_color(self, context, node):
+        return BoolSocketColor
+
+class DataSocket(NodeSocket):
+    bl_idname = 'DataSocketType'
+    bl_label = 'Data Node Socket'
+    def draw(self, context, layout, node, text):
+        layout.label(text)
+    def draw_color(self, context, node):
+        return DataSocketColor
+
+class IfelseNode(Node, B4WLogicNode):
+    bl_idname = 'IfelseNode'
+    bl_label = 'ifelse'
+    def updateNode(self, context):
+        pass
+    def init(self, context):
+        self.inputs.new('OrderSocketType', ">Order")
+        self.inputs.new('BoolSocketType', "Condition()")
+        self.outputs.new('OrderSocketType', "Order>")
+        self.outputs.new('OrderSocketType', "True{}")
+        self.outputs.new('OrderSocketType', "False{}")
+
+class ForNode(Node, B4WLogicNode):
+    bl_idname = 'ForNode'
+    bl_label = 'for'
+    def updateNode(self, context):
+        pass
+    def init(self, context):
+        self.inputs.new('OrderSocketType', ">Order")
+        self.inputs.new('OrderSocketType', ">Init")
+        self.inputs.new('BoolSocketType', "Condition()")
+        self.inputs.new('OrderSocketType', ">Loop")
+
+        self.outputs.new('OrderSocketType', "Order>")
+        self.outputs.new('OrderSocketType', "Cycle{}")
+
+class ForInNode(Node, B4WLogicNode):
+    bl_idname = 'ForInNode'
+    bl_label = 'forin'
+    def updateNode(self, context):
+        pass
+    def init(self, context):
+        self.inputs.new('OrderSocketType', ">Order")
+        self.inputs.new('DataSocketType', "Collection")
+
+        self.outputs.new('OrderSocketType', "Order>")
+        self.outputs.new('OrderSocketType', "Cycle{}")
+        self.outputs.new('DataSocketType', "Element")
+
+
+class CallbackInterfaceNode(Node, B4WLogicNode):
+    bl_idname = 'CallbackInterfaceNode'
+    bl_label = 'Callback interface'
+    def updateNode(self, context):
+        pass
+    def init(self, context):
+        self.inputs.new('FunctionNodeSensorSocketType', ">Sensor")
+
+        self.outputs.new('FunctionNodeSensorSocketType', "Sensor>")
+        self.outputs.new('OrderSocketType', "Function{}")
+        self.outputs.new('DataSocketType', "Pulse")
 #-------------------------------
 
 class RemoveSocket(bpy.types.Operator):
@@ -345,7 +418,14 @@ node_categories = [
         ]),
     MyNodeCategory("Callbacks", "Callbacks", items=[
         # our basic node
+        NodeItem("CallbackInterfaceNode", label="Callback interface",),
         NodeItem("FunctionNode", label="Function",),
+        ]),
+    MyNodeCategory("Algorithmic", "Algorithmic", items=[
+        # our basic node
+        NodeItem("IfelseNode", label="If Else",),
+        NodeItem("ForNode", label="For",),
+        NodeItem("ForInNode", label="For In",),
         ]),
     ]
 
@@ -365,6 +445,15 @@ def register():
     bpy.utils.register_class(RemoveSocket)
     bpy.utils.register_class(FunctionNodeSensorSocket)
     bpy.utils.register_class(FunctionNodeTargetSocket)
+    bpy.utils.register_class(OrderSocket)
+    bpy.utils.register_class(BoolSocket)
+    bpy.utils.register_class(IfelseNode)
+    bpy.utils.register_class(ForNode)
+    bpy.utils.register_class(ForInNode)
+    bpy.utils.register_class(DataSocket)
+    bpy.utils.register_class(CallbackInterfaceNode)
+
+
 
     nodeitems_utils.register_node_categories("CUSTOM_NODES", node_categories)
 
@@ -385,6 +474,13 @@ def unregister():
     bpy.utils.unregister_class(RemoveSocket)
     bpy.utils.unregister_class(FunctionNodeSensorSocket)
     bpy.utils.unregister_class(FunctionNodeTargetSocket)
+    bpy.utils.unregister_class(OrderSocket)
+    bpy.utils.unregister_class(BoolSocket)
+    bpy.utils.unregister_class(IfelseNode)
+    bpy.utils.unregister_class(ForNode)
+    bpy.utils.unregister_class(ForInNode)
+    bpy.utils.unregister_class(DataSocket)
+    bpy.utils.unregister_class(CallbackInterfaceNode)
 
 if __name__ == "__main__":
     register()
