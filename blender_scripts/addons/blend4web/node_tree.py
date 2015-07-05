@@ -219,7 +219,7 @@ class IfelseNode(Node, B4WLogicNode):
         pass
     def init(self, context):
         self.inputs.new('OrderSocketType', ">Order")
-        self.inputs.new('BoolSocketType', "Condition()")
+        self.inputs.new('BoolSocketType', "(Cond)")
         self.outputs.new('OrderSocketType', "Order>")
         self.outputs.new('OrderSocketType', "True{}")
         self.outputs.new('OrderSocketType', "False{}")
@@ -231,11 +231,12 @@ class ForNode(Node, B4WLogicNode):
         pass
     def init(self, context):
         self.inputs.new('OrderSocketType', ">Order")
-        self.inputs.new('OrderSocketType', ">Init")
-        self.inputs.new('BoolSocketType', "Condition()")
-        self.inputs.new('OrderSocketType', ">Loop")
+        self.inputs.new('BoolSocketType', "(*;Cond;*)")
+
 
         self.outputs.new('OrderSocketType', "Order>")
+        self.outputs.new('OrderSocketType', "(Init;*;*)")
+        self.outputs.new('OrderSocketType', "(*;*;Loop)")
         self.outputs.new('OrderSocketType', "Cycle{}")
 
 class ForInNode(Node, B4WLogicNode):
