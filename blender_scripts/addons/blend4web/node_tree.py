@@ -3,6 +3,66 @@ import bpy
 from bpy.types import NodeTree, Node, NodeSocket
 from bpy.props import StringProperty
 
+import os
+import re
+
+def get_b4w_api():
+    b4w_src_path = bpy.context.user_preferences.addons["blend4web"].preferences.b4w_src_path
+
+    path_to_src = os.path.join(b4w_src_path, "src")
+    path_to_ext = os.path.join(b4w_src_path, "ext")
+    os.path.normpath(path_to_ext)
+    if not (b4w_src_path != "" and os.path.exists(path_to_ext)):
+        return None
+
+    api_lib = []
+    expr_const = re.compile("@const.*\{(.*)\}.*module:(.*)\.(.*)")
+    expr_method = re.compile("@method.*module:(.*)\.(.*)")
+    expr_param = re.compile("@param.* \{(.*)\} (.*?) (.*)")
+    expr_returns = re.compile("@returns.* \{(.*)\} (.*)")
+    expr_deprecated = re.compile("@deprecated *([^ ].*)")
+
+    files = os.listdir(path_to_ext)
+    for file in files:
+        module_name = file.split(".")[0]
+
+        api_lib.append({"name": module_name})
+        file_src = open(EXT_DIR + file)
+        methods = []
+        const = []
+        for line in file_src.readlines():
+            const_data = re.search(expr_const, line)
+            if const_data:
+                const.append({"name":const_data.group(3),
+                              "type":const_data.group(1)})
+
+            method_data = re.search(expr_method, line)
+            if method_data:
+                methods.append({"name":method_data.group(2)})
+            param_data = re.search(expr_param, line)
+            if param_data:
+                if len(methods):
+                    if "params" not in methods[-1]:
+                        methods[-1]["params"] = []
+                    methods[-1]["params"].append({"type": param_data.group(1),
+                                                  "name": param_data.group(2),
+                                                  "desc": param_data.group(3)})
+            return_data = re.search(expr_returns, line)
+            if return_data:
+                if len(methods):
+                    methods[-1]["return"] = {"type": return_data.group(1),
+                                             "desc": return_data.group(2)}
+            depricated_data = re.search(expr_deprecated, line)
+            if depricated_data:
+                if len(methods):
+                    methods[-1]["depricated"] = {"is_depricated": True,
+                                                 "desc": depricated_data.group(1)}
+
+        api_lib[-1]["method"] = methods
+        api_lib[-1]["const"] = const
+    print(api_lib)
+    return api_lib
+
 # Implementation of custom nodes from Python
 SensorSocketColor = (0.0, 1.0, 0.216, 0.5)
 TargetSocketColor = (1.0, 1.0, 0.216, 0.5)
@@ -212,6 +272,179 @@ class DataSocket(NodeSocket):
     def draw_color(self, context, node):
         return DataSocketColor
 
+class VariableNode(Node, B4WLogicNode):
+    bl_idname = 'VariableNode'
+    bl_label = 'Variable'
+
+    action_enum = [
+    ("SET", "SET", "---"),
+    ("GET", "GET", "---"),
+    ]
+
+    action = bpy.props.EnumProperty(name="OperatorType", items=action_enum)
+    def updateNode(self, context):
+        pass
+
+    variable_name = bpy.props.StringProperty(
+        default='',
+        description='name of the variable',
+        update=updateNode)
+    input_text = bpy.props.StringProperty(
+        default='', update=updateNode)
+
+    def draw_buttons(self, context, layout):
+
+        # TODO: check bug of "GET" action
+        if self.action == "SET" and len(self.inputs) != 2:
+            self.inputs.clear()
+            self.outputs.clear()
+            self.inputs.new('OrderSocketType', ">Order")
+            self.inputs.new('DataSocketType', "Set")
+            self.outputs.new('OrderSocketType', "Order>")
+        elif self.action == "GET" and len(self.inputs) != 1:
+            self.inputs.clear()
+            self.outputs.clear()
+            self.outputs.new('DataSocketType', "Get")
+
+        layout.label("Name")
+        col = layout.column()
+        row = col.row()
+        row.prop(self, "action", text='')
+        row = col.row()
+        row.prop_search(self, 'variable_name', bpy.data, 'objects', text='')
+
+    def init(self, context):
+        self.inputs.new('OrderSocketType', ">Order")
+        self.inputs.new('DataSocketType', "Set")
+
+        self.outputs.new('OrderSocketType', "Order>")
+
+class GlobalVariableDeclarationNode(Node, B4WLogicNode):
+    bl_idname = 'GlobalVariableDeclarationNode'
+    bl_label = 'Global variable declaration'
+
+    def updateNode(self, context):
+        pass
+
+    variable_name = bpy.props.StringProperty(
+        default='',
+        description='name of the variable',
+        update=updateNode)
+    input_text = bpy.props.StringProperty(
+        default='', update=updateNode)
+
+    def draw_buttons(self, context, layout):
+        layout.label("Name")
+        col = layout.column()
+        col.prop_search(self, 'variable_name', bpy.data, 'objects', text='')
+
+class UnaryOperatorNode(Node, B4WLogicNode):
+    bl_idname = 'UnaryOperatorNode'
+    bl_label = 'Unary Operator'
+
+    unary_operator_enum = [
+    ("++", "++", "---"),
+    ("--", "--", "---"),
+    ("+", "+", "---"),
+    ("-", "-", "---"),
+    ("~", "~", "---"),
+    ("!", "!", "---"),
+    ("delete", "delete", "---"),
+    ("typeof", "typeof", "---"),
+    ]
+
+    unary_operation = bpy.props.EnumProperty(name="OperatorType", items=unary_operator_enum)
+    def init(self, context):
+        s = self.inputs.new('DataSocketType', "")
+        s.node_name = self.name
+        s.unary_operation = self.unary_operation
+        self.outputs.new('DataSocketType', "")
+
+    def copy(self, node):
+        print("Copying from node ", node)
+
+    def draw_buttons(self, context, layout):
+        row = layout.row()
+        row.prop(self, "unary_operation", text='')
+
+    def draw_label(self):
+        return "Unary operator node"
+
+class RelationalOperatorNode(Node, B4WLogicNode):
+    bl_idname = 'RelationalOperatorNode'
+    bl_label = 'Relational Operator'
+
+    relational_operator_enum = [
+    ("<", "<", "---"),
+    (">", ">", "---"),
+    ("<=", "<=", "---"),
+    (">=", ">=", "---"),
+    ("instanceof", "instanceof", "---"),
+    ("==", "==", "---"),
+    ("!=", "!=", "---"),
+    ("===", "===", "---"),
+    ("!==", "!==", "---"),
+    ]
+
+    relational_operator = bpy.props.EnumProperty(name="OperatorType", items=relational_operator_enum)
+    def init(self, context):
+        self.inputs.new('DataSocketType', "")
+        self.inputs.new('DataSocketType', "")
+        self.outputs.new('DataSocketType', "")
+
+    def copy(self, node):
+        print("Copying from node ", node)
+
+    def draw_buttons(self, context, layout):
+        row = layout.row()
+        row.prop(self, "relational_operator", text='')
+
+    def draw_label(self):
+        return "Relational operator node"
+
+class OperatorNode(Node, B4WLogicNode):
+    bl_idname = 'OperatorNode'
+    bl_label = 'Operator'
+
+    operator_enum = [
+    ("ADD", "ADD", "---"),
+    ("SUB", "SUB", "---"),
+    ("MUL", "MUL", "---"),
+    ("DIV", "DIV", "---"),
+    ("MOD", "MOD", "---"),
+    ("<<", "<<", "Left shift operator"),
+    (">>", ">>", "Right shift operator"),
+    (">>>", ">>>", "Right shift operator"),
+    ]
+
+    operation = bpy.props.EnumProperty(name="OperatorType", items=operator_enum)
+    def init(self, context):
+        s = self.inputs.new('DataSocketType', "")
+        s.node_name = self.name
+        s.tree_name = self.id_data.name
+        s.operation = self.operation
+        self.outputs.new('DataSocketType', "")
+
+    def copy(self, node):
+        print("Copying from node ", node)
+
+    def draw_buttons(self, context, layout):
+        row = layout.row()
+        row.prop(self, "operation", text='')
+
+        if self.operation in ["ADD", "SUB", "MUL"]:
+            row = layout.row()
+            row.scale_y = 0.8
+            opera = row.operator('node.add_input_socket', text="Add input")
+            opera.node_name = self.name
+            opera.tree_name = self.id_data.name
+        else:
+            while len(self.inputs) > 1:
+                self.inputs.remove(self.inputs[-1])
+
+    def draw_label(self):
+        return "Operator node"
+
 class IfelseNode(Node, B4WLogicNode):
     bl_idname = 'IfelseNode'
     bl_label = 'ifelse'
@@ -266,7 +499,7 @@ class CallbackInterfaceNode(Node, B4WLogicNode):
         self.outputs.new('DataSocketType', "Pulse")
 #-------------------------------
 
-class RemoveSocket(bpy.types.Operator):
+class RemoveInputSocket(bpy.types.Operator):
     bl_idname = "node.remove_socket"
     bl_label = "remove socket"
     bl_options = {'REGISTER', 'UNDO'}
@@ -313,25 +546,28 @@ class LogicOperatorSocketOutput(NodeSocket):
         return SensorSocketColor
 global ID
 ID=0
-class AddSocket(bpy.types.Operator):
-    bl_idname = "node.add_socket"
+class AddInputSocket(bpy.types.Operator):
+    bl_idname = "node.add_input_socket"
     bl_label = "add socket"
     bl_options = {'REGISTER', 'UNDO'}
     node_name = StringProperty(name='name node', description='it is name of node',
                                default='')
     tree_name = StringProperty(name='name tree', description='it is name of tree',
                                default='')
+
     def execute(self, context):
         global ID
         inputs = bpy.data.node_groups[self.tree_name].nodes[self.node_name].inputs
-        s = inputs.new('LogicOperatorSocketInputType', "socket_%s" % ID)
+
+        if bpy.data.node_groups[self.tree_name].nodes[self.node_name].bl_idname in ["LogicOperatorNode"]:
+            s = inputs.new('LogicOperatorSocketInputType', "socket_%s" % ID)
+            s.logic_operation = bpy.data.node_groups[self.tree_name].nodes[self.node_name].logic_operation
+        else:
+            s = inputs.new('DataSocketType', "socket_%s" % ID)
         ID += 1
         s.node_name = self.node_name
         s.tree_name = self.tree_name
-        s.logic_operation = bpy.data.node_groups[self.tree_name].nodes[self.node_name].logic_operation
         return {'FINISHED'}
-
-
 
 class LogicOperatorNode(Node, B4WLogicNode):
 
@@ -373,7 +609,7 @@ class LogicOperatorNode(Node, B4WLogicNode):
             # self.inputs[-1].logic_operation = self.logic_operation
             row = layout.row()
             row.scale_y = 1
-            opera = row.operator('node.add_socket', text="Add input")
+            opera = row.operator('node.add_input_socket', text="Add input")
             opera.node_name = self.name
             opera.tree_name = self.id_data.name
         else:
@@ -387,6 +623,33 @@ class LogicOperatorNode(Node, B4WLogicNode):
 
     def draw_label(self):
         return "LogicOperator node"
+
+class FunctionDeclarationNode(Node, B4WLogicNode):
+    bl_idname = 'FunctionDeclarationNode'
+    bl_label = 'Function declaration'
+
+    def updateNode(self, context):
+        pass
+
+    function_name = bpy.props.StringProperty(
+        default='',
+        description='name of the function',
+        update=updateNode)
+    input_text = bpy.props.StringProperty(
+        default='', update=updateNode)
+
+    def draw_buttons(self, context, layout):
+        layout.label("Name")
+        col = layout.column()
+        row = col.row()
+        row.prop_search(self, 'function_name', bpy.data, 'objects', text='')
+        row = col.row()
+        opera = row.operator('node.add_input_socket', text="Add input")
+        opera.node_name = self.name
+        opera.tree_name = self.id_data.name
+
+    def init(self, context):
+        self.outputs.new('OrderSocketType', "Declaration>")
 #-------------------------------
 
 ### Node Categories ###
@@ -411,11 +674,10 @@ node_categories = [
     MyNodeCategory("Sensors", "Sensors", items=[
         # our basic node
         NodeItem("SensorNode", label="Sensor"),
-        NodeItem("LogicOperatorNode", label="LogicOperator",),
         ]),
-    MyNodeCategory("Targets", "Targets", items=[
+    MyNodeCategory("Objects", "Objects", items=[
         NodeItem("TargetNode", label="Target",),
-
+        NodeItem("VariableNode", label="Variable",),
         ]),
     MyNodeCategory("Callbacks", "Callbacks", items=[
         # our basic node
@@ -428,60 +690,91 @@ node_categories = [
         NodeItem("ForNode", label="For",),
         NodeItem("ForInNode", label="For In",),
         ]),
+    MyNodeCategory("Declarations", "Declarations", items=[
+        NodeItem("FunctionDeclarationNode", label="Function",),
+        NodeItem("GlobalVariableDeclarationNode", label="Global VariabAle",),
+        ]),
+    MyNodeCategory("Operators", "Operators", items=[
+        NodeItem("UnaryOperatorNode", label="Unary operator",),
+        NodeItem("OperatorNode", label="Operator",),
+        NodeItem("LogicOperatorNode", label="Logic Operator",),
+        NodeItem("RelationalOperatorNode", label="Relational Operator",),
+        ]),
     ]
 
 
 def register():
+    nodeitems_utils.register_node_categories("CUSTOM_NODES", node_categories)
+
+    # tree
     bpy.utils.register_class(B4WLogicNodeTree)
+
+    # sockets
     bpy.utils.register_class(SensorSocket)
-    bpy.utils.register_class(SensorNode)
-    bpy.utils.register_class(TargetNode)
     bpy.utils.register_class(TargetSocket)
-    bpy.utils.register_class(FunctionNode)
     bpy.utils.register_class(FunctionSocket)
-    bpy.utils.register_class(LogicOperatorNode)
     bpy.utils.register_class(LogicOperatorSocketInput)
     bpy.utils.register_class(LogicOperatorSocketOutput)
-    bpy.utils.register_class(AddSocket)
-    bpy.utils.register_class(RemoveSocket)
+    bpy.utils.register_class(AddInputSocket)
+    bpy.utils.register_class(RemoveInputSocket)
     bpy.utils.register_class(FunctionNodeSensorSocket)
     bpy.utils.register_class(FunctionNodeTargetSocket)
     bpy.utils.register_class(OrderSocket)
     bpy.utils.register_class(BoolSocket)
+    bpy.utils.register_class(DataSocket)
+
+    # nodes
+    bpy.utils.register_class(SensorNode)
+    bpy.utils.register_class(TargetNode)
+    bpy.utils.register_class(FunctionNode)
+    bpy.utils.register_class(UnaryOperatorNode)
+    bpy.utils.register_class(OperatorNode)
+    bpy.utils.register_class(LogicOperatorNode)
+    bpy.utils.register_class(RelationalOperatorNode)
+    bpy.utils.register_class(VariableNode)
     bpy.utils.register_class(IfelseNode)
     bpy.utils.register_class(ForNode)
     bpy.utils.register_class(ForInNode)
-    bpy.utils.register_class(DataSocket)
     bpy.utils.register_class(CallbackInterfaceNode)
-
-
-
-    nodeitems_utils.register_node_categories("CUSTOM_NODES", node_categories)
+    bpy.utils.register_class(FunctionDeclarationNode)
+    bpy.utils.register_class(GlobalVariableDeclarationNode)
 
 
 def unregister():
     nodeitems_utils.unregister_node_categories("CUSTOM_NODES")
 
+    # tree
     bpy.utils.unregister_class(B4WLogicNodeTree)
+
+    # sockets
     bpy.utils.unregister_class(SensorSocket)
-    bpy.utils.unregister_class(TargetNode)
     bpy.utils.unregister_class(TargetSocket)
-    bpy.utils.unregister_class(FunctionNode)
     bpy.utils.unregister_class(FunctionSocket)
-    bpy.utils.unregister_class(LogicOperatorNode)
     bpy.utils.unregister_class(LogicOperatorSocketInput)
     bpy.utils.unregister_class(LogicOperatorSocketOutput)
-    bpy.utils.unregister_class(AddSocket)
-    bpy.utils.unregister_class(RemoveSocket)
+    bpy.utils.unregister_class(AddInputSocket)
+    bpy.utils.unregister_class(RemoveInputSocket)
     bpy.utils.unregister_class(FunctionNodeSensorSocket)
     bpy.utils.unregister_class(FunctionNodeTargetSocket)
     bpy.utils.unregister_class(OrderSocket)
     bpy.utils.unregister_class(BoolSocket)
+    bpy.utils.unregister_class(DataSocket)
+
+    # nodes
+    bpy.utils.unregister_class(SensorNode)
+    bpy.utils.unregister_class(TargetNode)
+    bpy.utils.unregister_class(FunctionNode)
+    bpy.utils.unregister_class(UnaryOperatorNode)
+    bpy.utils.unregister_class(OperatorNode)
+    bpy.utils.unregister_class(LogicOperatorNode)
+    bpy.utils.unregister_class(RelationalOperatorNode)
+    bpy.utils.unregister_class(VariableNode)
     bpy.utils.unregister_class(IfelseNode)
     bpy.utils.unregister_class(ForNode)
     bpy.utils.unregister_class(ForInNode)
-    bpy.utils.unregister_class(DataSocket)
     bpy.utils.unregister_class(CallbackInterfaceNode)
+    bpy.utils.unregister_class(FunctionDeclarationNode)
+    bpy.utils.unregister_class(GlobalVariableDeclarationNode)
 
 if __name__ == "__main__":
     register()
