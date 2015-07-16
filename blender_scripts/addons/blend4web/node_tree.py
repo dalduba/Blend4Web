@@ -3,66 +3,6 @@ import bpy
 from bpy.types import NodeTree, Node, NodeSocket
 from bpy.props import StringProperty
 
-import os
-import re
-
-def get_b4w_api():
-    b4w_src_path = bpy.context.user_preferences.addons["blend4web"].preferences.b4w_src_path
-
-    path_to_src = os.path.join(b4w_src_path, "src")
-    path_to_ext = os.path.join(b4w_src_path, "ext")
-    os.path.normpath(path_to_ext)
-    if not (b4w_src_path != "" and os.path.exists(path_to_ext)):
-        return None
-
-    api_lib = []
-    expr_const = re.compile("@const.*\{(.*)\}.*module:(.*)\.(.*)")
-    expr_method = re.compile("@method.*module:(.*)\.(.*)")
-    expr_param = re.compile("@param.* \{(.*)\} (.*?) (.*)")
-    expr_returns = re.compile("@returns.* \{(.*)\} (.*)")
-    expr_deprecated = re.compile("@deprecated *([^ ].*)")
-
-    files = os.listdir(path_to_ext)
-    for file in files:
-        module_name = file.split(".")[0]
-
-        api_lib.append({"name": module_name})
-        file_src = open(EXT_DIR + file)
-        methods = []
-        const = []
-        for line in file_src.readlines():
-            const_data = re.search(expr_const, line)
-            if const_data:
-                const.append({"name":const_data.group(3),
-                              "type":const_data.group(1)})
-
-            method_data = re.search(expr_method, line)
-            if method_data:
-                methods.append({"name":method_data.group(2)})
-            param_data = re.search(expr_param, line)
-            if param_data:
-                if len(methods):
-                    if "params" not in methods[-1]:
-                        methods[-1]["params"] = []
-                    methods[-1]["params"].append({"type": param_data.group(1),
-                                                  "name": param_data.group(2),
-                                                  "desc": param_data.group(3)})
-            return_data = re.search(expr_returns, line)
-            if return_data:
-                if len(methods):
-                    methods[-1]["return"] = {"type": return_data.group(1),
-                                             "desc": return_data.group(2)}
-            depricated_data = re.search(expr_deprecated, line)
-            if depricated_data:
-                if len(methods):
-                    methods[-1]["depricated"] = {"is_depricated": True,
-                                                 "desc": depricated_data.group(1)}
-
-        api_lib[-1]["method"] = methods
-        api_lib[-1]["const"] = const
-    print(api_lib)
-    return api_lib
-
 # Implementation of custom nodes from Python
 SensorSocketColor = (0.0, 1.0, 0.216, 0.5)
 TargetSocketColor = (1.0, 1.0, 0.216, 0.5)
@@ -569,6 +509,30 @@ class AddInputSocket(bpy.types.Operator):
         s.tree_name = self.tree_name
         return {'FINISHED'}
 
+class AddInOutSockets(bpy.types.Operator):
+    bl_idname = "node.add_inout_sockets"
+    bl_label = "add input ad output sockets"
+    bl_options = {'REGISTER', 'UNDO'}
+    node_name = StringProperty(name='name node', description='it is name of node',
+                               default='')
+    tree_name = StringProperty(name='name tree', description='it is name of tree',
+                               default='')
+
+    def execute(self, context):
+        global ID
+        inputs = bpy.data.node_groups[self.tree_name].nodes[self.node_name].inputs
+        outputs = bpy.data.node_groups[self.tree_name].nodes[self.node_name].outputs
+
+        s = inputs.new('DataSocketType', "socket_%s" % ID)
+        s.node_name = self.node_name
+        s.tree_name = self.tree_name
+        s = outputs.new('DataSocketType', "socket_%s" % ID)
+        s.node_name = self.node_name
+        s.tree_name = self.tree_name
+        ID += 1
+
+        return {'FINISHED'}
+
 class LogicOperatorNode(Node, B4WLogicNode):
 
     def updateNode(self, context):
@@ -644,7 +608,7 @@ class FunctionDeclarationNode(Node, B4WLogicNode):
         row = col.row()
         row.prop_search(self, 'function_name', bpy.data, 'objects', text='')
         row = col.row()
-        opera = row.operator('node.add_input_socket', text="Add input")
+        opera = row.operator('node.add_inout_sockets', text="Add input")
         opera.node_name = self.name
         opera.tree_name = self.id_data.name
 
@@ -716,6 +680,7 @@ def register():
     bpy.utils.register_class(LogicOperatorSocketInput)
     bpy.utils.register_class(LogicOperatorSocketOutput)
     bpy.utils.register_class(AddInputSocket)
+    bpy.utils.register_class(AddInOutSockets)
     bpy.utils.register_class(RemoveInputSocket)
     bpy.utils.register_class(FunctionNodeSensorSocket)
     bpy.utils.register_class(FunctionNodeTargetSocket)
@@ -753,6 +718,7 @@ def unregister():
     bpy.utils.unregister_class(LogicOperatorSocketInput)
     bpy.utils.unregister_class(LogicOperatorSocketOutput)
     bpy.utils.unregister_class(AddInputSocket)
+    bpy.utils.unregister_class(AddInOutSockets)
     bpy.utils.unregister_class(RemoveInputSocket)
     bpy.utils.unregister_class(FunctionNodeSensorSocket)
     bpy.utils.unregister_class(FunctionNodeTargetSocket)
