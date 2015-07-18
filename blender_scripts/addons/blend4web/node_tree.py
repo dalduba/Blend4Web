@@ -229,12 +229,8 @@ class VariableNode(Node, B4WLogicNode):
         default='',
         description='name of the variable',
         update=updateNode)
-    input_text = bpy.props.StringProperty(
-        default='', update=updateNode)
 
     def draw_buttons(self, context, layout):
-
-        # TODO: check bug of "GET" action
         if self.action == "SET" and len(self.inputs) != 2:
             self.inputs.clear()
             self.outputs.clear()
@@ -272,8 +268,6 @@ class GlobalVariableDeclarationNode(Node, B4WLogicNode):
         default='',
         description='name of the variable',
         update=updateNode)
-    input_text = bpy.props.StringProperty(
-        default='', update=updateNode)
 
     def draw_buttons(self, context, layout):
         layout.label("Name")
@@ -381,11 +375,33 @@ class OperatorNode(Node, B4WLogicNode):
             opera.node_name = self.name
             opera.tree_name = self.id_data.name
         else:
-            while len(self.inputs) > 1:
+            while len(self.inputs) > 2:
                 self.inputs.remove(self.inputs[-1])
+            while len(self.inputs) < 2:
+                self.inputs.new('DataSocketType', "")
 
     def draw_label(self):
         return "Operator node"
+
+class JSScriptNode(Node, B4WLogicNode):
+    bl_idname = 'JSScriptNode'
+    bl_label = 'JS Script'
+
+    def updateNode(self, context):
+        pass
+
+    script_name = bpy.props.StringProperty(
+        default='',
+        description='name of JavaScript text',
+        update=updateNode)
+
+    def init(self, context):
+        self.inputs.new('OrderSocketType', ">Order")
+        self.outputs.new('OrderSocketType', "Order>")
+    def draw_buttons(self, context, layout):
+        row = layout.row()
+        row.prop_search(self, 'script_name', bpy.data, 'texts', text='')
+
 
 class IfelseNode(Node, B4WLogicNode):
     bl_idname = 'IfelseNode'
@@ -644,6 +660,7 @@ node_categories = [
     MyNodeCategory("Objects", "Objects", items=[
         NodeItem("TargetNode", label="Target",),
         NodeItem("VariableNode", label="Variable",),
+        NodeItem("JSScriptNode", label="JS script",),
         ]),
     MyNodeCategory("Callbacks", "Callbacks", items=[
         # our basic node
@@ -699,6 +716,7 @@ def register():
     bpy.utils.register_class(LogicOperatorNode)
     bpy.utils.register_class(RelationalOperatorNode)
     bpy.utils.register_class(VariableNode)
+    bpy.utils.register_class(JSScriptNode)
     bpy.utils.register_class(IfelseNode)
     bpy.utils.register_class(ForNode)
     bpy.utils.register_class(ForInNode)
@@ -737,6 +755,7 @@ def unregister():
     bpy.utils.unregister_class(LogicOperatorNode)
     bpy.utils.unregister_class(RelationalOperatorNode)
     bpy.utils.unregister_class(VariableNode)
+    bpy.utils.unregister_class(JSScriptNode)
     bpy.utils.unregister_class(IfelseNode)
     bpy.utils.unregister_class(ForNode)
     bpy.utils.unregister_class(ForInNode)
