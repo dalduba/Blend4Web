@@ -207,6 +207,7 @@ class BoolSocket(NodeSocket):
 class DataSocket(NodeSocket):
     bl_idname = 'DataSocketType'
     bl_label = 'Data Node Socket'
+    b4w_type = "*"
     def draw(self, context, layout, node, text):
         layout.label(text)
     def draw_color(self, context, node):
@@ -612,16 +613,27 @@ class B4W_Name(bpy.types.PropertyGroup):
     name = bpy.props.StringProperty(name="name")
 
 #  ----------read B4W API--
-B4W_modules_enum = []
 import json
-B4W_PATH = "../../.."
 import os
 curdir = os.path.dirname(os.path.abspath(__file__))
 b4w_api_json_path = os.path.join(curdir,"b4w_api.json")
 with open(b4w_api_json_path) as data_file:
     b4w_data = json.load(data_file)
 #--------------------------
+def clear_with_exceptions(ss, exceptions):
+    for s in ss:
+        if s.bl_idname in exceptions:
+            continue
+        ss.remove(s)
 
+def get_module(data, name):
+    for m in b4w_data["modules"]:
+        if m['module_name'] == name:
+            return m
+def get_method(data, name):
+    for m in data["module_methods"]:
+        if m['method_name'] == name:
+            return m
 class Blend4WebAPINode(Node, B4WLogicNode):
     modules_names = bpy.props.CollectionProperty(
         name="B4W: Modules names",
@@ -633,25 +645,43 @@ class Blend4WebAPINode(Node, B4WLogicNode):
         type=B4W_Name,
         description="Methods names")
 
-    def updateNode(self, context):
+    def updateMethod(self, context):
+        self.updateSockets(context)
+
+    def updateSockets(self, context):
+        clear_with_exceptions(self.inputs, ["OrderSocketType"])
+        clear_with_exceptions(self.outputs, ["OrderSocketType"])
+        m = get_module(b4w_data,self.module_name)
+        meth = get_method(m, self.method_name)
+        if not meth:
+            return
+        if "method_params" in meth:
+            for p in meth["method_params"]:
+                self.inputs.new('DataSocketType', p["param_name"]+":"+p["param_type"])
+        if "method_return" in meth:
+            self.outputs.new('DataSocketType', meth["method_return"]['return_type'])
+
+    def updateModule(self, context):
         self.methods_names.clear()
-        method_name =""
         for m in b4w_data["modules"]:
             if m['module_name'] == self.module_name:
                 for meth in m['module_methods']:
                     self.methods_names.add()
                     self.methods_names[-1].name = meth['method_name']
+        self.updateSockets(context)
+
 
     module_name = bpy.props.StringProperty(
         name = "Module name",
         description = "name of B4W module",
         default = "",
-        update = updateNode
+        update = updateModule
     )
     method_name = bpy.props.StringProperty(
         name = "Method name",
         description = "name of method",
-        default = ""
+        default = "",
+        update = updateMethod
     )
 
     bl_idname = 'Blend4WebAPINode'
@@ -663,6 +693,8 @@ class Blend4WebAPINode(Node, B4WLogicNode):
             self.modules_names.add()
             self.modules_names[-1].name = m['module_name']
         pass
+        self.inputs.new('OrderSocketType', ">Order")
+        self.outputs.new('OrderSocketType', "Order>")
 
     def copy(self, node):
         print("Copying from node ", node)
@@ -674,8 +706,10 @@ class Blend4WebAPINode(Node, B4WLogicNode):
         row.prop_search(self, 'method_name', self, 'methods_names', text='method', icon='MARKER')
 
     def draw_label(self):
-        return self.bl_label
-
+        if self.method_name:
+            return self.module_name+'.'+self.method_name
+        else:
+            return self.bl_label
 
 class FunctionDeclarationNode(Node, B4WLogicNode):
     bl_idname = 'FunctionDeclarationNode'
