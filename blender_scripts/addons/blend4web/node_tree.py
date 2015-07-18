@@ -241,10 +241,12 @@ class VariableNode(Node, B4WLogicNode):
             self.inputs.new('OrderSocketType', ">Order")
             self.inputs.new('DataSocketType', "Set")
             self.outputs.new('OrderSocketType', "Order>")
-        elif self.action == "GET" and len(self.inputs) != 1:
+            print("set")
+        elif self.action == "GET" and len(self.inputs) == 2:
             self.inputs.clear()
             self.outputs.clear()
             self.outputs.new('DataSocketType', "Get")
+            print("get")
 
         layout.label("Name")
         col = layout.column()
