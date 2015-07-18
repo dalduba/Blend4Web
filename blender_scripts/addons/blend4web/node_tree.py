@@ -663,6 +663,7 @@ class Blend4WebAPINode(Node, B4WLogicNode):
 
     def updateModule(self, context):
         self.methods_names.clear()
+        self.method_name = ""
         for m in b4w_data["modules"]:
             if m['module_name'] == self.module_name:
                 for meth in m['module_methods']:
