@@ -606,6 +606,77 @@ class LogicOperatorNode(Node, B4WLogicNode):
     def draw_label(self):
         return "LogicOperator node"
 
+
+class B4W_Name(bpy.types.PropertyGroup):
+    bl_idname = 'Blend4Web_String'
+    name = bpy.props.StringProperty(name="name")
+
+#  ----------read B4W API--
+B4W_modules_enum = []
+import json
+B4W_PATH = "../../.."
+import os
+curdir = os.path.dirname(os.path.abspath(__file__))
+b4w_api_json_path = os.path.join(curdir,"b4w_api.json")
+with open(b4w_api_json_path) as data_file:
+    b4w_data = json.load(data_file)
+#--------------------------
+
+class Blend4WebAPINode(Node, B4WLogicNode):
+    modules_names = bpy.props.CollectionProperty(
+        name="B4W: Modules names",
+        type=B4W_Name,
+        description="Modules names")
+
+    methods_names = bpy.props.CollectionProperty(
+        name="B4W: Methods names",
+        type=B4W_Name,
+        description="Methods names")
+
+    def updateNode(self, context):
+        self.methods_names.clear()
+        method_name =""
+        for m in b4w_data["modules"]:
+            if m['module_name'] == self.module_name:
+                for meth in m['module_methods']:
+                    self.methods_names.add()
+                    self.methods_names[-1].name = meth['method_name']
+
+    module_name = bpy.props.StringProperty(
+        name = "Module name",
+        description = "name of B4W module",
+        default = "",
+        update = updateNode
+    )
+    method_name = bpy.props.StringProperty(
+        name = "Method name",
+        description = "name of method",
+        default = ""
+    )
+
+    bl_idname = 'Blend4WebAPINode'
+    bl_label = 'Blend4WebAPINode'
+
+    def init(self, context):
+        self.modules_names.clear()
+        for m in b4w_data["modules"]:
+            self.modules_names.add()
+            self.modules_names[-1].name = m['module_name']
+        pass
+
+    def copy(self, node):
+        print("Copying from node ", node)
+
+    def draw_buttons(self, context, layout):
+        row = layout.row()
+        row.prop_search(self, 'module_name', self, 'modules_names', text='module', icon='MARKER')
+        row = layout.row()
+        row.prop_search(self, 'method_name', self, 'methods_names', text='method', icon='MARKER')
+
+    def draw_label(self):
+        return self.bl_label
+
+
 class FunctionDeclarationNode(Node, B4WLogicNode):
     bl_idname = 'FunctionDeclarationNode'
     bl_label = 'Function declaration'
@@ -683,6 +754,9 @@ node_categories = [
         NodeItem("LogicOperatorNode", label="Logic Operator",),
         NodeItem("RelationalOperatorNode", label="Relational Operator",),
         ]),
+    MyNodeCategory("Call methods", "Call Methods", items=[
+        NodeItem("Blend4WebAPINode", label="Blend4Web API",),
+        ]),
     ]
 
 
@@ -723,6 +797,8 @@ def register():
     bpy.utils.register_class(CallbackInterfaceNode)
     bpy.utils.register_class(FunctionDeclarationNode)
     bpy.utils.register_class(GlobalVariableDeclarationNode)
+    bpy.utils.register_class(B4W_Name)
+    bpy.utils.register_class(Blend4WebAPINode)
 
 
 def unregister():
@@ -762,6 +838,8 @@ def unregister():
     bpy.utils.unregister_class(CallbackInterfaceNode)
     bpy.utils.unregister_class(FunctionDeclarationNode)
     bpy.utils.unregister_class(GlobalVariableDeclarationNode)
+    bpy.utils.unregister_class(B4W_Name)
+    bpy.utils.unregister_class(Blend4WebAPINode)
 
 if __name__ == "__main__":
     register()
