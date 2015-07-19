@@ -46,6 +46,107 @@ B4W_PATH = ".."
 #     ]
 # }
 
+def Vec3_sock_desc(name, connectible = 1):
+    return {"socket_name":name, "socket_type": "Vec3", "connectible": connectible}
+def String_sock_desc(name):
+    return {"socket_name":name, "socket_type": "String", "connectible": 0}
+def Bool_sock_desc(name):
+    return {"socket_name":name, "socket_type": "Bool", "connectible": 0}
+def Object3D_sock_desc(name):
+    return {"socket_name":name, "socket_type": "Object3D", "connectible": 0}
+def Number_sock_desc(name):
+    return {"socket_name":name, "socket_type": "Number", "connectible": 0}
+def Axis_sock_desc(name):
+    return {"socket_name":name, "socket_type": "Axis", "connectible": 0}
+def Sensor_standard_output_desc(payload = True):
+    r = {"socket_name":"sensor"}, {"socket_name":"value"}
+    if payload:
+        r = r, {"socket_name":"payload"}
+sensors = [
+    {"sensor_name": "keyboard",
+     "inputs":[{"socket_name":"key", "socket_type": "Key", "connectible": 0},],
+     "outputs":[Sensor_standard_output_desc()]},
+
+    {"sensor_name": "mouse_click",
+     "inputs":[],
+     "outputs":[Sensor_standard_output_desc()]},
+
+    {"sensor_name": "mouse_move",
+     "inputs":[Axis_sock_desc("axis")],
+     "outputs":[Sensor_standard_output_desc()]},
+
+    {"sensor_name": "mouse_wheel",
+     "inputs":[],
+     "outputs":[Sensor_standard_output_desc()]},
+
+    {"sensor_name": "touch_move",
+     "inputs":[Axis_sock_desc("axis")],
+     "outputs":[Sensor_standard_output_desc()]},
+
+    {"sensor_name": "touch_zoom",
+     "inputs":[],
+     "outputs":[Sensor_standard_output_desc()]},
+
+    {"sensor_name": "collision",
+     "inputs":[Object3D_sock_desc("obj"),
+               String_sock_desc("id"),
+               Bool_sock_desc("calc_pos_norm"),],
+     "outputs":[Sensor_standard_output_desc()]},
+
+    {"sensor_name": "collision_impulse",
+     "inputs":[Object3D_sock_desc("obj"),],
+     "outputs":[Sensor_standard_output_desc()]},
+
+    {"sensor_name": "ray",
+     "inputs":[Object3D_sock_desc("obj"),
+               Vec3_sock_desc("from"),
+               Vec3_sock_desc("to"),
+               String_sock_desc("id"),
+               Bool_sock_desc("is_binary_value"),
+               Bool_sock_desc("calc_pos_norm"),
+               Bool_sock_desc("ign_src_rot")],
+     "outputs":[Sensor_standard_output_desc()]},
+
+    {"sensor_name": "selection",
+     "inputs":[Object3D_sock_desc("obj"),
+               Bool_sock_desc("auto_release"),],
+     "outputs":[Sensor_standard_output_desc()]},
+
+    {"sensor_name": "timer",
+     "inputs":[Number_sock_desc("period"),
+               Bool_sock_desc("do_repeat"),],
+     "outputs":[Sensor_standard_output_desc()]},
+
+    {"sensor_name": "elapsed",
+     "inputs":[],
+     "outputs":[Sensor_standard_output_desc()]},
+
+    {"sensor_name": "timeline",
+     "inputs":[],
+     "outputs":[Sensor_standard_output_desc()]},
+
+    {"sensor_name": "motion",
+     "inputs":[Object3D_sock_desc("obj"),
+               Number_sock_desc("threshold"),
+               Number_sock_desc("rotation_threshold"),],
+     "outputs":[Sensor_standard_output_desc()]},
+
+    {"sensor_name": "vertical_velocity",
+     "inputs":[Object3D_sock_desc("obj"),
+               Number_sock_desc("threshold"),],
+     "outputs":[Sensor_standard_output_desc()]},
+
+    {"sensor_name": "gyro_delta",
+     "inputs":[],
+     "outputs":[Sensor_standard_output_desc()]},
+
+    {"sensor_name": "gyro_angles",
+     "inputs":[],
+     "outputs":[Sensor_standard_output_desc()]},
+
+    ]
+
+
 def get_b4w_api():
 
     path_to_src = os.path.join(B4W_PATH, "src")
@@ -162,6 +263,7 @@ def get_b4w_api():
     api_lib["types"] = list(types)
     api_lib["callbacks"] = callbacks
     api_lib["aliases"] = typedefs
+    api_lib["sensors"] = sensors
 
     return api_lib
 
@@ -182,6 +284,8 @@ def dump(data):
 
     file.write(json.dumps(data))
 
+import pprint
 if __name__ == '__main__':
     data = get_b4w_api()
     dump(data)
+    pprint.pprint(data)
