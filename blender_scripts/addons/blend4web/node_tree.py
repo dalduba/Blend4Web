@@ -28,43 +28,6 @@ class B4WLogicNode:
     def poll(cls, ntree):
         return ntree.bl_idname == 'B4WLogicNodeTreeType'
 
-class SensorSocket(NodeSocket):
-    bl_idname = 'SensorSocketType'
-    bl_label = 'Sensor Node Socket'
-    my_items = [
-        ("Init", "Init", "Fire at Initialisation time"),
-        ("Always", "Always", "Fire every frame"),
-        ("Bounding begin", "Bounding begin", "---"),
-        ("Bounding end", "Bounding end", "---"),
-    ]
-    myEnumProperty = bpy.props.EnumProperty(name="SensorType", description="Sensor Type", items=my_items, default='Init')
-
-    def draw(self, context, layout, node, text):
-        if self.is_output or self.is_linked:
-            layout.prop(self, "myEnumProperty", text=text)
-        else:
-            layout.label(text)
-
-    def draw_color(self, context, node):
-        return SensorSocketColor
-
-
-class SensorNode(Node, B4WLogicNode):
-    bl_idname = 'SensorNode'
-    bl_label = 'Sensor'
-
-    def init(self, context):
-        self.outputs.new('SensorSocketType', "")
-
-    def copy(self, node):
-        print("Copying from node ", node)
-
-    def draw_buttons(self, context, layout):
-        layout.label("Node settings")
-
-    def draw_label(self):
-        return "Sensor node"
-
 #----------------------
 class TargetSocket(NodeSocket):
     bl_idname = 'TargetSocketType'
@@ -126,6 +89,7 @@ class FunctionSocket(NodeSocket):
 class FunctionNodeSensorSocket(NodeSocket):
     bl_idname = 'FunctionNodeSensorSocketType'
     bl_label = 'Function Node Sensor Socket'
+    socket_type = ''
     def draw(self, context, layout, node, text):
         layout.label(text)
 
@@ -631,9 +595,71 @@ def get_module(data, name):
         if m['module_name'] == name:
             return m
 def get_method(data, name):
+    if not "module_methods" in data:
+        return None
     for m in data["module_methods"]:
         if m['method_name'] == name:
             return m
+
+class SensorSocket(NodeSocket):
+    bl_idname = "SensorSocketType"
+    def draw(self, context, layout, node, text):
+        layout.label(text)
+
+    def draw_color(self, context, node):
+        return SensorSocketColor
+
+def add_sensor_sockets(ss, socks_desc):
+    for sd in socks_desc:
+        connectible = True
+        if 'connectible' in sd:
+            if not sd['connectible']:
+                connectible = False
+        if connectible:
+            s = ss.new('SensorSocketType', sd['socket_name'])
+            if 'socket_type' in sd:
+                s.socket_type = sd['socket_type']
+
+class SensorNode(Node, B4WLogicNode):
+    bl_idname = 'SensorNode'
+    bl_label = 'Sensor'
+    sensors_names = bpy.props.CollectionProperty(
+        name="B4W: Sensors names",
+        type=B4W_Name,
+        description="Sensors names")
+
+    def updateSensor(self, context):
+        self.inputs.clear()
+        self.outputs.clear()
+        for s in b4w_data['sensors']:
+            if s['sensor_name'] == self.sensor_name:
+                add_sensor_sockets(self.inputs, s['inputs'])
+                add_sensor_sockets(self.outputs, s['outputs'])
+
+    sensor_name = bpy.props.StringProperty(
+        name = "Sensor name",
+        description = "Sensor name",
+        default = "selection",
+        update = updateSensor
+    )
+    def init(self, context):
+        self.sensors_names.clear()
+        for s in b4w_data['sensors']:
+            self.sensors_names.add()
+            self.sensors_names[-1].name = s['sensor_name']
+
+        self.updateSensor(context)
+
+    def copy(self, node):
+        print("Copying from node ", node)
+
+    def draw_buttons(self, context, layout):
+        row = layout.row()
+        row.prop_search(self, 'sensor_name', self, 'sensors_names', text='sensor', icon='MARKER')
+
+    def draw_label(self):
+        return "Sensor node"
+
 class Blend4WebAPINode(Node, B4WLogicNode):
     modules_names = bpy.props.CollectionProperty(
         name="B4W: Modules names",
@@ -652,6 +678,8 @@ class Blend4WebAPINode(Node, B4WLogicNode):
         clear_with_exceptions(self.inputs, ["OrderSocketType"])
         clear_with_exceptions(self.outputs, ["OrderSocketType"])
         m = get_module(b4w_data,self.module_name)
+        if not m:
+            return
         meth = get_method(m, self.method_name)
         if not meth:
             return
@@ -666,6 +694,8 @@ class Blend4WebAPINode(Node, B4WLogicNode):
         self.method_name = ""
         for m in b4w_data["modules"]:
             if m['module_name'] == self.module_name:
+                if 'module_methods' not in m:
+                    return
                 for meth in m['module_methods']:
                     self.methods_names.add()
                     self.methods_names[-1].name = meth['method_name']
@@ -800,7 +830,7 @@ def register():
 
     # tree
     bpy.utils.register_class(B4WLogicNodeTree)
-
+    bpy.utils.register_class(B4W_Name)
     # sockets
     bpy.utils.register_class(SensorSocket)
     bpy.utils.register_class(TargetSocket)
@@ -832,9 +862,7 @@ def register():
     bpy.utils.register_class(CallbackInterfaceNode)
     bpy.utils.register_class(FunctionDeclarationNode)
     bpy.utils.register_class(GlobalVariableDeclarationNode)
-    bpy.utils.register_class(B4W_Name)
     bpy.utils.register_class(Blend4WebAPINode)
-
 
 def unregister():
     nodeitems_utils.unregister_node_categories("CUSTOM_NODES")
@@ -873,8 +901,8 @@ def unregister():
     bpy.utils.unregister_class(CallbackInterfaceNode)
     bpy.utils.unregister_class(FunctionDeclarationNode)
     bpy.utils.unregister_class(GlobalVariableDeclarationNode)
-    bpy.utils.unregister_class(B4W_Name)
     bpy.utils.unregister_class(Blend4WebAPINode)
+    bpy.utils.unregister_class(B4W_Name)
 
 if __name__ == "__main__":
     register()
