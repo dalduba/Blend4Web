@@ -571,6 +571,12 @@ class LogicOperatorNode(Node, B4WLogicNode):
     def draw_label(self):
         return "LogicOperator node"
 
+class B4W_dyn_param_union(bpy.types.PropertyGroup):
+    bl_idname = 'B4W_dyn_param_union'
+    s = bpy.props.StringProperty(name="string")
+    f = bpy.props.FloatProperty(name="float")
+    b = bpy.props.BoolProperty(name="bool")
+    v3 = bpy.props.FloatVectorProperty(name="vector3")
 
 class B4W_Name(bpy.types.PropertyGroup):
     bl_idname = 'Blend4Web_String'
@@ -608,17 +614,34 @@ class SensorSocket(NodeSocket):
 
     def draw_color(self, context, node):
         return SensorSocketColor
+def is_connectible(sock_desc):
+    connectible = True
+    if 'connectible' in sock_desc:
+        if not sock_desc['connectible']:
+            connectible = False
+    return connectible
+
+def get_sock_desc_type(desc):
+    type = "_Data"
+    if 'socket_type' in desc:
+        type = desc['socket_type']
+    return type
 
 def add_sensor_sockets(ss, socks_desc):
     for sd in socks_desc:
-        connectible = True
-        if 'connectible' in sd:
-            if not sd['connectible']:
-                connectible = False
-        if connectible:
+        if is_connectible(sd):
             s = ss.new('SensorSocketType', sd['socket_name'])
             if 'socket_type' in sd:
                 s.socket_type = sd['socket_type']
+
+def extend_not_connectible_arr(dst, search_src):
+    for sd in search_src:
+        if not is_connectible(sd):
+            dst.add()
+            sock_type = get_sock_desc_type(sd)
+            s = dst[-1]
+            s['socket_type'] = sock_type
+            s['socket_name'] = sd["socket_name"]
 
 class SensorNode(Node, B4WLogicNode):
     bl_idname = 'SensorNode'
@@ -628,13 +651,20 @@ class SensorNode(Node, B4WLogicNode):
         type=B4W_Name,
         description="Sensors names")
 
+    dyn_props = bpy.props.CollectionProperty(
+        name="B4W: Dynamic props",
+        type=B4W_dyn_param_union,
+        description="B4W: Dynamic props")
+
     def updateSensor(self, context):
+        self.dyn_props.clear()
         self.inputs.clear()
         self.outputs.clear()
         for s in b4w_data['sensors']:
             if s['sensor_name'] == self.sensor_name:
                 add_sensor_sockets(self.inputs, s['inputs'])
                 add_sensor_sockets(self.outputs, s['outputs'])
+                extend_not_connectible_arr(self.dyn_props, s['inputs'])
 
     sensor_name = bpy.props.StringProperty(
         name = "Sensor name",
@@ -642,20 +672,37 @@ class SensorNode(Node, B4WLogicNode):
         default = "selection",
         update = updateSensor
     )
+    not_connectible = []
+
     def init(self, context):
         self.sensors_names.clear()
         for s in b4w_data['sensors']:
             self.sensors_names.add()
             self.sensors_names[-1].name = s['sensor_name']
-
         self.updateSensor(context)
 
     def copy(self, node):
         print("Copying from node ", node)
 
+    def draw_dyn_param(self, container, prop_name, layout):
+        row = layout.row()
+        row.prop(container, prop_name, text=container['socket_name'])
+
     def draw_buttons(self, context, layout):
         row = layout.row()
         row.prop_search(self, 'sensor_name', self, 'sensors_names', text='sensor', icon='MARKER')
+        for p in self.dyn_props:
+            if p['socket_type'] == 'Object3D':
+                row = layout.row()
+                row.prop_search(p, 's', bpy.data, 'objects', text=p['socket_name'], icon='MARKER')
+            if p['socket_type'] in ['String', 'Axis', 'Key']:
+                self.draw_dyn_param(p, 's', layout)
+            if p['socket_type'] in ['Bool']:
+                self.draw_dyn_param(p, 'b', layout)
+            if p['socket_type'] in ['Number']:
+                self.draw_dyn_param(p, 'f', layout)
+            if p['socket_type'] in ['Vec3']:
+                self.draw_dyn_param(p, 'v3', layout)
 
     def draw_label(self):
         return "Sensor node"
@@ -831,6 +878,7 @@ def register():
     # tree
     bpy.utils.register_class(B4WLogicNodeTree)
     bpy.utils.register_class(B4W_Name)
+    bpy.utils.register_class(B4W_dyn_param_union)
     # sockets
     bpy.utils.register_class(SensorSocket)
     bpy.utils.register_class(TargetSocket)
@@ -903,6 +951,7 @@ def unregister():
     bpy.utils.unregister_class(GlobalVariableDeclarationNode)
     bpy.utils.unregister_class(Blend4WebAPINode)
     bpy.utils.unregister_class(B4W_Name)
+    bpy.utils.unregister_class(B4W_dyn_param_union)
 
 if __name__ == "__main__":
     register()
