@@ -5,6 +5,8 @@ from bpy.props import StringProperty
 
 # Implementation of custom nodes from Python
 SensorSocketColor = (0.0, 1.0, 0.216, 0.5)
+SensorNodeColor = (0.55, 0.93, 0.57)
+B4WAPINodeColor = (0.71, 0.57, 0.96)
 TargetSocketColor = (1.0, 1.0, 0.216, 0.5)
 OrderSocketColor = (0.9, 0.4, 0.216, 0.5)
 BoolSocketColor = (0.9, 0.4, 0.9, 0.5)
@@ -646,6 +648,7 @@ def extend_not_connectible_arr(dst, search_src):
 class SensorNode(Node, B4WLogicNode):
     bl_idname = 'SensorNode'
     bl_label = 'Sensor'
+    node_color = SensorNodeColor
     sensors_names = bpy.props.CollectionProperty(
         name="B4W: Sensors names",
         type=B4W_Name,
@@ -675,6 +678,8 @@ class SensorNode(Node, B4WLogicNode):
     not_connectible = []
 
     def init(self, context):
+        self.color = self.node_color
+        self.use_custom_color = True
         self.sensors_names.clear()
         for s in b4w_data['sensors']:
             self.sensors_names.add()
@@ -708,6 +713,7 @@ class SensorNode(Node, B4WLogicNode):
         return "Sensor node"
 
 class Blend4WebAPINode(Node, B4WLogicNode):
+    node_color = B4WAPINodeColor
     modules_names = bpy.props.CollectionProperty(
         name="B4W: Modules names",
         type=B4W_Name,
@@ -766,6 +772,8 @@ class Blend4WebAPINode(Node, B4WLogicNode):
     bl_label = 'Blend4WebAPINode'
 
     def init(self, context):
+        self.color = self.node_color
+        self.use_custom_color = True
         self.modules_names.clear()
         for m in b4w_data["modules"]:
             self.modules_names.add()
