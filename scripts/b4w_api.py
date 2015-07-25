@@ -54,8 +54,8 @@ def Bool_sock_desc(name):
     return {"socket_name":name, "socket_type": "Bool", "connectible": 0}
 def Object3D_sock_desc(name):
     return {"socket_name":name, "socket_type": "Object3D", "connectible": 1}
-def Number_sock_desc(name):
-    return {"socket_name":name, "socket_type": "Number", "connectible": 0}
+def Number_sock_desc(name, connectible = 0):
+    return {"socket_name":name, "socket_type": "Number", "connectible": connectible}
 def Axis_sock_desc(name):
     return {"socket_name":name, "socket_type": "Axis", "connectible": 0}
 def Sensor_standard_output_desc(payload = True):
@@ -65,41 +65,41 @@ def Sensor_standard_output_desc(payload = True):
     return r
 
 sensors = [
-    {"sensor_name": "keyboard",
+    {"name": "keyboard",
      "inputs":[{"socket_name":"key", "socket_type": "Key", "connectible": 0},],
      "outputs":[]},
 
-    {"sensor_name": "mouse_click",
+    {"name": "mouse_click",
      "inputs":[],
      "outputs":[]},
 
-    {"sensor_name": "mouse_move",
+    {"name": "mouse_move",
      "inputs":[Axis_sock_desc("axis")],
      "outputs":[]},
 
-    {"sensor_name": "mouse_wheel",
+    {"name": "mouse_wheel",
      "inputs":[],
      "outputs":[]},
 
-    {"sensor_name": "touch_move",
+    {"name": "touch_move",
      "inputs":[Axis_sock_desc("axis")],
      "outputs":[]},
 
-    {"sensor_name": "touch_zoom",
+    {"name": "touch_zoom",
      "inputs":[],
      "outputs":[]},
 
-    {"sensor_name": "collision",
+    {"name": "collision",
      "inputs":[Object3D_sock_desc("obj"),
                String_sock_desc("id"),
                Bool_sock_desc("calc_pos_norm"),],
      "outputs":[]},
 
-    {"sensor_name": "collision_impulse",
+    {"name": "collision_impulse",
      "inputs":[Object3D_sock_desc("obj"),],
      "outputs":[]},
 
-    {"sensor_name": "ray",
+    {"name": "ray",
      "inputs":[Object3D_sock_desc("obj"),
                Vec3_sock_desc("from"),
                Vec3_sock_desc("to"),
@@ -109,47 +109,153 @@ sensors = [
                Bool_sock_desc("ign_src_rot")],
      "outputs":[]},
 
-    {"sensor_name": "selection",
+    {"name": "selection",
      "inputs":[Object3D_sock_desc("obj"),
                Bool_sock_desc("auto_release"),],
      "outputs":[]},
 
-    {"sensor_name": "timer",
+    {"name": "timer",
      "inputs":[Number_sock_desc("period"),
                Bool_sock_desc("do_repeat"),],
      "outputs":[]},
 
-    {"sensor_name": "elapsed",
+    {"name": "elapsed",
      "inputs":[],
      "outputs":[]},
 
-    {"sensor_name": "timeline",
+    {"name": "timeline",
      "inputs":[],
      "outputs":[]},
 
-    {"sensor_name": "motion",
+    {"name": "motion",
      "inputs":[Object3D_sock_desc("obj"),
                Number_sock_desc("threshold"),
                Number_sock_desc("rotation_threshold"),],
      "outputs":[]},
 
-    {"sensor_name": "vertical_velocity",
+    {"name": "vertical_velocity",
      "inputs":[Object3D_sock_desc("obj"),
                Number_sock_desc("threshold"),],
      "outputs":[]},
 
-    {"sensor_name": "gyro_delta",
+    {"name": "gyro_delta",
      "inputs":[],
      "outputs":[]},
 
-    {"sensor_name": "gyro_angles",
-     "inputs":[],
+    {"name": "gyro_angles",
+     "inputs":[Number_sock_desc("threshold")],
      "outputs":[]},
 
     ]
 for s in sensors:
     for out in Sensor_standard_output_desc().__reversed__():
         s['outputs'].insert(0, out)
+
+#---------
+
+js_api_modules=[
+    {"name": "Math", "methods":[
+
+        {"name": "E",
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "LN2",
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "LN10",
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "LOG2E",
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "LOG10E",
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "PI",
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "SQRT1_2",
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "SQRT2",
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "abs",
+         "inputs":[Number_sock_desc("x", True)],
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "acos",
+         "inputs":[Number_sock_desc("x", True)],
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "asin",
+         "inputs":[Number_sock_desc("x", True)],
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "atan",
+         "inputs":[Number_sock_desc("x", True)],
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "atan2",
+         "inputs":[Number_sock_desc("y", True), Number_sock_desc("x", True)],
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "ceil",
+         "inputs":[Number_sock_desc("x", True)],
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "cos",
+         "inputs":[Number_sock_desc("x", True)],
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "exp",
+         "inputs":[Number_sock_desc("x", True)],
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "flor",
+         "inputs":[Number_sock_desc("x", True)],
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "log",
+         "inputs":[Number_sock_desc("x", True)],
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "pow",
+         "inputs":[Number_sock_desc("x", True), Number_sock_desc("y", True)],
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "round",
+         "inputs":[Number_sock_desc("x", True)],
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "sin",
+         "inputs":[Number_sock_desc("x", True)],
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "sqrt",
+         "inputs":[Number_sock_desc("x", True)],
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "tan",
+         "inputs":[Number_sock_desc("x", True)],
+         "outputs":[Number_sock_desc("Number", True)]},
+
+        {"name": "random",
+         "inputs":[],
+         "outputs":[Number_sock_desc("Number", True)]},
+
+# TODO make dynamic inputs for min/max
+         {"name": "min",
+         "inputs":[],
+         "outputs":[Number_sock_desc("Number", True)]},
+
+         {"name": "max",
+         "inputs":[],
+         "outputs":[Number_sock_desc("Number", True)]},
+    ]
+
+    }
+]
 
 #---------
 

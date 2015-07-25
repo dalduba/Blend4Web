@@ -61,8 +61,6 @@ class B4WLogicSocket(NodeSocket):
                 if type in 'Object3D':
                     r = layout.row()
                     r.prop_search(p, attr_name, bpy.data, 'objects', text=p.name, icon='MARKER')
-                    r = layout.row()
-                    r.prop_search(p, attr_name, bpy.data, 'objects', text=p.name, icon='MARKER')
                 else:
                     layout.prop(p, attr_name, text=p.name)
         else:
@@ -743,7 +741,7 @@ class SensorNode(B4WLogicNode):
         self.inputs.clear()
         self.outputs.clear()
         for s in b4w_data['sensors']:
-            if s['sensor_name'] == self.sensor_name:
+            if s['name'] == self.sensor_name:
                 extend_not_connectible_arr(self.dyn_props, s['inputs'])
                 add_sensor_sockets(self.inputs, s['inputs'], True)
                 add_sensor_sockets(self.outputs, s['outputs'], False)
