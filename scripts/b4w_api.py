@@ -53,7 +53,7 @@ def String_sock_desc(name):
 def Bool_sock_desc(name):
     return {"socket_name":name, "socket_type": "Bool", "connectible": 0}
 def Object3D_sock_desc(name):
-    return {"socket_name":name, "socket_type": "Object3D", "connectible": 0}
+    return {"socket_name":name, "socket_type": "Object3D", "connectible": 1}
 def Number_sock_desc(name):
     return {"socket_name":name, "socket_type": "Number", "connectible": 0}
 def Axis_sock_desc(name):
