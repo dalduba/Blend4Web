@@ -47,21 +47,21 @@ B4W_PATH = ".."
 # }
 
 def Vec3_sock_desc(name, connectible = 1):
-    return {"socket_name":name, "socket_type": "Vec3", "connectible": connectible}
+    return {"name":name, "type": "Vec3", "connectible": connectible}
 def String_sock_desc(name):
-    return {"socket_name":name, "socket_type": "String", "connectible": 0}
+    return {"name":name, "type": "String", "connectible": 0}
 def Bool_sock_desc(name):
-    return {"socket_name":name, "socket_type": "Bool", "connectible": 0}
+    return {"name":name, "type": "Bool", "connectible": 0}
 def Object3D_sock_desc(name):
-    return {"socket_name":name, "socket_type": "Object3D", "connectible": 1}
+    return {"name":name, "type": "Object3D", "connectible": 1}
 def Number_sock_desc(name, connectible = 0):
-    return {"socket_name":name, "socket_type": "Number", "connectible": connectible}
+    return {"name":name, "type": "Number", "connectible": connectible}
 def Axis_sock_desc(name):
-    return {"socket_name":name, "socket_type": "Axis", "connectible": 0}
+    return {"name":name, "type": "Axis", "connectible": 0}
 def Sensor_standard_output_desc(payload = True):
-    r = [{"socket_name":"sensor"}, {"socket_name":"value"}]
+    r = [{"name":"sensor"}, {"name":"value"}]
     if payload:
-       r.append({"socket_name":"payload"})
+       r.append({"name":"payload"})
     return r
 
 sensors = [
@@ -277,7 +277,7 @@ def get_b4w_api():
         return None
 
     api_lib = {}
-    api_lib["modules"] = []
+    api_lib["b4w_api"] = []
 
     expr_begin_comment = re.compile("\/\*\*")
     expr_end_comment = re.compile("\*\/")
@@ -299,7 +299,7 @@ def get_b4w_api():
     for file in files:
         module_name = file.split(".")[0]
 
-        api_lib["modules"].append({"name": module_name})
+        api_lib["b4w_api"].append({"name": module_name})
         file_src = open(os.path.join(path_to_ext, file))
         methods = []
         const = []
@@ -345,12 +345,12 @@ def get_b4w_api():
                     param_type = check_aliases(param_data.group(1), typedefs)
                     types.add(param_type)
                     if in_method and len(methods):
-                        if "method_params" not in methods[-1]:
-                            methods[-1]["method_params"] = []
-                        methods[-1]["method_params"].append(
-                                {"param_type": param_type,
-                                 "param_name": param_data.group(2),
-                                 "param_desc": param_data.group(3)})
+                        if "inputs" not in methods[-1]:
+                            methods[-1]["inputs"] = []
+                        methods[-1]["inputs"].append(
+                                {"type": param_type,
+                                 "name": param_data.group(2),
+                                 "desc": param_data.group(3)})
                     elif in_callback and cur_callback in callbacks:
                         if "callback_params" not in callbacks[cur_callback]:
                             callbacks[cur_callback]["callback_params"] = []
@@ -362,8 +362,8 @@ def get_b4w_api():
                 return_data = re.search(expr_returns, line)
                 if return_data:
                     if len(methods):
-                        methods[-1]["method_return"] = {"return_type": return_data.group(1),
-                                                        "return_desc": return_data.group(2)}
+                        methods[-1]["outputs"] = [{"type": return_data.group(1),
+                                                        "desc": return_data.group(2)}]
 
                 depricated_data = re.search(expr_deprecated, line)
                 if depricated_data:
@@ -378,12 +378,13 @@ def get_b4w_api():
 
 
         if len(methods):
-            api_lib["modules"][-1]["methods"] = methods
+            api_lib["b4w_api"][-1]["methods"] = methods
         if len(const):
-            api_lib["modules"][-1]["module_const"] = const
+            api_lib["b4w_api"][-1]["module_const"] = const
     api_lib["types"] = list(types)
     api_lib["callbacks"] = callbacks
     api_lib["aliases"] = typedefs
+
     api_lib["sensors"] = sensors
     api_lib["js_api"] = js_api_modules
 

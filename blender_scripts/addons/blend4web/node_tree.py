@@ -36,15 +36,18 @@ class B4W_dyn_param_union(bpy.types.PropertyGroup):
     b = bpy.props.BoolProperty(name="bool")
     v3 = bpy.props.FloatVectorProperty(name="vector3")
 
+editable_types = ['String', 'Axis', 'Key','Object3D', 'Bool', 'Number', 'Vec3']
 def get_prop_name_by_type(type):
-    if type in ['String', 'Axis', 'Key','Object3D', '_Data']:
+    if type in ['String', 'Axis', 'Key','Object3D']:
         return 's'
-    if type in ['Bool']:
+    if type in ['Bool', 'Boolean']:
        return 'b'
     if type in ['Number']:
         return 'f'
     if type in ['Vec3']:
         return 'v3'
+
+    return 's'
 
 class B4WLogicSocket(NodeSocket):
     bl_idname = 'B4WLogicSocket'
@@ -62,13 +65,15 @@ class B4WLogicSocket(NodeSocket):
         if self['is_input']:
             attr_name = get_prop_name_by_type(type)
             if not self.is_linked:
-                if type in 'Object3D':
+                if type == 'Object3D':
                     r = layout.row()
-                    r.prop_search(p, attr_name, bpy.data, 'objects', text=p.name, icon='MARKER')
+                    r.prop_search(p, attr_name, bpy.data, 'objects', text=p.name+":"+p.type, icon='MARKER')
+                elif type in editable_types:
+                    layout.prop(p, attr_name, text=p.name+":"+p.type)
                 else:
-                    layout.prop(p, attr_name, text=p.name)
+                    layout.label(p.name+":"+p.type)
         else:
-            layout.label(self.prop.name)
+            layout.label(p.name+":"+p.type)
 
 
     def draw_color(self, context, node):
@@ -84,6 +89,7 @@ class B4WLogicNode(Node):
     def poll(cls, ntree):
         return ntree.bl_idname == 'B4WLogicNodeTreeType'
     def draw_dyn_props(self, dyn_props, layout):
+        box = None
         for p in dyn_props:
             pass
             connectible = False
@@ -92,12 +98,14 @@ class B4WLogicNode(Node):
                     connectible = True
             if not connectible:
                 attr_name = get_prop_name_by_type(p.type)
+                if box == None:
+                    box = layout.box()
                 if p.type == 'Object3D':
-                    row = layout.row()
+                    row = box.row()
                     row.prop_search(p, attr_name, bpy.data, 'objects', text=p.name, icon='MARKER')
                 else:
-                    row = layout.row()
-                    layout.prop(p, attr_name, text=p.name)
+                    row = box.row()
+                    row.prop(p, attr_name, text=p.name)
 
     def create_sockets(self,  dyn_props, layout):
         for p in dyn_props:
@@ -703,8 +711,8 @@ def is_connectible(sock_desc):
 
 def get_sock_desc_type(desc):
     type = "_Data"
-    if 'socket_type' in desc:
-        type = desc['socket_type']
+    if 'type' in desc:
+        type = desc['type']
     return type
 
 def add_method_sockets(ss, socks_desc, is_input):
@@ -714,9 +722,11 @@ def add_method_sockets(ss, socks_desc, is_input):
             if not is_connectible(sd):
                 add = False
         if add:
-            s = ss.new('B4WLogicSocket', sd['socket_name'])
+            if not 'name' in sd:
+                sd['name'] = sd['type']
+            s = ss.new('B4WLogicSocket', sd['name'])
             s.prop.type = get_sock_desc_type(sd)
-            s.prop.name = sd['socket_name']
+            s.prop.name = sd['name']
             # print(s.prop.type)
             s['is_input'] = copy.copy(is_input)
 
@@ -727,7 +737,7 @@ def extend_not_connectible_arr(dst, search_src):
             sock_type = get_sock_desc_type(sd)
             s = dst[-1]
             s.type = sock_type
-            s.name = sd["socket_name"]
+            s.name = sd["name"]
 
 class AnyAPINode(B4WLogicNode):
     bl_idname = 'AnyAPINode'
@@ -772,7 +782,7 @@ class AnyAPINode(B4WLogicNode):
         self.inputs.clear()
         self.outputs.clear()
 
-        if self.api_type in ["JS"]:
+        if self.api_type in ["JS", "B4W"]:
             self.add_Order()
 
         if self.api_type == "JS":
@@ -780,6 +790,9 @@ class AnyAPINode(B4WLogicNode):
 
         if self.api_type == "Sensor":
             api_name = "sensors"
+
+        if self.api_type == "B4W":
+            api_name = "b4w_api"
 
         for m in b4w_data[api_name]:
             self.modules_names.add()
@@ -789,9 +802,11 @@ class AnyAPINode(B4WLogicNode):
                     self.methods_names.add()
                     self.methods_names[-1].name = meth['name']
                     if meth['name'] == self.method_name:
-                        extend_not_connectible_arr(self.dyn_props, meth['inputs'])
-                        add_method_sockets(self.inputs, meth['inputs'], True)
-                        add_method_sockets(self.outputs, meth['outputs'], False)
+                        if "inputs" in meth:
+                            extend_not_connectible_arr(self.dyn_props, meth['inputs'])
+                            add_method_sockets(self.inputs, meth['inputs'], True)
+                        if "outputs" in meth:
+                            add_method_sockets(self.outputs, meth['outputs'], False)
 
 
     module_name = bpy.props.StringProperty(
@@ -805,10 +820,6 @@ class AnyAPINode(B4WLogicNode):
         description = "Method name",
         update = update_node
     )
-    def free(self):
-        if "firs_update_flag" in self:
-            del self["firs_update_flag"]
-
     def draw_dyn_param(self, container, prop_name, layout):
         row = layout.row()
         row.prop(container, prop_name, text=container['socket_name'])
@@ -819,99 +830,21 @@ class AnyAPINode(B4WLogicNode):
         stage2_name = "method"
 
         if self.api_type == "Sensor":
+            stage1_name = "category"
             stage2_name = "sensor"
 
-        if self.api_type in ["JS", "Sensor"]:
-            row = layout.row()
+        if self.api_type in ["JS", "Sensor", "B4W"]:
+            box = layout.box()
+            row = box.row()
             row.prop_search(self, 'module_name', self, 'modules_names', text=stage1_name, icon='MARKER')
-            row = layout.row()
+            row = box.row()
             row.prop_search(self, 'method_name', self, 'methods_names', text=stage2_name, icon='MARKER')
             super(AnyAPINode, self).draw_dyn_props(self.dyn_props,layout)
-
-class Blend4WebAPINode(B4WLogicNode):
-    node_color = B4WAPINodeColor
-    modules_names = bpy.props.CollectionProperty(
-        name="B4W: Modules names",
-        type=B4W_Name,
-        description="Modules names")
-
-    methods_names = bpy.props.CollectionProperty(
-        name="B4W: Methods names",
-        type=B4W_Name,
-        description="Methods names")
-
-    def updateMethod(self, context):
-        self.updateSockets(context)
-
-    def updateSockets(self, context):
-        clear_with_exceptions(self.inputs, ["OrderSocketType"])
-        clear_with_exceptions(self.outputs, ["OrderSocketType"])
-        m = get_module(b4w_data,self.module_name)
-        if not m:
-            return
-        meth = get_method(m, self.method_name)
-        if not meth:
-            return
-        if "method_params" in meth:
-            for p in meth["method_params"]:
-                self.inputs.new('DataSocketType', p["param_name"]+":"+p["param_type"])
-        if "method_return" in meth:
-            self.outputs.new('DataSocketType', meth["method_return"]['return_type'])
-
-    def updateModule(self, context):
-        self.methods_names.clear()
-        self.method_name = ""
-        for m in b4w_data["modules"]:
-            if m['name'] == self.module_name:
-                if 'methods' not in m:
-                    return
-                for meth in m['methods']:
-                    self.methods_names.add()
-                    self.methods_names[-1].name = meth['name']
-        self.updateSockets(context)
-
-
-    module_name = bpy.props.StringProperty(
-        name = "Module name",
-        description = "name of B4W module",
-        default = "",
-        update = updateModule
-    )
-    method_name = bpy.props.StringProperty(
-        name = "Method name",
-        description = "name of method",
-        default = "",
-        update = updateMethod
-    )
-
-    bl_idname = 'Blend4WebAPINode'
-    bl_label = 'Blend4WebAPINode'
-
-    def init(self, context):
-        self.color = self.node_color
-        self.use_custom_color = True
-        self.modules_names.clear()
-        for m in b4w_data["modules"]:
-            self.modules_names.add()
-            self.modules_names[-1].name = m['name']
-        pass
-        self.inputs.new('OrderSocketType', ">Order")
-        self.outputs.new('OrderSocketType', "Order>")
-
-    def copy(self, node):
-        print("Copying from node ", node)
-
-    def draw_buttons(self, context, layout):
-        row = layout.row()
-        row.prop_search(self, 'module_name', self, 'modules_names', text='module', icon='MARKER')
-        row = layout.row()
-        row.prop_search(self, 'method_name', self, 'methods_names', text='method', icon='MARKER')
-
     def draw_label(self):
         if self.method_name:
-            return self.module_name+'.'+self.method_name
+            return self.api_type+": "+self.module_name+'.'+self.method_name
         else:
-            return self.bl_label
+            return self.api_type
 
 class FunctionDeclarationNode(B4WLogicNode):
     bl_idname = 'FunctionDeclarationNode'
@@ -993,9 +926,11 @@ node_categories = [
         NodeItem("RelationalOperatorNode", label="Relational Operator",),
         ]),
     MyNodeCategory("Call methods", "Call Methods", items=[
-        NodeItem("Blend4WebAPINode", label="Blend4Web API",),
         NodeItem("AnyAPINode", label="JS API",  settings={
             "api_type": repr("JS"),
+            }),
+        NodeItem("AnyAPINode", label="B4W",  settings={
+            "api_type": repr("B4W"),
             }),
         ]),
     ]
@@ -1040,7 +975,6 @@ def register():
     bpy.utils.register_class(CallbackInterfaceNode)
     bpy.utils.register_class(FunctionDeclarationNode)
     bpy.utils.register_class(GlobalVariableDeclarationNode)
-    bpy.utils.register_class(Blend4WebAPINode)
     bpy.utils.register_class(B4WLogicSocket)
 
 def unregister():
@@ -1080,7 +1014,6 @@ def unregister():
     bpy.utils.unregister_class(CallbackInterfaceNode)
     bpy.utils.unregister_class(FunctionDeclarationNode)
     bpy.utils.unregister_class(GlobalVariableDeclarationNode)
-    bpy.utils.unregister_class(Blend4WebAPINode)
     bpy.utils.unregister_class(B4W_Name)
     bpy.utils.unregister_class(B4W_dyn_param_union)
     bpy.utils.unregister_class(B4WLogicNode)
