@@ -758,30 +758,40 @@ class AnyAPINode(B4WLogicNode):
     def update(self):
         pass
 
-    def update_node(self, context):
-        self.dyn_props.clear()
-        self.modules_names.clear()
-        self.methods_names.clear()
-        self.inputs.clear()
-        self.outputs.clear()
+    def add_Order(self):
         s = self.inputs.new('B4WLogicSocket', '>Order')
         s["is_input"] = True
         s.prop.type = "Order"
         s = self.outputs.new('B4WLogicSocket', 'Order>')
         s["is_input"] = False
         s.prop.type = "Order"
+    def update_node(self, context):
+        self.dyn_props.clear()
+        self.modules_names.clear()
+        self.methods_names.clear()
+        self.inputs.clear()
+        self.outputs.clear()
+
+        if self.api_type in ["JS"]:
+            self.add_Order()
+
         if self.api_type == "JS":
-            for m in b4w_data["js_api"]:
-                self.modules_names.add()
-                self.modules_names[-1].name = m['name']
-                if m['name'] == self.module_name:
-                    for meth in m['methods']:
-                        self.methods_names.add()
-                        self.methods_names[-1].name = meth['name']
-                        if meth['name'] == self.method_name:
-                            extend_not_connectible_arr(self.dyn_props, meth['inputs'])
-                            add_method_sockets(self.inputs, meth['inputs'], True)
-                            add_method_sockets(self.outputs, meth['outputs'], False)
+            api_name = "js_api"
+
+        if self.api_type == "Sensor":
+            api_name = "sensors"
+
+        for m in b4w_data[api_name]:
+            self.modules_names.add()
+            self.modules_names[-1].name = m['name']
+            if m['name'] == self.module_name:
+                for meth in m['methods']:
+                    self.methods_names.add()
+                    self.methods_names[-1].name = meth['name']
+                    if meth['name'] == self.method_name:
+                        extend_not_connectible_arr(self.dyn_props, meth['inputs'])
+                        add_method_sockets(self.inputs, meth['inputs'], True)
+                        add_method_sockets(self.outputs, meth['outputs'], False)
 
 
     module_name = bpy.props.StringProperty(
@@ -804,69 +814,19 @@ class AnyAPINode(B4WLogicNode):
         row.prop(container, prop_name, text=container['socket_name'])
 
     def draw_buttons(self, context, layout):
-        if self.api_type in ["JS",]:
+
+        stage1_name = "module"
+        stage2_name = "method"
+
+        if self.api_type == "Sensor":
+            stage2_name = "sensor"
+
+        if self.api_type in ["JS", "Sensor"]:
             row = layout.row()
-            row.prop_search(self, 'module_name', self, 'modules_names', text='module', icon='MARKER')
+            row.prop_search(self, 'module_name', self, 'modules_names', text=stage1_name, icon='MARKER')
             row = layout.row()
-            row.prop_search(self, 'method_name', self, 'methods_names', text='methodS', icon='MARKER')
+            row.prop_search(self, 'method_name', self, 'methods_names', text=stage2_name, icon='MARKER')
             super(AnyAPINode, self).draw_dyn_props(self.dyn_props,layout)
-
-class SensorNode(B4WLogicNode):
-    bl_idname = 'SensorNode'
-    bl_label = 'Sensor'
-    node_color = SensorNodeColor
-    sensors_names = bpy.props.CollectionProperty(
-        name="B4W: Sensors names",
-        type=B4W_Name,
-        description="Sensors names")
-
-    dyn_props = bpy.props.CollectionProperty(
-        name="B4W: Dynamic props",
-        type=B4W_dyn_param_union,
-        description="B4W: Dynamic props")
-
-    def updateSensor(self, context):
-        self.dyn_props.clear()
-        self.inputs.clear()
-        self.outputs.clear()
-        for s in b4w_data['sensors']:
-            if s['name'] == self.sensor_name:
-                extend_not_connectible_arr(self.dyn_props, s['inputs'])
-                add_method_sockets(self.inputs, s['inputs'], True)
-                add_method_sockets(self.outputs, s['outputs'], False)
-
-
-    sensor_name = bpy.props.StringProperty(
-        name = "Sensor name",
-        description = "Sensor name",
-        default = "selection",
-        update = updateSensor
-    )
-    not_connectible = []
-
-    def init(self, context):
-        self.color = self.node_color
-        self.use_custom_color = True
-        self.sensors_names.clear()
-        for s in b4w_data['sensors']:
-            self.sensors_names.add()
-            self.sensors_names[-1].name = s['name']
-        self.updateSensor(context)
-
-    def copy(self, node):
-        print("Copying from node ", node)
-
-    def draw_dyn_param(self, container, prop_name, layout):
-        row = layout.row()
-        row.prop(container, prop_name, text=container['socket_name'])
-
-    def draw_buttons(self, context, layout):
-        row = layout.row()
-        row.prop_search(self, 'sensor_name', self, 'sensors_names', text='sensor', icon='MARKER')
-        super(SensorNode, self).draw_dyn_props(self.dyn_props,layout)
-
-    def draw_label(self):
-        return "Sensor node"
 
 class Blend4WebAPINode(B4WLogicNode):
     node_color = B4WAPINodeColor
@@ -1002,7 +962,9 @@ node_categories = [
     # identifier, label, items list
     MyNodeCategory("Sensors", "Sensors", items=[
         # our basic node
-        NodeItem("SensorNode", label="Sensor"),
+        NodeItem("AnyAPINode", label="Sensor",  settings={
+            "api_type": repr("Sensor"),
+            }),
         ]),
     MyNodeCategory("Objects", "Objects", items=[
         NodeItem("TargetNode", label="Target",),
@@ -1064,7 +1026,6 @@ def register():
     # nodes
     bpy.utils.register_class(B4WLogicNode)
     bpy.utils.register_class(AnyAPINode)
-    bpy.utils.register_class(SensorNode)
     bpy.utils.register_class(TargetNode)
     bpy.utils.register_class(FunctionNode)
     bpy.utils.register_class(UnaryOperatorNode)
@@ -1104,7 +1065,6 @@ def unregister():
     bpy.utils.unregister_class(DataSocket)
 
     # nodes
-    bpy.utils.unregister_class(SensorNode)
     bpy.utils.unregister_class(AnyAPINode)
     bpy.utils.unregister_class(TargetNode)
     bpy.utils.unregister_class(FunctionNode)
