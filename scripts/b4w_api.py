@@ -65,6 +65,7 @@ def Sensor_standard_output_desc(payload = True):
     return r
 
 sensors = [
+{"name":"controls", "methods":[
     {"name": "keyboard",
      "inputs":[{"socket_name":"key", "socket_type": "Key", "connectible": 0},],
      "outputs":[]},
@@ -88,8 +89,10 @@ sensors = [
     {"name": "touch_zoom",
      "inputs":[],
      "outputs":[]},
+]},
 
-    {"name": "collision",
+{"name":"collision", "methods":[
+     {"name": "collision",
      "inputs":[Object3D_sock_desc("obj"),
                String_sock_desc("id"),
                Bool_sock_desc("calc_pos_norm"),],
@@ -113,7 +116,9 @@ sensors = [
      "inputs":[Object3D_sock_desc("obj"),
                Bool_sock_desc("auto_release"),],
      "outputs":[]},
+]},
 
+{"name":"time", "methods":[
     {"name": "timer",
      "inputs":[Number_sock_desc("period"),
                Bool_sock_desc("do_repeat"),],
@@ -126,8 +131,10 @@ sensors = [
     {"name": "timeline",
      "inputs":[],
      "outputs":[]},
+]},
 
-    {"name": "motion",
+{"name":"motion", "methods":[
+     {"name": "motion",
      "inputs":[Object3D_sock_desc("obj"),
                Number_sock_desc("threshold"),
                Number_sock_desc("rotation_threshold"),],
@@ -145,11 +152,13 @@ sensors = [
     {"name": "gyro_angles",
      "inputs":[Number_sock_desc("threshold")],
      "outputs":[]},
+]},
+]
 
-    ]
-for s in sensors:
-    for out in Sensor_standard_output_desc().__reversed__():
-        s['outputs'].insert(0, out)
+for m in sensors:
+    for s in m['methods']:
+        for out in Sensor_standard_output_desc().__reversed__():
+            s['outputs'].insert(0, out)
 
 #---------
 
@@ -375,7 +384,7 @@ def get_b4w_api():
     api_lib["types"] = list(types)
     api_lib["callbacks"] = callbacks
     api_lib["aliases"] = typedefs
-    api_lib["sensors"] = [{"name": "ALL", "methods": sensors}]
+    api_lib["sensors"] = sensors
     api_lib["js_api"] = js_api_modules
 
     return api_lib
