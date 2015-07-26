@@ -35,8 +35,9 @@ class B4W_dyn_param_union(bpy.types.PropertyGroup):
     f = bpy.props.FloatProperty(name="float")
     b = bpy.props.BoolProperty(name="bool")
     v3 = bpy.props.FloatVectorProperty(name="vector3")
+    i = bpy.props.IntProperty(name="integet")
 
-editable_types = ['String', 'Axis', 'Key','Object3D', 'Bool', 'Number', 'Vec3']
+editable_types = ['String', 'Axis', 'Key','Object3D', 'Bool', 'Number', 'Vec3', 'Int']
 def get_prop_name_by_type(type):
     if type in ['String', 'Axis', 'Key','Object3D']:
         return 's'
@@ -46,6 +47,8 @@ def get_prop_name_by_type(type):
         return 'f'
     if type in ['Vec3']:
         return 'v3'
+    if type in ["Int"]:
+        return 'i'
 
     return 's'
 
@@ -72,7 +75,8 @@ class B4WLogicSocket(NodeSocket):
                     layout.prop(p, attr_name, text=p.name+":"+p.type)
                 else:
                     layout.label(p.name+":"+p.type)
-        else:
+
+        if self.is_linked or not self['is_input']:
             layout.label(p.name+":"+p.type)
 
 
@@ -118,8 +122,6 @@ class B4WLogicNode(Node):
         pass
 
     def init(self, context):
-
-
         pass
 
 #----------------------

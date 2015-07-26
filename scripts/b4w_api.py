@@ -17,20 +17,20 @@ B4W_PATH = ".."
 #     },
 #     "typedefs": {"new_name": "old_name"},
 #     "types": ["type_name", ...],
-#     "modules": [{
-#         "module_name": "name",
-#         "module_methods": [{
-#             "method_name": "name",
-#             "method_params": [{
-#                 "param_name": "name",
-#                 "param_type": "type",
-#                 "param_desc": "description"
+#     "b4w_api": [{
+#         "name": "name",
+#         "methods": [{
+#             "name": "name",
+#             "inputs": [{
+#                 "name": "name",
+#                 "type": "type",
+#                 "desc": "description"
 #             }, ...
 #             ],
-#             "method_return": {
-#                 "return_type": "type",
-#                 "return_desc": "description"
-#             },
+#             "outputs": [{
+#                 "type": "type",
+#                 "desc": "description"
+#             }],
 #             "depricated": {
 #                 "is_depricated": true/false,
 #                 "desc" : "description"
@@ -553,7 +553,8 @@ def get_b4w_api():
                 return_data = re.search(expr_returns, line)
                 if return_data:
                     if len(methods):
-                        methods[-1]["outputs"] = [{"type": return_data.group(1),
+                        methods[-1]["outputs"] = [{"name": return_data.group(1),
+                                                      "type": return_data.group(1),
                                                         "desc": return_data.group(2)}]
 
                 depricated_data = re.search(expr_deprecated, line)
