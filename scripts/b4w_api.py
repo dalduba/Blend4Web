@@ -299,7 +299,7 @@ def get_b4w_api():
     for file in files:
         module_name = file.split(".")[0]
 
-        api_lib["modules"].append({"module_name": module_name})
+        api_lib["modules"].append({"name": module_name})
         file_src = open(os.path.join(path_to_ext, file))
         methods = []
         const = []
@@ -338,7 +338,7 @@ def get_b4w_api():
                 method_data = re.search(expr_method, line)
                 if method_data:
                     in_method = True
-                    methods.append({"method_name":method_data.group(2)})
+                    methods.append({"name":method_data.group(2)})
 
                 param_data = re.search(expr_param, line)
                 if param_data:
@@ -378,7 +378,7 @@ def get_b4w_api():
 
 
         if len(methods):
-            api_lib["modules"][-1]["module_methods"] = methods
+            api_lib["modules"][-1]["methods"] = methods
         if len(const):
             api_lib["modules"][-1]["module_const"] = const
     api_lib["types"] = list(types)

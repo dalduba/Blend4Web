@@ -678,13 +678,13 @@ def clear_with_exceptions(ss, exceptions):
 
 def get_module(data, name):
     for m in b4w_data["modules"]:
-        if m['module_name'] == name:
+        if m['name'] == name:
             return m
 def get_method(data, name):
-    if not "module_methods" in data:
+    if not "methods" in data:
         return None
-    for m in data["module_methods"]:
-        if m['method_name'] == name:
+    for m in data["methods"]:
+        if m['name'] == name:
             return m
 
 class SensorSocket(NodeSocket):
@@ -862,12 +862,12 @@ class Blend4WebAPINode(B4WLogicNode):
         self.methods_names.clear()
         self.method_name = ""
         for m in b4w_data["modules"]:
-            if m['module_name'] == self.module_name:
-                if 'module_methods' not in m:
+            if m['name'] == self.module_name:
+                if 'methods' not in m:
                     return
-                for meth in m['module_methods']:
+                for meth in m['methods']:
                     self.methods_names.add()
-                    self.methods_names[-1].name = meth['method_name']
+                    self.methods_names[-1].name = meth['name']
         self.updateSockets(context)
 
 
@@ -893,7 +893,7 @@ class Blend4WebAPINode(B4WLogicNode):
         self.modules_names.clear()
         for m in b4w_data["modules"]:
             self.modules_names.add()
-            self.modules_names[-1].name = m['module_name']
+            self.modules_names[-1].name = m['name']
         pass
         self.inputs.new('OrderSocketType', ">Order")
         self.outputs.new('OrderSocketType', "Order>")
