@@ -48,8 +48,8 @@ B4W_PATH = ".."
 
 def Vec3_sock_desc(name, connectible = 1):
     return {"name":name, "type": "Vec3", "connectible": connectible}
-def String_sock_desc(name):
-    return {"name":name, "type": "String", "connectible": 0}
+def String_sock_desc(name, connectible = 0):
+    return {"name":name, "type": "String", "connectible": connectible}
 def Bool_sock_desc(name):
     return {"name":name, "type": "Bool", "connectible": 0}
 def Object3D_sock_desc(name):
@@ -58,6 +58,12 @@ def Number_sock_desc(name, connectible = 0):
     return {"name":name, "type": "Number", "connectible": connectible}
 def Axis_sock_desc(name):
     return {"name":name, "type": "Axis", "connectible": 0}
+def Date_sock_desc(name, connectible = 1):
+    return {"name":name, "type": "Date", "connectible": connectible}
+def Int_sock_desc(name, connectible = 1):
+    return {"name":name, "type": "Int", "connectible": connectible}
+
+
 def Sensor_standard_output_desc(payload = True):
     r = [{"name":"sensor"}, {"name":"value"}]
     if payload:
@@ -263,7 +269,192 @@ js_api_modules=[
          "outputs":[Number_sock_desc("Number", True)]},
     ]
 
-    }
+    },
+    {"name": "Date", "methods":[
+        {"name": "Date",
+         "inputs":[],
+         "outputs":[Date_sock_desc("Date", True)]},
+
+        {"name": "getDate",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[Int_sock_desc("Day", True)]},
+
+        {"name": "getDay",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[Int_sock_desc("Day", True)]},
+
+        {"name": "getFullYear",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[Int_sock_desc("Year", True)]},
+
+        {"name": "getHoursr",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[Int_sock_desc("Hours", True)]},
+
+        {"name": "getMilliseconds",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[Int_sock_desc("msec", True)]},
+
+        {"name": "getMinutes",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[Int_sock_desc("minutes", True)]},
+
+        {"name": "getMonth",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[Int_sock_desc("Month", True)]},
+
+        {"name": "getSeconds",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[Int_sock_desc("Seconds", True)]},
+
+        {"name": "getTime",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[Int_sock_desc("msec", True)]},
+
+        {"name": "getTimezoneOffset",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[Int_sock_desc("Diff", True)]},
+
+        {"name": "getUTCDate",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[Int_sock_desc("Day", True)]},
+
+        {"name": "getUTCDay",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[Int_sock_desc("Day", True)]},
+
+        {"name": "getUTCFullYear",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[Int_sock_desc("Year", True)]},
+
+        {"name": "getUTCHours",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[Int_sock_desc("Hours", True)]},
+
+        {"name": "getUTCMilliseconds",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[Int_sock_desc("msec", True)]},
+
+        {"name": "getUTCMinutes",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[Int_sock_desc("Minutes", True)]},
+
+        {"name": "getUTCMonth",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[Int_sock_desc("Month", True)]},
+
+        {"name": "getUTCSeconds",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[Int_sock_desc("sec", True)]},
+
+        {"name": "parse",
+         "inputs":[Date_sock_desc("Date", True), String_sock_desc("DateString", True)],
+         "outputs":[Date_sock_desc("Date", True)]},
+
+        {"name": "setDate",
+         "inputs":[Date_sock_desc("Date", True), Int_sock_desc("Day", True)],
+         "outputs":[]},
+
+        {"name": "setFullYear",
+         "inputs":[Date_sock_desc("Date", True), Int_sock_desc("Year", True)],
+         "outputs":[]},
+
+        {"name": "setHours",
+         "inputs":[Date_sock_desc("Date", True), Int_sock_desc("Hours", True)],
+         "outputs":[]},
+
+        {"name": "setMilliseconds",
+         "inputs":[Date_sock_desc("Date", True), Int_sock_desc("msec", True)],
+         "outputs":[]},
+
+        {"name": "setMinutes",
+         "inputs":[Date_sock_desc("Date", True), Int_sock_desc("minutes", True)],
+         "outputs":[]},
+
+        {"name": "setMonth",
+         "inputs":[Date_sock_desc("Date", True), Int_sock_desc("Month", True)],
+         "outputs":[]},
+
+        {"name": "setSeconds",
+         "inputs":[Date_sock_desc("Date", True), Int_sock_desc("Sec", True)],
+         "outputs":[]},
+
+        {"name": "setTime",
+         "inputs":[Date_sock_desc("Date", True), Int_sock_desc("msec", True)],
+         "outputs":[]},
+
+        {"name": "setUTCDate",
+         "inputs":[Date_sock_desc("Date", True), Int_sock_desc("Day", True)],
+         "outputs":[]},
+
+        {"name": "setUTCFullYear",
+         "inputs":[Date_sock_desc("Date", True), Int_sock_desc("Year", True)],
+         "outputs":[]},
+
+        {"name": "setUTCHours",
+         "inputs":[Date_sock_desc("Date", True), Int_sock_desc("Hours", True)],
+         "outputs":[]},
+
+        {"name": "setUTCMilliseconds",
+         "inputs":[Date_sock_desc("Date", True), Int_sock_desc("mSec", True)],
+         "outputs":[]},
+
+        {"name": "setUTCMinutes",
+         "inputs":[Date_sock_desc("Date", True), Int_sock_desc("Minutes", True)],
+         "outputs":[]},
+
+        {"name": "setUTCMonth",
+         "inputs":[Date_sock_desc("Date", True), Int_sock_desc("Month", True)],
+         "outputs":[]},
+
+        {"name": "setUTCSeconds",
+         "inputs":[Date_sock_desc("Date", True), Int_sock_desc("Sec", True)],
+         "outputs":[]},
+
+        {"name": "toDateString",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[String_sock_desc("String", True)]},
+
+        {"name": "toISOString",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[String_sock_desc("String", True)]},
+
+        {"name": "toJSON",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[String_sock_desc("String", True)]},
+
+        {"name": "toLocaleDateString",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[String_sock_desc("String", True)]},
+
+        {"name": "toLocaleTimeString",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[String_sock_desc("String", True)]},
+
+        {"name": "toLocaleString",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[String_sock_desc("String", True)]},
+
+        {"name": "toString",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[String_sock_desc("String", True)]},
+
+        {"name": "toTimeString",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[String_sock_desc("String", True)]},
+
+        {"name": "toUTCString",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[String_sock_desc("String", True)]},
+
+        {"name": "UTC",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[Int_sock_desc("mSec", True)]},
+
+        {"name": "valueOf",
+         "inputs":[Date_sock_desc("Date", True)],
+         "outputs":[Int_sock_desc("Value", True)]},
+    ]}
 ]
 
 #---------
