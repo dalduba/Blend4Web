@@ -255,11 +255,11 @@ js_api_modules=[
 
 # TODO make dynamic inputs for min/max
          {"name": "min",
-         "inputs":[],
+         "inputs":[Number_sock_desc("x", True), Number_sock_desc("y", True)],
          "outputs":[Number_sock_desc("Number", True)]},
 
          {"name": "max",
-         "inputs":[],
+         "inputs":[Number_sock_desc("x", True), Number_sock_desc("y", True)],
          "outputs":[Number_sock_desc("Number", True)]},
     ]
 
