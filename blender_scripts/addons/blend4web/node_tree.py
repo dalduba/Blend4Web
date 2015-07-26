@@ -53,9 +53,13 @@ class B4WLogicSocket(NodeSocket):
     prop = bpy.props.PointerProperty(name='socket prop', type = B4W_dyn_param_union)
     def draw(self, context, layout, node, text):
         p = self.prop
+        type = p.type
+
+        if type == "Order":
+            layout.label(self.name)
+            return
+
         if self['is_input']:
-            type = p.type
-            print(type)
             attr_name = get_prop_name_by_type(type)
             if not self.is_linked:
                 if type in 'Object3D':
@@ -68,7 +72,10 @@ class B4WLogicSocket(NodeSocket):
 
 
     def draw_color(self, context, node):
-        return TargetSocketColor
+        if self.prop.type == 'Order':
+            return OrderSocketColor
+        else:
+            return DataSocketColor
 
 class B4WLogicNode(Node):
     bl_idname = 'B4WLogicNode'
@@ -700,7 +707,7 @@ def get_sock_desc_type(desc):
         type = desc['socket_type']
     return type
 
-def add_sensor_sockets(ss, socks_desc, is_input):
+def add_method_sockets(ss, socks_desc, is_input):
     for sd in socks_desc:
         add = True
         if is_input:
@@ -721,6 +728,88 @@ def extend_not_connectible_arr(dst, search_src):
             s = dst[-1]
             s.type = sock_type
             s.name = sd["socket_name"]
+
+class AnyAPINode(B4WLogicNode):
+    bl_idname = 'AnyAPINode'
+    bl_label = 'AnyAPINode'
+    def true_init(self, context):
+        self.update_node(context)
+
+    api_type =  bpy.props.StringProperty(
+        name = "API type",
+        description = "API type",
+        update=true_init
+    )
+    modules_names = bpy.props.CollectionProperty(
+        name="B4W: Modules names",
+        type=B4W_Name,
+        description="Modules names")
+
+    methods_names = bpy.props.CollectionProperty(
+        name="B4W: Methods names",
+        type=B4W_Name,
+        description="Methods names")
+
+    dyn_props = bpy.props.CollectionProperty(
+        name="B4W: Dynamic props",
+        type=B4W_dyn_param_union,
+        description="B4W: Dynamic props")
+
+    def update(self):
+        pass
+
+    def update_node(self, context):
+        self.dyn_props.clear()
+        self.modules_names.clear()
+        self.methods_names.clear()
+        self.inputs.clear()
+        self.outputs.clear()
+        s = self.inputs.new('B4WLogicSocket', '>Order')
+        s["is_input"] = True
+        s.prop.type = "Order"
+        s = self.outputs.new('B4WLogicSocket', 'Order>')
+        s["is_input"] = False
+        s.prop.type = "Order"
+        if self.api_type == "JS":
+            for m in b4w_data["js_api"]:
+                self.modules_names.add()
+                self.modules_names[-1].name = m['name']
+                if m['name'] == self.module_name:
+                    for meth in m['methods']:
+                        self.methods_names.add()
+                        self.methods_names[-1].name = meth['name']
+                        if meth['name'] == self.method_name:
+                            extend_not_connectible_arr(self.dyn_props, meth['inputs'])
+                            add_method_sockets(self.inputs, meth['inputs'], True)
+                            add_method_sockets(self.outputs, meth['outputs'], False)
+
+
+    module_name = bpy.props.StringProperty(
+        name = "Module name",
+        description = "Module name",
+        update = update_node
+    )
+
+    method_name = bpy.props.StringProperty(
+        name = "Method name",
+        description = "Method name",
+        update = update_node
+    )
+    def free(self):
+        if "firs_update_flag" in self:
+            del self["firs_update_flag"]
+
+    def draw_dyn_param(self, container, prop_name, layout):
+        row = layout.row()
+        row.prop(container, prop_name, text=container['socket_name'])
+
+    def draw_buttons(self, context, layout):
+        if self.api_type in ["JS",]:
+            row = layout.row()
+            row.prop_search(self, 'module_name', self, 'modules_names', text='module', icon='MARKER')
+            row = layout.row()
+            row.prop_search(self, 'method_name', self, 'methods_names', text='methodS', icon='MARKER')
+            super(AnyAPINode, self).draw_dyn_props(self.dyn_props,layout)
 
 class SensorNode(B4WLogicNode):
     bl_idname = 'SensorNode'
@@ -743,8 +832,8 @@ class SensorNode(B4WLogicNode):
         for s in b4w_data['sensors']:
             if s['name'] == self.sensor_name:
                 extend_not_connectible_arr(self.dyn_props, s['inputs'])
-                add_sensor_sockets(self.inputs, s['inputs'], True)
-                add_sensor_sockets(self.outputs, s['outputs'], False)
+                add_method_sockets(self.inputs, s['inputs'], True)
+                add_method_sockets(self.outputs, s['outputs'], False)
 
 
     sensor_name = bpy.props.StringProperty(
@@ -761,7 +850,7 @@ class SensorNode(B4WLogicNode):
         self.sensors_names.clear()
         for s in b4w_data['sensors']:
             self.sensors_names.add()
-            self.sensors_names[-1].name = s['sensor_name']
+            self.sensors_names[-1].name = s['name']
         self.updateSensor(context)
 
     def copy(self, node):
@@ -943,6 +1032,9 @@ node_categories = [
         ]),
     MyNodeCategory("Call methods", "Call Methods", items=[
         NodeItem("Blend4WebAPINode", label="Blend4Web API",),
+        NodeItem("AnyAPINode", label="JS API",  settings={
+            "api_type": repr("JS"),
+            }),
         ]),
     ]
 
@@ -971,6 +1063,7 @@ def register():
 
     # nodes
     bpy.utils.register_class(B4WLogicNode)
+    bpy.utils.register_class(AnyAPINode)
     bpy.utils.register_class(SensorNode)
     bpy.utils.register_class(TargetNode)
     bpy.utils.register_class(FunctionNode)
@@ -1012,6 +1105,7 @@ def unregister():
 
     # nodes
     bpy.utils.unregister_class(SensorNode)
+    bpy.utils.unregister_class(AnyAPINode)
     bpy.utils.unregister_class(TargetNode)
     bpy.utils.unregister_class(FunctionNode)
     bpy.utils.unregister_class(UnaryOperatorNode)

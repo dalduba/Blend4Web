@@ -376,6 +376,7 @@ def get_b4w_api():
     api_lib["callbacks"] = callbacks
     api_lib["aliases"] = typedefs
     api_lib["sensors"] = sensors
+    api_lib["js_api"] = js_api_modules
 
     return api_lib
 
