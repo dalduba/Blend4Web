@@ -814,7 +814,8 @@ class AnyAPINode(B4WLogicNode):
     module_name = bpy.props.StringProperty(
         name = "Module name",
         description = "Module name",
-        update = update_node
+        update = update_node,
+        default = 'all'
     )
 
     method_name = bpy.props.StringProperty(
