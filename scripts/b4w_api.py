@@ -458,7 +458,19 @@ js_api_modules=[
 ]
 
 #---------
+import copy
+def add_all_module(api_lib, api_name):
+    modules =  api_lib[api_name]
+    methods = []
 
+    for module in modules:
+        if "methods" in module:
+            for meth in module["methods"]:
+                copy_meth = copy.deepcopy(meth)
+                copy_meth["name"] = module['name']+"."+copy_meth["name"]
+                methods.append(copy_meth)
+
+    modules.append({"name": "all", "methods": methods})
 def get_b4w_api():
 
     path_to_src = os.path.join(B4W_PATH, "src")
@@ -580,6 +592,9 @@ def get_b4w_api():
     api_lib["sensors"] = sensors
     api_lib["js_api"] = js_api_modules
 
+    add_all_module(api_lib, "sensors")
+    add_all_module(api_lib, "js_api")
+    add_all_module(api_lib, "b4w_api")
     return api_lib
 
 def check_aliases(name, typedefs):
