@@ -62,10 +62,12 @@ def Date_sock_desc(name, connectible = 1):
     return {"name":name, "type": "Date", "connectible": connectible}
 def Int_sock_desc(name, connectible = 1):
     return {"name":name, "type": "Int", "connectible": connectible}
+def Int_array_sock_desc(name, connectible = 1):
+    return {"name":name, "type": "Array", "connectible": connectible}
 
 
 def Sensor_standard_output_desc(payload = True):
-    r = [{"name":"sensor"}, {"name":"value"}]
+    r = [{"name":"sensor", "type":"Sensor"}, {"name":"value"}]
     if payload:
        r.append({"name":"payload"})
     return r
@@ -169,6 +171,92 @@ for m in sensors:
 #---------
 
 js_api_modules=[
+     {"name": "String", "methods":[
+        {"name": "length",
+         "inputs":[String_sock_desc("Str", True)],
+         "outputs":[Int_sock_desc("Number", True)]},
+
+        {"name": "charAt",
+         "inputs":[String_sock_desc("Str", True)],
+         "outputs":[String_sock_desc("Str", True)]},
+
+        {"name": "charCodeAt",
+         "inputs":[String_sock_desc("Str", True)],
+         "outputs":[Int_sock_desc("Code", True)]},
+
+        {"name": "concat",
+         "inputs":[String_sock_desc("Str1", True), String_sock_desc("Str2", True)],
+         "outputs":[String_sock_desc("Str", True)]},
+
+        {"name": "fromCharCode",
+         "inputs":[String_sock_desc("Str", True), Int_sock_desc("Code", True)],
+         "outputs":[String_sock_desc("Str", True)]},
+
+        {"name": "indexOf",
+         "inputs":[String_sock_desc("Str1", True), String_sock_desc("Str2", True)],
+         "outputs":[Int_sock_desc("Index", True)]},
+
+        {"name": "lastIndexOf",
+         "inputs":[String_sock_desc("Str1", True), String_sock_desc("Str2", True)],
+         "outputs":[Int_sock_desc("Index", True)]},
+
+        {"name": "localeCompare",
+         "inputs":[String_sock_desc("Str1", True), String_sock_desc("Str2", True)],
+         "outputs":[Int_sock_desc("Ret", True)]},
+
+        {"name": "match",
+         "inputs":[String_sock_desc("Str1", True), String_sock_desc("Str2", True)],
+         "outputs":[Int_array_sock_desc("Ret", True)]},
+
+        {"name": "replace",
+         "inputs":[String_sock_desc("Str", True), String_sock_desc("Search", True), String_sock_desc("Replace", True)],
+         "outputs":[String_sock_desc("Ret", True)]},
+
+        {"name": "search",
+         "inputs":[String_sock_desc("Str1", True), String_sock_desc("Str2", True)],
+         "outputs":[Int_sock_desc("Ret", True)]},
+
+        {"name": "slice",
+         "inputs":[String_sock_desc("Str", True), Int_sock_desc("Start", True),Int_sock_desc("End", True)],
+         "outputs":[Int_sock_desc("Ret", True)]},
+
+        {"name": "split",
+         "inputs":[String_sock_desc("Str", True), String_sock_desc("Sep", True)],
+         "outputs":[Int_array_sock_desc("Ret", True)]},
+
+        {"name": "substring",
+         "inputs":[String_sock_desc("Str", True), Int_sock_desc("Start", True),Int_sock_desc("End", True)],
+         "outputs":[String_sock_desc("Str", True)]},
+
+        {"name": "toLocaleLowerCase",
+         "inputs":[String_sock_desc("Str", True)],
+         "outputs":[String_sock_desc("Str", True)]},
+
+        {"name": "toLocaleUpperCase",
+         "inputs":[String_sock_desc("Str", True)],
+         "outputs":[String_sock_desc("Str", True)]},
+
+        {"name": "toLowerCase",
+         "inputs":[String_sock_desc("Str", True)],
+         "outputs":[String_sock_desc("Str", True)]},
+
+        {"name": "toString",
+         "inputs":[String_sock_desc("Str", True)],
+         "outputs":[String_sock_desc("Str", True)]},
+
+        {"name": "toUpperCase",
+         "inputs":[String_sock_desc("Str", True)],
+         "outputs":[String_sock_desc("Str", True)]},
+
+        {"name": "trim",
+         "inputs":[String_sock_desc("Str", True)],
+         "outputs":[String_sock_desc("Str", True)]},
+
+        {"name": "valueOf",
+         "inputs":[String_sock_desc("Str", True)],
+         "outputs":[Int_sock_desc("Val", True)]},
+
+     ]},
     {"name": "Math", "methods":[
 
         {"name": "E",

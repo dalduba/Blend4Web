@@ -37,7 +37,7 @@ class B4W_dyn_param_union(bpy.types.PropertyGroup):
     v3 = bpy.props.FloatVectorProperty(name="vector3")
     i = bpy.props.IntProperty(name="integet")
 
-editable_types = ['String', 'Axis', 'Key','Object3D', 'Bool', 'Number', 'Vec3', 'Int']
+editable_types = ['String', 'Axis', 'Key','Object3D', 'Bool', 'Number', 'Vec3', 'Int', 'Boolean']
 def get_prop_name_by_type(type):
     if type in ['String', 'Axis', 'Key','Object3D']:
         return 's'
