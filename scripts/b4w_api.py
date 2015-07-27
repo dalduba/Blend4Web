@@ -62,8 +62,10 @@ def Date_sock_desc(name, connectible = 1):
     return {"name":name, "type": "Date", "connectible": connectible}
 def Int_sock_desc(name, connectible = 1):
     return {"name":name, "type": "Int", "connectible": connectible}
-def Int_array_sock_desc(name, connectible = 1):
+def Array_sock_desc(name, connectible = 1):
     return {"name":name, "type": "Array", "connectible": connectible}
+def Data_sock_desc(name, connectible = 1):
+    return {"name":name, "type": "_Data", "connectible": connectible}
 
 
 def Sensor_standard_output_desc(payload = True):
@@ -206,7 +208,7 @@ js_api_modules=[
 
         {"name": "match",
          "inputs":[String_sock_desc("Str1", True), String_sock_desc("Str2", True)],
-         "outputs":[Int_array_sock_desc("Ret", True)]},
+         "outputs":[Array_sock_desc("Ret", True)]},
 
         {"name": "replace",
          "inputs":[String_sock_desc("Str", True), String_sock_desc("Search", True), String_sock_desc("Replace", True)],
@@ -222,7 +224,7 @@ js_api_modules=[
 
         {"name": "split",
          "inputs":[String_sock_desc("Str", True), String_sock_desc("Sep", True)],
-         "outputs":[Int_array_sock_desc("Ret", True)]},
+         "outputs":[Array_sock_desc("Ret", True)]},
 
         {"name": "substring",
          "inputs":[String_sock_desc("Str", True), Int_sock_desc("Start", True),Int_sock_desc("End", True)],
@@ -257,6 +259,101 @@ js_api_modules=[
          "outputs":[Int_sock_desc("Val", True)]},
 
      ]},
+
+     {"name": "Number", "methods":[
+        {"name": "MAX_VALUE",
+         "outputs":[Int_sock_desc("Val", True)]},
+
+        {"name": "MIN_VALUE",
+         "outputs":[Int_sock_desc("Val", True)]},
+
+        {"name": "NEGATIVE_INFINITY",
+         "outputs":[String_sock_desc("Val", True)]},
+
+        {"name": "NaN",
+         "outputs":[String_sock_desc("Val", True)]},
+
+        {"name": "POSITIVE_INFINITY",
+         "outputs":[String_sock_desc("Val", True)]},
+
+        {"name": "toExponential",
+         "inputs":[Number_sock_desc("Num", True)],
+         "outputs":[String_sock_desc("Str", True)]},
+
+        {"name": "toFixed",
+         "inputs":[Number_sock_desc("Num", True), Int_sock_desc("Val", True)],
+         "outputs":[String_sock_desc("Str", True)]},
+
+        {"name": "toPrecision",
+         "inputs":[Number_sock_desc("Num", True), Int_sock_desc("Val", True)],
+         "outputs":[String_sock_desc("Str", True)]},
+
+        {"name": "toString",
+         "inputs":[Number_sock_desc("Num", True)],
+         "outputs":[String_sock_desc("Str", True)]},
+
+        {"name": "valueOf",
+         "inputs":[Number_sock_desc("Num", True)],
+         "outputs":[Int_sock_desc("Val", True)]},
+
+     ]},
+    {"name": "Array", "methods":[
+        {"name": "length",
+         "inputs":[Array_sock_desc("Array", True)],
+         "outputs":[Int_sock_desc("Length", True)]},
+
+        {"name": "concat",
+         "inputs":[Array_sock_desc("Array1", True), Array_sock_desc("Array2", True)],
+         "outputs":[Array_sock_desc("Array", True)]},
+
+        {"name": "indexOf",
+         "inputs":[Array_sock_desc("Array1", True), Array_sock_desc("Array2", True)],
+         "outputs":[Int_sock_desc("Index", True)]},
+
+        {"name": "join",
+         "inputs":[Array_sock_desc("Array1", True), Array_sock_desc("Array2", True)],
+         "outputs":[Array_sock_desc("Array", True)]},
+
+        {"name": "lastIndexOf",
+         "inputs":[Array_sock_desc("Array1", True), Array_sock_desc("Array2", True)],
+         "outputs":[Int_sock_desc("Index", True)]},
+
+        {"name": "pop",
+         "inputs":[Array_sock_desc("Array1", True)],
+         "outputs":[Data_sock_desc("Elem", True)]},
+
+        {"name": "push",
+         "inputs":[Array_sock_desc("Array1", True), Data_sock_desc("Elem", True)],
+         "outputs":[Int_sock_desc("Length", True)]},
+
+        {"name": "reverse",
+         "inputs":[Array_sock_desc("Array", True)],
+         "outputs":[]},
+
+        {"name": "shift",
+         "inputs":[Array_sock_desc("Array", True)],
+         "outputs":[Data_sock_desc("Elem", True)]},
+
+        {"name": "slice",
+         "inputs":[Array_sock_desc("Array", True), Int_sock_desc("Start", True), Int_sock_desc("End", True)],
+         "outputs":[Array_sock_desc("Array", True)]},
+
+        {"name": "sort",
+         "inputs":[Array_sock_desc("Array", True)],
+         "outputs":[]},
+
+        {"name": "toString",
+         "inputs":[Array_sock_desc("Array", True)],
+         "outputs":[String_sock_desc("Str", True)]},
+
+        {"name": "unshift",
+         "inputs":[Array_sock_desc("Array", True), Data_sock_desc("Elem", True)],
+         "outputs":[Int_sock_desc("Length", True)]},
+
+        {"name": "valueOf",
+         "inputs":[Array_sock_desc("Array", True)],
+         "outputs":[Int_sock_desc("Val", True)]},
+    ]},
     {"name": "Math", "methods":[
 
         {"name": "E",
