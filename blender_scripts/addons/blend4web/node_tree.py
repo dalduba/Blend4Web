@@ -752,6 +752,12 @@ class AnyAPINode(B4WLogicNode):
         description = "API type",
         update=true_init
     )
+
+    callback_name =  bpy.props.StringProperty(
+        name = "Callback name",
+        description = "Callback name",
+    )
+
     modules_names = bpy.props.CollectionProperty(
         name="B4W: Modules names",
         type=B4W_Name,
@@ -777,6 +783,18 @@ class AnyAPINode(B4WLogicNode):
         s = self.outputs.new('B4WLogicSocket', 'Order>')
         s["is_input"] = False
         s.prop.type = "Order"
+
+    def add_Body(self):
+        s = self.outputs.new('B4WLogicSocket', 'Body>')
+        s["is_input"] = True
+        s.prop.type = "Order"
+    def is_callback(self):
+        if self.module_name == "callbacks":
+            return True
+        if self.module_name == "all" and  \
+            str(self.method_name).startswith("callbacks."):
+            return True
+        return False
     def update_node(self, context):
         self.dyn_props.clear()
         self.modules_names.clear()
@@ -784,7 +802,17 @@ class AnyAPINode(B4WLogicNode):
         self.inputs.clear()
         self.outputs.clear()
 
-        if self.api_type in ["JS", "B4W"]:
+        addOrder = False
+        if self.api_type in ["JS"]:
+            addOrder = True
+
+        if self.api_type in ["B4W"]:
+            if not self.is_callback():
+                addOrder = True
+            else:
+                self.add_Body()
+
+        if addOrder:
             self.add_Order()
 
         if self.api_type == "JS":
@@ -804,11 +832,15 @@ class AnyAPINode(B4WLogicNode):
                     self.methods_names.add()
                     self.methods_names[-1].name = meth['name']
                     if meth['name'] == self.method_name:
-                        if "inputs" in meth:
-                            extend_not_connectible_arr(self.dyn_props, meth['inputs'])
-                            add_method_sockets(self.inputs, meth['inputs'], True)
-                        if "outputs" in meth:
-                            add_method_sockets(self.outputs, meth['outputs'], False)
+                        if self.is_callback():
+                            if "outputs" in meth:
+                                add_method_sockets(self.outputs, meth['outputs'], False)
+                        else:
+                            if "inputs" in meth:
+                                extend_not_connectible_arr(self.dyn_props, meth['inputs'])
+                                add_method_sockets(self.inputs, meth['inputs'], True)
+                            if "outputs" in meth:
+                                add_method_sockets(self.outputs, meth['outputs'], False)
 
 
     module_name = bpy.props.StringProperty(
@@ -843,6 +875,11 @@ class AnyAPINode(B4WLogicNode):
             row = box.row()
             row.prop_search(self, 'method_name', self, 'methods_names', text=stage2_name, icon='MARKER')
             super(AnyAPINode, self).draw_dyn_props(self.dyn_props,layout)
+
+            if self.is_callback():
+                row = box.row()
+                row.prop(self, "callback_name", text="Callback Name")
+
     def draw_label(self):
         if self.method_name:
             return self.api_type+": "+self.module_name+'.'+self.method_name

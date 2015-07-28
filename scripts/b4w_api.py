@@ -681,9 +681,9 @@ def get_b4w_api():
     files = os.listdir(path_to_ext)
 
     typedefs = {}
-    callbacks = {}
     types = set()
-
+    callbacks = []
+    callbacks_dict = {}
     for file in files:
         module_name = file.split(".")[0]
 
@@ -716,7 +716,7 @@ def get_b4w_api():
                 if callback_name_data:
                     in_callback = True
                     cur_callback = callback_name_data.group(1)
-                    callbacks[cur_callback] = {}
+                    callbacks.append({"name":cur_callback})
 
                 const_data = re.search(expr_const, line)
                 if const_data:
@@ -739,13 +739,14 @@ def get_b4w_api():
                                 {"type": param_type,
                                  "name": param_data.group(2),
                                  "desc": param_data.group(3)})
-                    elif in_callback and cur_callback in callbacks:
-                        if "callback_params" not in callbacks[cur_callback]:
-                            callbacks[cur_callback]["callback_params"] = []
-                        callbacks[cur_callback]["callback_params"].append(
-                                {"param_type": param_type,
-                                 "param_name": param_data.group(2),
-                                 "param_desc": param_data.group(3)})
+                    elif in_callback and cur_callback not in callbacks_dict:
+                        if "outputs" not in callbacks[-1]:
+                            callbacks[-1]["outputs"] = []
+                        callbacks_dict[cur_callback] = callbacks[-1]
+                        callbacks[-1]["outputs"].append(
+                                {"type": param_type,
+                                 "name": param_data.group(2),
+                                 "desc": param_data.group(3)})
 
                 return_data = re.search(expr_returns, line)
                 if return_data:
@@ -763,13 +764,14 @@ def get_b4w_api():
                 in_callback = False
                 in_method = False
                 new_type_name = ""
-                cur_callback = ""
 
 
         if len(methods):
             api_lib["b4w_api"][-1]["methods"] = methods
         if len(const):
             api_lib["b4w_api"][-1]["module_const"] = const
+
+    api_lib["b4w_api"].append({"name":"callbacks", "methods":callbacks})
     api_lib["types"] = list(types)
     api_lib["callbacks"] = callbacks
     api_lib["aliases"] = typedefs
@@ -803,4 +805,4 @@ import pprint
 if __name__ == '__main__':
     data = get_b4w_api()
     dump(data)
-    pprint.pprint(data)
+    # pprint.pprint(data)
