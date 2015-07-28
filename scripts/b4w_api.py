@@ -50,8 +50,8 @@ def Vec3_sock_desc(name, connectible = 1):
     return {"name":name, "type": "Vec3", "connectible": connectible}
 def String_sock_desc(name, connectible = 0):
     return {"name":name, "type": "String", "connectible": connectible}
-def Bool_sock_desc(name):
-    return {"name":name, "type": "Bool", "connectible": 0}
+def Bool_sock_desc(name, connectible = 0):
+    return {"name":name, "type": "Bool", "connectible": connectible}
 def Object3D_sock_desc(name):
     return {"name":name, "type": "Object3D", "connectible": 1}
 def Number_sock_desc(name, connectible = 0):
@@ -297,6 +297,51 @@ js_api_modules=[
          "outputs":[Int_sock_desc("Val", True)]},
 
      ]},
+
+    {"name": "Boolean", "methods":[
+        {"name": "toString",
+         "inputs":[Bool_sock_desc("Bool", True)],
+         "outputs":[String_sock_desc("Str", True)]},
+
+         {"name": "valueOf",
+         "inputs":[Bool_sock_desc("Bool", True)],
+         "outputs":[Bool_sock_desc("Str", True)]},
+    ]},
+
+    {"name": "RegExp", "methods":[
+        {"name": "global",
+         "inputs":[String_sock_desc("RegExp", True)],
+         "outputs":[Bool_sock_desc("Ret", True)]},
+
+        {"name": "ignoreCase",
+         "inputs":[String_sock_desc("RegExp", True)],
+         "outputs":[Bool_sock_desc("Ret", True)]},
+
+        {"name": "lastIndex",
+         "inputs":[String_sock_desc("RegExp", True)],
+         "outputs":[Int_sock_desc("Index", True)]},
+
+        {"name": "multiline",
+         "inputs":[String_sock_desc("RegExp", True)],
+         "outputs":[Bool_sock_desc("Ret", True)]},
+
+        {"name": "source",
+         "inputs":[String_sock_desc("RegExp", True)],
+         "outputs":[String_sock_desc("Str", True)]},
+
+        {"name": "exec",
+         "inputs":[String_sock_desc("RegExp", True)],
+         "outputs":[String_sock_desc("Str", True)]},
+
+        {"name": "test",
+         "inputs":[String_sock_desc("RegExp", True)],
+         "outputs":[Bool_sock_desc("Ret", True)]},
+
+        {"name": "toString",
+         "inputs":[String_sock_desc("RegExp", True)],
+         "outputs":[String_sock_desc("Str", True)]},
+    ]},
+
     {"name": "Array", "methods":[
         {"name": "length",
          "inputs":[Array_sock_desc("Array", True)],
