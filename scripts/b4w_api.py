@@ -303,9 +303,145 @@ js_api_modules=[
          "inputs":[Bool_sock_desc("Bool", True)],
          "outputs":[String_sock_desc("Str", True)]},
 
-         {"name": "valueOf",
+        {"name": "valueOf",
          "inputs":[Bool_sock_desc("Bool", True)],
          "outputs":[Bool_sock_desc("Str", True)]},
+    ]},
+
+    {"name": "Location", "methods":[
+
+        {"name": "hash",
+         "outputs":[String_sock_desc("hash", True)]},
+
+        {"name": "host",
+         "outputs":[String_sock_desc("host", True)]},
+
+        {"name": "hostname",
+         "outputs":[String_sock_desc("hostname", True)]},
+
+        {"name": "href",
+         "outputs":[String_sock_desc("href", True)]},
+
+        {"name": "origin",
+         "outputs":[String_sock_desc("origin", True)]},
+
+        {"name": "pathname",
+         "outputs":[String_sock_desc("pathname", True)]},
+
+        {"name": "port",
+         "outputs":[String_sock_desc("port", True)]},
+
+        {"name": "protocol",
+         "outputs":[String_sock_desc("protocol", True)]},
+
+        {"name": "search",
+         "outputs":[String_sock_desc("search", True)]},
+
+        {"name": "assign",
+         "inputs":[String_sock_desc("URL", True)],
+         "outputs":[]},
+
+        {"name": "reload",
+         "inputs":[],
+         "outputs":[]},
+
+        {"name": "replace",
+         "inputs":[String_sock_desc("URL", True)],
+         "outputs":[]},
+
+    ]},
+
+    {"name": "Navigator", "methods":[
+        {"name": "appCodeName",
+         "outputs":[String_sock_desc("appCodeName", True)]},
+
+        {"name": "appName",
+         "outputs":[String_sock_desc("appName", True)]},
+
+        {"name": "appVersion",
+         "outputs":[String_sock_desc("appVersion", True)]},
+
+        {"name": "cookieEnabled",
+         "outputs":[Bool_sock_desc("cookieEnabled", True)]},
+
+        {"name": "geolocation",
+         "outputs":[Data_sock_desc("geolocation", True)]},
+
+        {"name": "language",
+         "outputs":[String_sock_desc("language", True)]},
+
+        {"name": "onLine",
+         "outputs":[Bool_sock_desc("onLine", True)]},
+
+        {"name": "platform",
+         "outputs":[String_sock_desc("platform", True)]},
+
+        {"name": "product",
+         "outputs":[String_sock_desc("product", True)]},
+
+        {"name": "userAgent",
+         "outputs":[String_sock_desc("userAgent", True)]},
+
+        {"name": "javaEnabled",
+         "outputs":[Bool_sock_desc("javaEnabled", True)]},
+    ]},
+
+    {"name": "Global", "methods":[
+        {"name": "Infinity",
+         "inputs":[],
+         "outputs":[Data_sock_desc("Infinity", True)]},
+
+        {"name": "NaN",
+         "inputs":[],
+         "outputs":[Data_sock_desc("NaN", True)]},
+
+        {"name": "undefined",
+         "inputs":[],
+         "outputs":[Data_sock_desc("undefined", True)]},
+
+        {"name": "decodeURI",
+         "inputs":[String_sock_desc("Uri", True)],
+         "outputs":[String_sock_desc("Str", True)]},
+
+        {"name": "decodeURIComponent",
+         "inputs":[String_sock_desc("Str", True)],
+         "outputs":[String_sock_desc("Uri", True)]},
+
+        {"name": "encodeURI",
+         "inputs":[String_sock_desc("Str", True)],
+         "outputs":[String_sock_desc("Uri", True)]},
+
+        {"name": "encodeURIComponent",
+         "inputs":[String_sock_desc("Str", True)],
+         "outputs":[String_sock_desc("Uri", True)]},
+
+        {"name": "eval",
+         "inputs":[String_sock_desc("Str", True)],
+         "outputs":[Data_sock_desc("Ret", True)]},
+
+        {"name": "isFinite",
+         "inputs":[Data_sock_desc("In", True)],
+         "outputs":[Bool_sock_desc("Ret", True)]},
+
+        {"name": "isNaN",
+         "inputs":[Data_sock_desc("In", True)],
+         "outputs":[Bool_sock_desc("Ret", True)]},
+
+        {"name": "Number",
+         "inputs":[Data_sock_desc("In", True)],
+         "outputs":[Number_sock_desc("Ret", True)]},
+
+        {"name": "parseFloat",
+         "inputs":[String_sock_desc("In", True)],
+         "outputs":[Number_sock_desc("Ret", True)]},
+
+        {"name": "parseInt",
+         "inputs":[String_sock_desc("In", True)],
+         "outputs":[Int_sock_desc("Ret", True)]},
+
+        {"name": "String",
+         "inputs":[Data_sock_desc("In", True)],
+         "outputs":[String_sock_desc("Ret", True)]},
     ]},
 
     {"name": "RegExp", "methods":[
