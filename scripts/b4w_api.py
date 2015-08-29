@@ -74,6 +74,154 @@ def Sensor_standard_output_desc(payload = True):
        r.append({"name":"payload"})
     return r
 
+operators = [
+{"name":"binary", "methods":[
+    {"name": "+",
+     "inputs":[Number_sock_desc("op1", 1),
+               Number_sock_desc("op2", 1)],
+     "outputs":[Number_sock_desc("result", 1)],
+    },
+    {"name": "-",
+     "inputs":[Number_sock_desc("op1", 1),
+               Number_sock_desc("op2", 1)],
+     "outputs":[Number_sock_desc("result", 1)]
+    },
+    {"name": "*",
+     "inputs":[Number_sock_desc("op1", 1),
+               Number_sock_desc("op2", 1)],
+     "outputs":[Number_sock_desc("result", 1)]
+    },
+    {"name": "/",
+     "inputs":[Number_sock_desc("op1", 1),
+               Number_sock_desc("op2", 1)],
+     "outputs":[Number_sock_desc("result", 1)]
+    },
+    {"name": "%",
+     "inputs":[Number_sock_desc("op1", 1),
+               Number_sock_desc("op2", 1)],
+     "outputs":[Number_sock_desc("result", 1)]
+    },
+    {"name": "<<",
+     "inputs":[Number_sock_desc("op1", 1),
+               Number_sock_desc("op2", 1)],
+     "outputs":[Number_sock_desc("result", 1)]
+    },
+    {"name": ">>",
+     "inputs":[Number_sock_desc("op1", 1),
+               Number_sock_desc("op2", 1)],
+     "outputs":[Number_sock_desc("result", 1)]
+    },
+    ]
+},
+{"name":"relational", "methods":[
+    {"name": "!==",
+     "inputs":[Data_sock_desc("op1", 1),
+               Data_sock_desc("op2", 1)],
+     "outputs":[Bool_sock_desc("result", 1)],
+    },
+    {"name": "===",
+     "inputs":[Data_sock_desc("op1", 1),
+               Data_sock_desc("op2", 1)],
+     "outputs":[Bool_sock_desc("result", 1)],
+    },
+    {"name": "!=",
+     "inputs":[Data_sock_desc("op1", 1),
+               Data_sock_desc("op2", 1)],
+     "outputs":[Bool_sock_desc("result", 1)],
+    },
+    {"name": "==",
+     "inputs":[Data_sock_desc("op1", 1),
+               Data_sock_desc("op2", 1)],
+     "outputs":[Bool_sock_desc("result", 1)],
+    },
+    {"name": "instanceof",
+     "inputs":[Data_sock_desc("op1", 1),
+               Data_sock_desc("op2", 1)],
+     "outputs":[Bool_sock_desc("result", 1)],
+    },
+    {"name": ">=",
+     "inputs":[Number_sock_desc("op1", 1),
+               Number_sock_desc("op2", 1)],
+     "outputs":[Bool_sock_desc("result", 1)],
+    },
+    {"name": "<=",
+     "inputs":[Number_sock_desc("op1", 1),
+               Number_sock_desc("op2", 1)],
+     "outputs":[Bool_sock_desc("result", 1)],
+    },
+    {"name": ">",
+     "inputs":[Number_sock_desc("op1", 1),
+               Number_sock_desc("op2", 1)],
+     "outputs":[Bool_sock_desc("result", 1)],
+    },
+    {"name": "<",
+     "inputs":[Number_sock_desc("op1", 1),
+               Number_sock_desc("op2", 1)],
+     "outputs":[Bool_sock_desc("result", 1)],
+    },
+    ]
+},
+{"name":"logic", "methods":[
+    {"name": "OR",
+     "inputs":[Bool_sock_desc("op1", 1),
+               Bool_sock_desc("op2", 1)],
+     "outputs":[Bool_sock_desc("result", 1)],
+    },
+    {"name": "AND",
+     "inputs":[Bool_sock_desc("op1", 1),
+               Bool_sock_desc("op2", 1)],
+     "outputs":[Bool_sock_desc("result", 1)],
+    },
+    {"name": "NOT",
+     "inputs":[Bool_sock_desc("op", 1)],
+     "outputs":[Bool_sock_desc("result", 1)],
+    },
+    ]
+},
+{"name":"unary", "methods":[
+    {"name": "typeof",
+     "inputs":[Data_sock_desc("op1", 1),],
+     "outputs":[String_sock_desc("result", 1)],
+    },
+    {"name": "op--",
+     "inputs":[Number_sock_desc("op", 1),],
+     "outputs":[Number_sock_desc("result", 1),],
+    },
+    {"name": "--op",
+     "inputs":[Number_sock_desc("op", 1),],
+     "outputs":[Number_sock_desc("result", 1),],
+    },
+    {"name": "op++",
+     "inputs":[Number_sock_desc("op", 1),],
+     "outputs":[Number_sock_desc("result", 1),],
+    },
+    {"name": "++op",
+     "inputs":[Number_sock_desc("op", 1),],
+     "outputs":[Number_sock_desc("result", 1),],
+    },
+    ]
+},
+{"name":"sensor", "methods":[
+    {"name": "OR",
+     "inputs":[Bool_sock_desc("op1", 1),
+               Bool_sock_desc("op2", 1)],
+     "outputs":[Bool_sock_desc("result", 1)],
+    },
+    {"name": "AND",
+     "inputs":[Bool_sock_desc("op1", 1),
+               Bool_sock_desc("op2", 1)],
+     "outputs":[Bool_sock_desc("result", 1)],
+    },
+    {"name": "NOT",
+     "inputs":[Bool_sock_desc("op1", 1)],
+     "outputs":[Bool_sock_desc("result", 1)],
+    },
+    ]
+}
+
+]
+
+
 sensors = [
 {"name":"controls", "methods":[
     {"name": "keyboard",
@@ -986,4 +1134,4 @@ import pprint
 if __name__ == '__main__':
     data = get_b4w_api()
     dump(data)
-    # pprint.pprint(data)
+    pprint.pprint(data)
