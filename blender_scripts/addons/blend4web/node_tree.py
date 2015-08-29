@@ -704,6 +704,20 @@ node_categories = [
             "api_type": repr("Operators"), "module_name": repr("sensor")
             }),
         ]),
+    MyNodeCategory("Data", "Data", items=[
+        NodeItem("AnyAPINode", label="Get Attribute",  settings={
+            "api_type": repr("OtherStuff"), "module_name": repr("data_get_set"), "method_name": repr("get_attr")
+            }),
+        NodeItem("AnyAPINode", label="Get Value By Key",  settings={
+            "api_type": repr("OtherStuff"), "module_name": repr("data_get_set"), "method_name": repr("get_value_by_key")
+            }),
+        NodeItem("AnyAPINode", label="Set Attribute",  settings={
+            "api_type": repr("OtherStuff"), "module_name": repr("data_get_set"), "method_name": repr("set_attr")
+            }),
+        NodeItem("AnyAPINode", label="Get Attribute",  settings={
+            "api_type": repr("OtherStuff"), "module_name": repr("data_get_set"), "method_name": repr("set_value_by_key")
+            }),
+        ]),
     MyNodeCategory("Objects", "Objects", items=[
         NodeItem("TargetNode", label="Target",),
         NodeItem("VariableNode", label="Variable",),

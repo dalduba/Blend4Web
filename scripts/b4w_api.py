@@ -93,6 +93,53 @@ other_stuff = [
     },
     ]
 },
+{"name":"data_get_set", "methods":[
+    {"name": "get_attr",
+     "inputs":[
+         Order_sock_desc(">Order"),
+         String_sock_desc("name", 1),
+         Data_sock_desc("data"),
+     ],
+     "outputs":[
+         Order_sock_desc("Order>"),
+         Data_sock_desc("value"),
+          ]
+    },
+    {"name": "get_value_by_key",
+     "inputs":[
+         Order_sock_desc(">Order"),
+         String_sock_desc("name", 1),
+         Data_sock_desc("data"),
+     ],
+     "outputs":[
+         Order_sock_desc("Order>"),
+         Data_sock_desc("value"),
+          ]
+    },
+    {"name": "set_attr",
+     "inputs":[
+         Order_sock_desc(">Order"),
+         String_sock_desc("name", 1),
+         Data_sock_desc("data"),
+         Data_sock_desc("value"),
+     ],
+     "outputs":[
+         Order_sock_desc("Order>"),
+          ]
+    },
+    {"name": "set_value_by_key",
+     "inputs":[
+         Order_sock_desc(">Order"),
+         String_sock_desc("name", 1),
+         Data_sock_desc("data"),
+         Data_sock_desc("value"),
+     ],
+     "outputs":[
+         Order_sock_desc("Order>"),
+          ]
+    },
+    ]
+},
 {"name":"algorythmic", "methods":[
     {"name": "ifelse",
      "inputs":[Order_sock_desc(">Order"),
