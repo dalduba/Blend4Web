@@ -66,6 +66,8 @@ def Array_sock_desc(name, connectible = 1):
     return {"name":name, "type": "Array", "connectible": connectible}
 def Data_sock_desc(name, connectible = 1):
     return {"name":name, "type": "_Data", "connectible": connectible}
+def Sensor_sock_desc(name, connectible = 1):
+    return {"name":name, "type": "sensor", "connectible": connectible}
 
 
 def Sensor_standard_output_desc(payload = True):
@@ -203,24 +205,22 @@ operators = [
 },
 {"name":"sensor", "methods":[
     {"name": "OR",
-     "inputs":[Bool_sock_desc("op1", 1),
-               Bool_sock_desc("op2", 1)],
-     "outputs":[Bool_sock_desc("result", 1)],
+     "inputs":[Sensor_sock_desc("sensor1", 1),
+               Sensor_sock_desc("sensor2", 1)],
+     "outputs":[Sensor_sock_desc("result", 1)],
     },
     {"name": "AND",
-     "inputs":[Bool_sock_desc("op1", 1),
-               Bool_sock_desc("op2", 1)],
-     "outputs":[Bool_sock_desc("result", 1)],
+     "inputs":[Sensor_sock_desc("sensor1", 1),
+               Sensor_sock_desc("sensor2", 1)],
+     "outputs":[Sensor_sock_desc("result", 1)],
     },
     {"name": "NOT",
-     "inputs":[Bool_sock_desc("op1", 1)],
-     "outputs":[Bool_sock_desc("result", 1)],
+     "inputs":[Sensor_sock_desc("sensor", 1)],
+     "outputs":[Sensor_sock_desc("result", 1)],
     },
     ]
 }
-
 ]
-
 
 sensors = [
 {"name":"controls", "methods":[
@@ -1107,10 +1107,12 @@ def get_b4w_api():
 
     api_lib["sensors"] = sensors
     api_lib["js_api"] = js_api_modules
+    api_lib["operators"] = operators
 
     add_all_module(api_lib, "sensors")
     add_all_module(api_lib, "js_api")
     add_all_module(api_lib, "b4w_api")
+    add_all_module(api_lib, "operators")
     return api_lib
 
 def check_aliases(name, typedefs):

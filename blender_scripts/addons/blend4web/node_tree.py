@@ -824,6 +824,9 @@ class AnyAPINode(B4WLogicNode):
         if self.api_type == "B4W":
             api_name = "b4w_api"
 
+        if self.api_type == "Operators":
+            api_name = "operators"
+
         for m in b4w_data[api_name]:
             self.modules_names.add()
             self.modules_names[-1].name = m['name']
@@ -868,7 +871,7 @@ class AnyAPINode(B4WLogicNode):
             stage1_name = "category"
             stage2_name = "sensor"
 
-        if self.api_type in ["JS", "Sensor", "B4W"]:
+        if self.api_type in ["JS", "Sensor", "B4W", "Operators"]:
             box = layout.box()
             row = box.row()
             row.prop_search(self, 'module_name', self, 'modules_names', text=stage1_name, icon='MARKER')
@@ -961,7 +964,10 @@ node_categories = [
         ]),
     MyNodeCategory("Operators", "Operators", items=[
         NodeItem("UnaryOperatorNode", label="Unary operator",),
-        NodeItem("OperatorNode", label="Operator",),
+        NodeItem("AnyAPINode", label="Operator",  settings={
+            "api_type": repr("Operators"),
+            }),
+       # NodeItem("OperatorNode", label="Operator",),
         NodeItem("LogicOperatorNode", label="Logic Operator",),
         NodeItem("RelationalOperatorNode", label="Relational Operator",),
         ]),
