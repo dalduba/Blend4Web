@@ -367,38 +367,6 @@ class UnaryOperatorNode(B4WLogicNode):
     def draw_label(self):
         return "Unary operator node"
 
-class RelationalOperatorNode(B4WLogicNode):
-    bl_idname = 'RelationalOperatorNode'
-    bl_label = 'Relational Operator'
-
-    relational_operator_enum = [
-    ("<", "<", "---"),
-    (">", ">", "---"),
-    ("<=", "<=", "---"),
-    (">=", ">=", "---"),
-    ("instanceof", "instanceof", "---"),
-    ("==", "==", "---"),
-    ("!=", "!=", "---"),
-    ("===", "===", "---"),
-    ("!==", "!==", "---"),
-    ]
-
-    relational_operator = bpy.props.EnumProperty(name="OperatorType", items=relational_operator_enum)
-    def init(self, context):
-        self.inputs.new('DataSocketType', "")
-        self.inputs.new('DataSocketType', "")
-        self.outputs.new('DataSocketType', "")
-
-    def copy(self, node):
-        print("Copying from node ", node)
-
-    def draw_buttons(self, context, layout):
-        row = layout.row()
-        row.prop(self, "relational_operator", text='')
-
-    def draw_label(self):
-        return "Relational operator node"
-
 class OperatorNode(B4WLogicNode):
     bl_idname = 'OperatorNode'
     bl_label = 'Operator'
@@ -611,62 +579,6 @@ class AddInOutSockets(bpy.types.Operator):
         ID += 1
 
         return {'FINISHED'}
-
-class LogicOperatorNode(B4WLogicNode):
-
-    def updateNode(self, context):
-        pass
-
-    bl_idname = 'LogicOperatorNode'
-    bl_label = 'LogicOperator'
-
-    logic_enum = [
-    ("NOT", "NOT", "---"),
-    ("AND", "AND", "---"),
-    ("OR", "OR", "---"),
-    ]
-    logic_operation = bpy.props.EnumProperty(name="LogicOperationType",items=logic_enum)
-    def init(self, context):
-        s = self.inputs.new('LogicOperatorSocketInputType', "")
-        s.node_name = self.name
-        s.tree_name = self.id_data.name
-        s.logic_operation = self.logic_operation
-        self.outputs.new('LogicOperatorSocketOutputType', "")
-
-
-    def copy(self, node):
-        print("Copying from node ", node)
-
-    def draw_buttons(self, context, layout):
-        row = layout.row()
-        row.prop(self, "logic_operation", text='')
-        # opera.tree_name = self.id_data.name
-        # opera.grup_name = self.groupname
-        # opera.sort = self.sort
-
-        if self.logic_operation in ["AND", "OR"]:
-
-            # for inp in self.inputs:
-            #     if "LogicOperatorSocketInputStaticType".__eq__(inp.bl_idname):
-            #         self.inputs.remove(inp)
-            # self.inputs[-1].logic_operation = self.logic_operation
-            row = layout.row()
-            row.scale_y = 1
-            opera = row.operator('node.add_input_socket', text="Add input")
-            opera.node_name = self.name
-            opera.tree_name = self.id_data.name
-        else:
-            while len(self.inputs) > 1:
-                self.inputs.remove(self.inputs[-1])
-
-            # print (dir(self.inputs[0]))
-            # if not "LogicOperatorSocketInputStaticType".__eq__(self.inputs[0].bl_idname):
-            #     self.inputs.clear()
-            #     s = self.inputs.new('LogicOperatorSocketInputStaticType', "")
-
-    def draw_label(self):
-        return "LogicOperator node"
-
 
 class B4W_Name(bpy.types.PropertyGroup):
     bl_idname = 'Blend4Web_String'
@@ -967,9 +879,7 @@ node_categories = [
         NodeItem("AnyAPINode", label="Operator",  settings={
             "api_type": repr("Operators"),
             }),
-       # NodeItem("OperatorNode", label="Operator",),
-        NodeItem("LogicOperatorNode", label="Logic Operator",),
-        NodeItem("RelationalOperatorNode", label="Relational Operator",),
+        NodeItem("OperatorNode", label="oldOperator",),
         ]),
     MyNodeCategory("Call methods", "Call Methods", items=[
         NodeItem("AnyAPINode", label="JS API",  settings={
@@ -1011,8 +921,6 @@ def register():
     bpy.utils.register_class(FunctionNode)
     bpy.utils.register_class(UnaryOperatorNode)
     bpy.utils.register_class(OperatorNode)
-    bpy.utils.register_class(LogicOperatorNode)
-    bpy.utils.register_class(RelationalOperatorNode)
     bpy.utils.register_class(VariableNode)
     bpy.utils.register_class(JSScriptNode)
     bpy.utils.register_class(IfelseNode)
@@ -1050,8 +958,6 @@ def unregister():
     bpy.utils.unregister_class(FunctionNode)
     bpy.utils.unregister_class(UnaryOperatorNode)
     bpy.utils.unregister_class(OperatorNode)
-    bpy.utils.unregister_class(LogicOperatorNode)
-    bpy.utils.unregister_class(RelationalOperatorNode)
     bpy.utils.unregister_class(VariableNode)
     bpy.utils.unregister_class(JSScriptNode)
     bpy.utils.unregister_class(IfelseNode)
