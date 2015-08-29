@@ -167,6 +167,21 @@ other_stuff = [
     },
     ]
 },
+{"name":"constant", "methods":[
+    {"name": "integer",
+     "inputs":[Int_sock_desc("value", 0),],
+     "outputs":[Int_sock_desc("output", 0)]
+    },
+    {"name": "float",
+     "inputs":[Number_sock_desc("value", 0),],
+     "outputs":[Number_sock_desc("output", 0)]
+    },
+    {"name": "string",
+     "inputs":[String_sock_desc("value", 0),],
+     "outputs":[String_sock_desc("output", 0)]
+    },
+    ]
+},
 {"name":"algorythmic", "methods":[
     {"name": "ifelse",
      "inputs":[Order_sock_desc(">Order"),

@@ -559,6 +559,17 @@ node_categories = [
             "api_type": repr("Operators"), "module_name": repr("sensor")
             }),
         ]),
+    MyNodeCategory("Constant", "Constant", items=[
+        NodeItem("AnyAPINode", label="Integer",  settings={
+            "api_type": repr("OtherStuff"), "module_name": repr("constant"), "method_name": repr("integer")
+            }),
+        NodeItem("AnyAPINode", label="Float",  settings={
+            "api_type": repr("OtherStuff"), "module_name": repr("constant"), "method_name": repr("float")
+            }),
+        NodeItem("AnyAPINode", label="String",  settings={
+            "api_type": repr("OtherStuff"), "module_name": repr("constant"), "method_name": repr("string")
+            }),
+        ]),
     MyNodeCategory("Variable", "Variable", items=[
         NodeItem("AnyAPINode", label="Define Global",  settings={
             "api_type": repr("OtherStuff"), "module_name": repr("variable"), "method_name": repr("define_global")
