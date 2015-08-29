@@ -113,6 +113,11 @@ operators = [
                Number_sock_desc("op2", 1)],
      "outputs":[Number_sock_desc("result", 1)]
     },
+    {"name": ">>>",
+     "inputs":[Number_sock_desc("op1", 1),
+               Number_sock_desc("op2", 1)],
+     "outputs":[Number_sock_desc("result", 1)]
+    },
     ]
 },
 {"name":"relational", "methods":[

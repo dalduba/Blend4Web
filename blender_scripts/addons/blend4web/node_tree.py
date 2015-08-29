@@ -335,83 +335,6 @@ class GlobalVariableDeclarationNode(B4WLogicNode):
         col = layout.column()
         col.prop_search(self, 'variable_name', bpy.data, 'objects', text='')
 
-class UnaryOperatorNode(B4WLogicNode):
-    bl_idname = 'UnaryOperatorNode'
-    bl_label = 'Unary Operator'
-
-    unary_operator_enum = [
-    ("++", "++", "---"),
-    ("--", "--", "---"),
-    ("+", "+", "---"),
-    ("-", "-", "---"),
-    ("~", "~", "---"),
-    ("!", "!", "---"),
-    ("delete", "delete", "---"),
-    ("typeof", "typeof", "---"),
-    ]
-
-    unary_operation = bpy.props.EnumProperty(name="OperatorType", items=unary_operator_enum)
-    def init(self, context):
-        s = self.inputs.new('DataSocketType', "")
-        s.node_name = self.name
-        s.unary_operation = self.unary_operation
-        self.outputs.new('DataSocketType', "")
-
-    def copy(self, node):
-        print("Copying from node ", node)
-
-    def draw_buttons(self, context, layout):
-        row = layout.row()
-        row.prop(self, "unary_operation", text='')
-
-    def draw_label(self):
-        return "Unary operator node"
-
-class OperatorNode(B4WLogicNode):
-    bl_idname = 'OperatorNode'
-    bl_label = 'Operator'
-
-    operator_enum = [
-    ("ADD", "ADD", "---"),
-    ("SUB", "SUB", "---"),
-    ("MUL", "MUL", "---"),
-    ("DIV", "DIV", "---"),
-    ("MOD", "MOD", "---"),
-    ("<<", "<<", "Left shift operator"),
-    (">>", ">>", "Right shift operator"),
-    (">>>", ">>>", "Right shift operator"),
-    ]
-
-    operation = bpy.props.EnumProperty(name="OperatorType", items=operator_enum)
-    def init(self, context):
-        s = self.inputs.new('DataSocketType', "")
-        s.node_name = self.name
-        s.tree_name = self.id_data.name
-        s.operation = self.operation
-        self.outputs.new('DataSocketType', "")
-
-    def copy(self, node):
-        print("Copying from node ", node)
-
-    def draw_buttons(self, context, layout):
-        row = layout.row()
-        row.prop(self, "operation", text='')
-
-        if self.operation in ["ADD", "SUB", "MUL"]:
-            row = layout.row()
-            row.scale_y = 0.8
-            opera = row.operator('node.add_input_socket', text="Add input")
-            opera.node_name = self.name
-            opera.tree_name = self.id_data.name
-        else:
-            while len(self.inputs) > 2:
-                self.inputs.remove(self.inputs[-1])
-            while len(self.inputs) < 2:
-                self.inputs.new('DataSocketType', "")
-
-    def draw_label(self):
-        return "Operator node"
-
 class JSScriptNode(B4WLogicNode):
     bl_idname = 'JSScriptNode'
     bl_label = 'JS Script'
@@ -727,6 +650,8 @@ class AnyAPINode(B4WLogicNode):
         if addOrder:
             self.add_Order()
 
+        api_name = None
+
         if self.api_type == "JS":
             api_name = "js_api"
 
@@ -739,6 +664,9 @@ class AnyAPINode(B4WLogicNode):
         if self.api_type == "Operators":
             api_name = "operators"
 
+        if api_name == None:
+            return
+        
         for m in b4w_data[api_name]:
             self.modules_names.add()
             self.modules_names[-1].name = m['name']
@@ -783,10 +711,20 @@ class AnyAPINode(B4WLogicNode):
             stage1_name = "category"
             stage2_name = "sensor"
 
-        if self.api_type in ["JS", "Sensor", "B4W", "Operators"]:
+        if self.api_type in ["JS", "Sensor", "B4W"]:
             box = layout.box()
             row = box.row()
             row.prop_search(self, 'module_name', self, 'modules_names', text=stage1_name, icon='MARKER')
+            row = box.row()
+            row.prop_search(self, 'method_name', self, 'methods_names', text=stage2_name, icon='MARKER')
+            super(AnyAPINode, self).draw_dyn_props(self.dyn_props,layout)
+
+            if self.is_callback():
+                row = box.row()
+                row.prop(self, "callback_name", text="Callback Name")
+
+        if self.api_type in ["Operators"]:
+            box = layout.box()
             row = box.row()
             row.prop_search(self, 'method_name', self, 'methods_names', text=stage2_name, icon='MARKER')
             super(AnyAPINode, self).draw_dyn_props(self.dyn_props,layout)
@@ -853,6 +791,9 @@ node_categories = [
         NodeItem("AnyAPINode", label="Sensor",  settings={
             "api_type": repr("Sensor"),
             }),
+        NodeItem("AnyAPINode", label="Logic Sensor Operator",  settings={
+            "api_type": repr("Operators"), "module_name": repr("sensor")
+            }),
         ]),
     MyNodeCategory("Objects", "Objects", items=[
         NodeItem("TargetNode", label="Target",),
@@ -875,11 +816,15 @@ node_categories = [
         NodeItem("GlobalVariableDeclarationNode", label="Global VariabAle",),
         ]),
     MyNodeCategory("Operators", "Operators", items=[
-        NodeItem("UnaryOperatorNode", label="Unary operator",),
-        NodeItem("AnyAPINode", label="Operator",  settings={
-            "api_type": repr("Operators"),
+        NodeItem("AnyAPINode", label="Bynary",  settings={
+            "api_type": repr("Operators"), "module_name": repr("binary")
             }),
-        NodeItem("OperatorNode", label="oldOperator",),
+        NodeItem("AnyAPINode", label="Unary",  settings={
+            "api_type": repr("Operators"), "module_name": repr("unary")
+            }),
+        NodeItem("AnyAPINode", label="Logic",  settings={
+            "api_type": repr("Operators"), "module_name": repr("logic")
+            }),
         ]),
     MyNodeCategory("Call methods", "Call Methods", items=[
         NodeItem("AnyAPINode", label="JS API",  settings={
@@ -919,8 +864,6 @@ def register():
     bpy.utils.register_class(AnyAPINode)
     bpy.utils.register_class(TargetNode)
     bpy.utils.register_class(FunctionNode)
-    bpy.utils.register_class(UnaryOperatorNode)
-    bpy.utils.register_class(OperatorNode)
     bpy.utils.register_class(VariableNode)
     bpy.utils.register_class(JSScriptNode)
     bpy.utils.register_class(IfelseNode)
@@ -956,8 +899,6 @@ def unregister():
     bpy.utils.unregister_class(AnyAPINode)
     bpy.utils.unregister_class(TargetNode)
     bpy.utils.unregister_class(FunctionNode)
-    bpy.utils.unregister_class(UnaryOperatorNode)
-    bpy.utils.unregister_class(OperatorNode)
     bpy.utils.unregister_class(VariableNode)
     bpy.utils.unregister_class(JSScriptNode)
     bpy.utils.unregister_class(IfelseNode)
