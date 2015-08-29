@@ -80,7 +80,11 @@ def Sensor_standard_output_desc(payload = True):
 other_stuff = [
 {"name":"callback", "methods":[
     {"name": "callback_interface",
-     "inputs":[Sensor_sock_desc("sensor"),],
+     "inputs":[Sensor_sock_desc("sensor"),
+               {"name":"control_type", "type": "enum", "connectible": 0,
+                "enum": ["CT_CHANGE", "CT_CONTINUOUS", "CT_LEVEL", "CT_SHOT", "CT_TRIGGER"]
+               }
+     ],
      "outputs":[Sensor_sock_desc("sensor"),
                 Order_sock_desc("{}"),
                 Number_sock_desc("pulse")],
