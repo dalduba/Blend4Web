@@ -205,49 +205,6 @@ class FunctionNodeTargetSocket(NodeSocket):
     def draw_color(self, context, node):
         return TargetSocketColor
 
-
-class FunctionNode(B4WLogicNode):
-    my_items = [
-        ("Delay", "Delay", "---"),
-        ("SetVisible", "SetVisible", "---"),
-    ]
-    true_false = [
-        ("True", "True", "---"),
-        ("False", "False", "---"),
-    ]
-    delay = bpy.props.FloatProperty(name="DelayType", default = 0)
-    setvisible = bpy.props.EnumProperty(name="SetVisibleType",items=true_false)
-    def updateNode(self, context):
-        pass
-    FunctionEnumProperty = bpy.props.EnumProperty(name="FunctionType", description="Function Type", items=my_items, default='Delay', update=updateNode)
-    bl_idname = 'FunctionNode'
-    bl_label = 'Function'
-
-    def init(self, context):
-        self.outputs.new('FunctionSocketType', "")
-        self.inputs.new('FunctionNodeSensorSocketType', "")
-        self.inputs.new('FunctionNodeTargetSocketType', "")
-
-    def copy(self, node):
-        print("Copying from node ", node)
-
-    def draw_buttons(self, context, layout):
-        # col = layout.column()
-        # # col.prop(self, "activate", text="Update")
-        # col.prop_search(self, 'obj_name', bpy.data, 'objects', text='', icon='HAND')
-        # if self.show_string_box:
-        #     col.prop(self, 'input_text', text='')
-        # layout.label("Node settings")
-        layout.prop(self, "FunctionEnumProperty", text='')
-        if self.FunctionEnumProperty == "Delay":
-            layout.prop(self, "delay", text='')
-
-        if self.FunctionEnumProperty == "SetVisible":
-            layout.prop(self, "setvisible", text='')
-
-    def draw_label(self):
-        return "Function node"
-
 class OrderSocket(NodeSocket):
     bl_idname = 'OrderSocketType'
     bl_label = 'Order Node Socket'
@@ -394,19 +351,6 @@ class ForInNode(B4WLogicNode):
         self.outputs.new('OrderSocketType', "Order>")
         self.outputs.new('OrderSocketType', "Cycle{}")
         self.outputs.new('DataSocketType', "Element")
-
-
-class CallbackInterfaceNode(B4WLogicNode):
-    bl_idname = 'CallbackInterfaceNode'
-    bl_label = 'Callback interface'
-    def updateNode(self, context):
-        pass
-    def init(self, context):
-        self.inputs.new('FunctionNodeSensorSocketType', ">Sensor")
-
-        self.outputs.new('FunctionNodeSensorSocketType', "Sensor>")
-        self.outputs.new('OrderSocketType', "Function{}")
-        self.outputs.new('DataSocketType', "Pulse")
 #-------------------------------
 
 class RemoveInputSocket(bpy.types.Operator):
@@ -805,8 +749,6 @@ node_categories = [
         ]),
     MyNodeCategory("Callbacks", "Callbacks", items=[
         # our basic node
-        NodeItem("CallbackInterfaceNode", label="Callback interface old",),
-        NodeItem("FunctionNode", label="Function",),
         NodeItem("AnyAPINode", label="Callback Interface",  settings={
             "api_type": repr("OtherStuff"), "module_name": repr("callback"), "method_name": repr("callback_interface")
             }),
@@ -869,13 +811,11 @@ def register():
     bpy.utils.register_class(B4WLogicNode)
     bpy.utils.register_class(AnyAPINode)
     bpy.utils.register_class(TargetNode)
-    bpy.utils.register_class(FunctionNode)
     bpy.utils.register_class(VariableNode)
     bpy.utils.register_class(JSScriptNode)
     bpy.utils.register_class(IfelseNode)
     bpy.utils.register_class(ForNode)
     bpy.utils.register_class(ForInNode)
-    bpy.utils.register_class(CallbackInterfaceNode)
     bpy.utils.register_class(FunctionDeclarationNode)
     bpy.utils.register_class(GlobalVariableDeclarationNode)
     bpy.utils.register_class(B4WLogicSocket)
@@ -904,13 +844,11 @@ def unregister():
     # nodes
     bpy.utils.unregister_class(AnyAPINode)
     bpy.utils.unregister_class(TargetNode)
-    bpy.utils.unregister_class(FunctionNode)
     bpy.utils.unregister_class(VariableNode)
     bpy.utils.unregister_class(JSScriptNode)
     bpy.utils.unregister_class(IfelseNode)
     bpy.utils.unregister_class(ForNode)
     bpy.utils.unregister_class(ForInNode)
-    bpy.utils.unregister_class(CallbackInterfaceNode)
     bpy.utils.unregister_class(FunctionDeclarationNode)
     bpy.utils.unregister_class(GlobalVariableDeclarationNode)
     bpy.utils.unregister_class(B4W_Name)
