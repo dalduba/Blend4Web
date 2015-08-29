@@ -204,29 +204,11 @@ class JSScriptNode(B4WLogicNode):
         row.prop_search(self, 'script_name', bpy.data, 'texts', text='')
 
 #-------------------------------
-
-class RemoveInputSocket(bpy.types.Operator):
-    bl_idname = "node.remove_socket"
-    bl_label = "remove socket"
-    bl_options = {'REGISTER', 'UNDO'}
-    node_name = StringProperty(name='name node', description='it is name of node',
-                               default='')
-    socket_name = StringProperty(name='name socket', description='it is name of node',
-                               default='')
-    tree_name = StringProperty(name='name tree', description='it is name of tree',
-                               default='')
-    def execute(self, context):
-        s = bpy.data.node_groups[self.tree_name].nodes[self.node_name].inputs
-        s.remove(s[self.socket_name])
-            # .remove(self.socket_name)
-        # bpy.data.node_groups[self.tree_name].nodes[self.node_name].inputs.remove('LogicOperatorSocketType', "")
-        return {'FINISHED'}
-
 global ID
-ID=0
-class AddInputSocket(bpy.types.Operator):
-    bl_idname = "node.add_input_socket"
-    bl_label = "add socket"
+ID = 0
+class AddOutSockets(bpy.types.Operator):
+    bl_idname = "node.b4w_js_add_out_sockets"
+    bl_label = "add output sockets"
     bl_options = {'REGISTER', 'UNDO'}
     node_name = StringProperty(name='name node', description='it is name of node',
                                default='')
@@ -234,40 +216,18 @@ class AddInputSocket(bpy.types.Operator):
                                default='')
 
     def execute(self, context):
+        node = bpy.data.node_groups[self.tree_name].nodes[self.node_name]
+        outputs = node.outputs
         global ID
-        inputs = bpy.data.node_groups[self.tree_name].nodes[self.node_name].inputs
-
-        if bpy.data.node_groups[self.tree_name].nodes[self.node_name].bl_idname in ["LogicOperatorNode"]:
-            s = inputs.new('LogicOperatorSocketInputType', "socket_%s" % ID)
-            s.logic_operation = bpy.data.node_groups[self.tree_name].nodes[self.node_name].logic_operation
-        else:
-            s = inputs.new('DataSocketType', "socket_%s" % ID)
-        ID += 1
+        while "socket_%s" % ID in outputs:
+            ID += 1
+        s = outputs.new('B4WLogicSocket', "socket_%s" % ID)
         s.node_name = self.node_name
         s.tree_name = self.tree_name
-        return {'FINISHED'}
-
-class AddInOutSockets(bpy.types.Operator):
-    bl_idname = "node.add_inout_sockets"
-    bl_label = "add input ad output sockets"
-    bl_options = {'REGISTER', 'UNDO'}
-    node_name = StringProperty(name='name node', description='it is name of node',
-                               default='')
-    tree_name = StringProperty(name='name tree', description='it is name of tree',
-                               default='')
-
-    def execute(self, context):
-        global ID
-        inputs = bpy.data.node_groups[self.tree_name].nodes[self.node_name].inputs
-        outputs = bpy.data.node_groups[self.tree_name].nodes[self.node_name].outputs
-
-        s = inputs.new('DataSocketType', "socket_%s" % ID)
-        s.node_name = self.node_name
-        s.tree_name = self.tree_name
-        s = outputs.new('DataSocketType', "socket_%s" % ID)
-        s.node_name = self.node_name
-        s.tree_name = self.tree_name
-        ID += 1
+        s['is_input'] = True
+        s.prop.name = "param"
+        s.prop.type = "_Data"
+        extend_not_connectible_arr(node.dyn_props, [{"name":"param_name", "type": "String", "connectible": 0}])
 
         return {'FINISHED'}
 
@@ -336,6 +296,7 @@ def extend_not_connectible_arr(dst, search_src):
             s = dst[-1]
             s.type = sock_type
             s.name = sd["name"]
+            s['is_input'] = True
 
 class AnyAPINode(B4WLogicNode):
     bl_idname = 'AnyAPINode'
@@ -428,6 +389,11 @@ class AnyAPINode(B4WLogicNode):
         if self.api_type == "OtherStuff":
             api_name = "other_stuff"
 
+        if self.api_type == "FuncDecl":
+            add_method_sockets(self.outputs, [{"name":"Declaration>", "type": "Order", "connectible": 1}], True)
+            extend_not_connectible_arr(self.dyn_props, [{"name":"func_name", "type": "String", "connectible": 0}])
+            return
+
         if api_name == None:
             return
         
@@ -495,6 +461,12 @@ class AnyAPINode(B4WLogicNode):
             row = layout.row()
             row.prop(self, "callback_name", text="Callback Name")
 
+        if self.api_type == "FuncDecl":
+            row = layout.row()
+            opera = row.operator('node.b4w_js_add_out_sockets', text="Add input")
+            opera.node_name = self.name
+            opera.tree_name = self.id_data.name
+
     def draw_label(self):
         if self.api_type == "OtherStuff":
             return self.method_name
@@ -503,32 +475,6 @@ class AnyAPINode(B4WLogicNode):
         else:
             return self.api_type
 
-class FunctionDeclarationNode(B4WLogicNode):
-    bl_idname = 'FunctionDeclarationNode'
-    bl_label = 'Function declaration'
-
-    def updateNode(self, context):
-        pass
-
-    function_name = bpy.props.StringProperty(
-        default='',
-        description='name of the function',
-        update=updateNode)
-    input_text = bpy.props.StringProperty(
-        default='', update=updateNode)
-
-    def draw_buttons(self, context, layout):
-        layout.label("Name")
-        col = layout.column()
-        row = col.row()
-        row.prop_search(self, 'function_name', bpy.data, 'objects', text='')
-        row = col.row()
-        opera = row.operator('node.add_inout_sockets', text="Add input")
-        opera.node_name = self.name
-        opera.tree_name = self.id_data.name
-
-    def init(self, context):
-        self.outputs.new('OrderSocketType', "Declaration>")
 #-------------------------------
 
 ### Node Categories ###
@@ -629,8 +575,10 @@ node_categories = [
             "api_type": repr("OtherStuff"), "module_name": repr("algorythmic"), "method_name": repr("return")
             }),
         ]),
-    MyNodeCategory("Declarations", "Declarations", items=[
-        NodeItem("FunctionDeclarationNode", label="Function",),
+    MyNodeCategory("Function", "Function", items=[
+        NodeItem("AnyAPINode", label="Declaration",  settings={
+            "api_type": repr("FuncDecl"),
+            }),
         ]),
     MyNodeCategory("Operators", "Operators", items=[
         NodeItem("AnyAPINode", label="Bynary",  settings={
@@ -653,7 +601,6 @@ node_categories = [
         ]),
     ]
 
-
 def register():
     nodeitems_utils.register_node_categories("CUSTOM_NODES1", node_categories)
 
@@ -663,9 +610,7 @@ def register():
     bpy.utils.register_class(B4W_dyn_param_union)
     # sockets
     bpy.utils.register_class(TargetSocket)
-    bpy.utils.register_class(AddInputSocket)
-    bpy.utils.register_class(AddInOutSockets)
-    bpy.utils.register_class(RemoveInputSocket)
+    bpy.utils.register_class(AddOutSockets)
     bpy.utils.register_class(OrderSocket)
     bpy.utils.register_class(DataSocket)
 
@@ -674,7 +619,6 @@ def register():
     bpy.utils.register_class(AnyAPINode)
     bpy.utils.register_class(TargetNode)
     bpy.utils.register_class(JSScriptNode)
-    bpy.utils.register_class(FunctionDeclarationNode)
     bpy.utils.register_class(B4WLogicSocket)
 
 def unregister():
@@ -685,9 +629,7 @@ def unregister():
 
     # sockets
     bpy.utils.unregister_class(TargetSocket)
-    bpy.utils.unregister_class(AddInputSocket)
-    bpy.utils.unregister_class(AddInOutSockets)
-    bpy.utils.unregister_class(RemoveInputSocket)
+    bpy.utils.unregister_class(AddOutSockets)
     bpy.utils.unregister_class(OrderSocket)
     bpy.utils.unregister_class(DataSocket)
 
@@ -695,7 +637,6 @@ def unregister():
     bpy.utils.unregister_class(AnyAPINode)
     bpy.utils.unregister_class(TargetNode)
     bpy.utils.unregister_class(JSScriptNode)
-    bpy.utils.unregister_class(FunctionDeclarationNode)
     bpy.utils.unregister_class(B4W_Name)
     bpy.utils.unregister_class(B4W_dyn_param_union)
     bpy.utils.unregister_class(B4WLogicNode)
