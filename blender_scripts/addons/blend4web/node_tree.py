@@ -166,41 +166,6 @@ class TargetNode(B4WLogicNode):
     def draw_label(self):
         return "Target node"
 #--------------------------------
-class FunctionSocket(NodeSocket):
-    bl_idname = 'FunctionSocketType'
-    bl_label = 'Function Node Socket'
-    def draw(self, context, layout, node, text):
-        if self.is_output or self.is_linked:
-            # layout.prop(self, "ObjectsProperty", text=text)
-            pass
-        else:
-            layout.label(text)
-
-    def draw_color(self, context, node):
-        return SensorSocketColor
-
-class FunctionNodeSensorSocket(NodeSocket):
-    bl_idname = 'FunctionNodeSensorSocketType'
-    bl_label = 'Function Node Sensor Socket'
-    socket_type = ''
-    def draw(self, context, layout, node, text):
-        layout.label(text)
-
-    def draw_color(self, context, node):
-        return SensorSocketColor
-
-class FunctionNodeTargetSocket(NodeSocket):
-    bl_idname = 'FunctionNodeTargetSocketType'
-    bl_label = 'Function Node Target Socket'
-    def draw(self, context, layout, node, text):
-        if self.is_output or self.is_linked:
-            # layout.prop(self, "ObjectsProperty", text=text)
-            pass
-        else:
-            layout.label(text)
-
-    def draw_color(self, context, node):
-        return TargetSocketColor
 
 class OrderSocket(NodeSocket):
     bl_idname = 'OrderSocketType'
@@ -209,14 +174,6 @@ class OrderSocket(NodeSocket):
         layout.label(text)
     def draw_color(self, context, node):
         return OrderSocketColor
-
-class BoolSocket(NodeSocket):
-    bl_idname = 'BoolSocketType'
-    bl_label = 'Bool Node Socket'
-    def draw(self, context, layout, node, text):
-        layout.label(text)
-    def draw_color(self, context, node):
-        return BoolSocketColor
 
 class DataSocket(NodeSocket):
     bl_idname = 'DataSocketType'
@@ -265,34 +222,6 @@ class RemoveInputSocket(bpy.types.Operator):
         # bpy.data.node_groups[self.tree_name].nodes[self.node_name].inputs.remove('LogicOperatorSocketType', "")
         return {'FINISHED'}
 
-class LogicOperatorSocketInput(NodeSocket):
-    bl_idname = 'LogicOperatorSocketInputType'
-    bl_label = 'LogicOperator Node Socket'
-    node_name = StringProperty(name='name node', description='it is name of node',
-                               default='')
-    tree_name = StringProperty(name='name tree', description='it is name of tree',
-                               default='')
-    logic_operation = StringProperty(name='logic operation', description='it is name of logic operation')
-    def draw(self, context, layout, node, text):
-        row = layout.row()
-        row.scale_y = 1
-        if not self.logic_operation in "NOT":
-            opera = row.operator('node.remove_socket', text="X")
-            opera.node_name = self.node_name
-            opera.socket_name = self.name
-            opera.tree_name = self.tree_name
-
-    def draw_color(self, context, node):
-        return SensorSocketColor
-
-class LogicOperatorSocketOutput(NodeSocket):
-    bl_idname = 'LogicOperatorSocketOutputType'
-    bl_label = 'LogicOperator Node Socket'
-    def draw(self, context, layout, node, text):
-        pass
-
-    def draw_color(self, context, node):
-        return SensorSocketColor
 global ID
 ID=0
 class AddInputSocket(bpy.types.Operator):
@@ -371,13 +300,6 @@ def get_method(data, name):
         if m['name'] == name:
             return m
 
-class SensorSocket(NodeSocket):
-    bl_idname = "SensorSocketType"
-    def draw(self, context, layout, node, text):
-        layout.label(text)
-
-    def draw_color(self, context, node):
-        return SensorSocketColor
 def is_connectible(sock_desc):
     connectible = True
     if 'connectible' in sock_desc:
@@ -729,18 +651,11 @@ def register():
     bpy.utils.register_class(B4W_Name)
     bpy.utils.register_class(B4W_dyn_param_union)
     # sockets
-    bpy.utils.register_class(SensorSocket)
     bpy.utils.register_class(TargetSocket)
-    bpy.utils.register_class(FunctionSocket)
-    bpy.utils.register_class(LogicOperatorSocketInput)
-    bpy.utils.register_class(LogicOperatorSocketOutput)
     bpy.utils.register_class(AddInputSocket)
     bpy.utils.register_class(AddInOutSockets)
     bpy.utils.register_class(RemoveInputSocket)
-    bpy.utils.register_class(FunctionNodeSensorSocket)
-    bpy.utils.register_class(FunctionNodeTargetSocket)
     bpy.utils.register_class(OrderSocket)
-    bpy.utils.register_class(BoolSocket)
     bpy.utils.register_class(DataSocket)
 
     # nodes
@@ -758,18 +673,11 @@ def unregister():
     bpy.utils.unregister_class(B4WLogicNodeTree)
 
     # sockets
-    bpy.utils.unregister_class(SensorSocket)
     bpy.utils.unregister_class(TargetSocket)
-    bpy.utils.unregister_class(FunctionSocket)
-    bpy.utils.unregister_class(LogicOperatorSocketInput)
-    bpy.utils.unregister_class(LogicOperatorSocketOutput)
     bpy.utils.unregister_class(AddInputSocket)
     bpy.utils.unregister_class(AddInOutSockets)
     bpy.utils.unregister_class(RemoveInputSocket)
-    bpy.utils.unregister_class(FunctionNodeSensorSocket)
-    bpy.utils.unregister_class(FunctionNodeTargetSocket)
     bpy.utils.unregister_class(OrderSocket)
-    bpy.utils.unregister_class(BoolSocket)
     bpy.utils.unregister_class(DataSocket)
 
     # nodes

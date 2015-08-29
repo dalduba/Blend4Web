@@ -122,7 +122,7 @@ other_stuff = [
      ],
      "outputs":[Sensor_sock_desc("sensor"),
                 Order_sock_desc("{}"),
-                Number_sock_desc("pulse")],
+                Int_sock_desc("pulse")],
     },
     ]
 },
