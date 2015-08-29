@@ -85,7 +85,8 @@ other_stuff = [
      "inputs":[Sensor_sock_desc("sensor"),
                {"name":"control_type", "type": "enum", "connectible": 0,
                 "enum": ["CT_CHANGE", "CT_CONTINUOUS", "CT_LEVEL", "CT_SHOT", "CT_TRIGGER"]
-               }
+               },
+               Object3D_sock_desc("object")
      ],
      "outputs":[Sensor_sock_desc("sensor"),
                 Order_sock_desc("{}"),

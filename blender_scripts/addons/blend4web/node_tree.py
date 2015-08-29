@@ -93,7 +93,6 @@ class B4WLogicNode(Node):
     def poll(cls, ntree):
         return ntree.bl_idname == 'B4WLogicNodeTreeType'
     def draw_dyn_props(self, dyn_props, layout):
-        box = None
         for p in dyn_props:
             pass
             connectible = False
@@ -102,13 +101,11 @@ class B4WLogicNode(Node):
                     connectible = True
             if not connectible:
                 attr_name = get_prop_name_by_type(p.type)
-                if box == None:
-                    box = layout.box()
                 if p.type == 'Object3D':
-                    row = box.row()
+                    row = layout.row()
                     row.prop_search(p, attr_name, bpy.data, 'objects', text=p.name, icon='MARKER')
                 else:
-                    row = box.row()
+                    row = layout.row()
                     row.prop(p, attr_name, text=p.name)
 
     def create_sockets(self,  dyn_props, layout):
@@ -626,18 +623,16 @@ class AnyAPINode(B4WLogicNode):
 
         if self.api_type in ["Operators"]:
             draw_method_name = True
-        if draw_method_name | draw_module_name:
-            box = layout.box()
         if draw_module_name:
-            row = box.row()
+            row = layout.row()
             row.prop_search(self, 'module_name', self, 'modules_names', text=stage1_name, icon='MARKER')
         if draw_method_name:
-            row = box.row()
+            row = layout.row()
             row.prop_search(self, 'method_name', self, 'methods_names', text=stage2_name, icon='MARKER')
         super(AnyAPINode, self).draw_dyn_props(self.dyn_props,layout)
 
         if self.is_callback():
-            row = box.row()
+            row = layout.row()
             row.prop(self, "callback_name", text="Callback Name")
 
     def draw_label(self):
