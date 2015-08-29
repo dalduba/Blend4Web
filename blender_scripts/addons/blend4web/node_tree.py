@@ -311,46 +311,6 @@ class JSScriptNode(B4WLogicNode):
         row = layout.row()
         row.prop_search(self, 'script_name', bpy.data, 'texts', text='')
 
-
-class IfelseNode(B4WLogicNode):
-    bl_idname = 'IfelseNode'
-    bl_label = 'ifelse'
-    def updateNode(self, context):
-        pass
-    def init(self, context):
-        self.inputs.new('OrderSocketType', ">Order")
-        self.inputs.new('BoolSocketType', "(Cond)")
-        self.outputs.new('OrderSocketType', "Order>")
-        self.outputs.new('OrderSocketType', "True{}")
-        self.outputs.new('OrderSocketType', "False{}")
-
-class ForNode(B4WLogicNode):
-    bl_idname = 'ForNode'
-    bl_label = 'for'
-    def updateNode(self, context):
-        pass
-    def init(self, context):
-        self.inputs.new('OrderSocketType', ">Order")
-        self.inputs.new('BoolSocketType', "(*;Cond;*)")
-
-
-        self.outputs.new('OrderSocketType', "Order>")
-        self.outputs.new('OrderSocketType', "(Init;*;*)")
-        self.outputs.new('OrderSocketType', "(*;*;Loop)")
-        self.outputs.new('OrderSocketType', "Cycle{}")
-
-class ForInNode(B4WLogicNode):
-    bl_idname = 'ForInNode'
-    bl_label = 'forin'
-    def updateNode(self, context):
-        pass
-    def init(self, context):
-        self.inputs.new('OrderSocketType', ">Order")
-        self.inputs.new('DataSocketType', "Collection")
-
-        self.outputs.new('OrderSocketType', "Order>")
-        self.outputs.new('OrderSocketType', "Cycle{}")
-        self.outputs.new('DataSocketType', "Element")
 #-------------------------------
 
 class RemoveInputSocket(bpy.types.Operator):
@@ -681,6 +641,8 @@ class AnyAPINode(B4WLogicNode):
             row.prop(self, "callback_name", text="Callback Name")
 
     def draw_label(self):
+        if self.api_type == "OtherStuff":
+            return self.method_name
         if self.method_name:
             return self.api_type+": "+self.module_name+'.'+self.method_name
         else:
@@ -755,9 +717,18 @@ node_categories = [
         ]),
     MyNodeCategory("Algorithmic", "Algorithmic", items=[
         # our basic node
-        NodeItem("IfelseNode", label="If Else",),
-        NodeItem("ForNode", label="For",),
-        NodeItem("ForInNode", label="For In",),
+        NodeItem("AnyAPINode", label="If Else",  settings={
+            "api_type": repr("OtherStuff"), "module_name": repr("algorythmic"), "method_name": repr("ifelse")
+            }),
+        NodeItem("AnyAPINode", label="For",  settings={
+            "api_type": repr("OtherStuff"), "module_name": repr("algorythmic"), "method_name": repr("for")
+            }),
+        NodeItem("AnyAPINode", label="For in",  settings={
+            "api_type": repr("OtherStuff"), "module_name": repr("algorythmic"), "method_name": repr("forin")
+            }),
+       # NodeItem("IfelseNode", label="If Else",),
+        #NodeItem("ForNode", label="For",),
+        #NodeItem("ForInNode", label="For In",),
         ]),
     MyNodeCategory("Declarations", "Declarations", items=[
         NodeItem("FunctionDeclarationNode", label="Function",),
@@ -813,9 +784,6 @@ def register():
     bpy.utils.register_class(TargetNode)
     bpy.utils.register_class(VariableNode)
     bpy.utils.register_class(JSScriptNode)
-    bpy.utils.register_class(IfelseNode)
-    bpy.utils.register_class(ForNode)
-    bpy.utils.register_class(ForInNode)
     bpy.utils.register_class(FunctionDeclarationNode)
     bpy.utils.register_class(GlobalVariableDeclarationNode)
     bpy.utils.register_class(B4WLogicSocket)
@@ -846,9 +814,6 @@ def unregister():
     bpy.utils.unregister_class(TargetNode)
     bpy.utils.unregister_class(VariableNode)
     bpy.utils.unregister_class(JSScriptNode)
-    bpy.utils.unregister_class(IfelseNode)
-    bpy.utils.unregister_class(ForNode)
-    bpy.utils.unregister_class(ForInNode)
     bpy.utils.unregister_class(FunctionDeclarationNode)
     bpy.utils.unregister_class(GlobalVariableDeclarationNode)
     bpy.utils.unregister_class(B4W_Name)

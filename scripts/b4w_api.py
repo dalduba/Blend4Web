@@ -66,6 +66,8 @@ def Array_sock_desc(name, connectible = 1):
     return {"name":name, "type": "Array", "connectible": connectible}
 def Data_sock_desc(name, connectible = 1):
     return {"name":name, "type": "_Data", "connectible": connectible}
+def Expression_sock_desc(name):
+    return {"name":name, "type": "expression", "connectible": 1}
 def Sensor_sock_desc(name):
     return {"name":name, "type": "sensor", "connectible": 1}
 def Order_sock_desc(name):
@@ -88,6 +90,40 @@ other_stuff = [
      "outputs":[Sensor_sock_desc("sensor"),
                 Order_sock_desc("{}"),
                 Number_sock_desc("pulse")],
+    },
+    ]
+},
+{"name":"algorythmic", "methods":[
+    {"name": "ifelse",
+     "inputs":[Order_sock_desc(">Order"),
+               Expression_sock_desc("condition"),
+     ],
+     "outputs":[
+                Order_sock_desc("Order>"),
+                Order_sock_desc("True>"),
+                Order_sock_desc("False>")
+                ],
+    },
+    {"name": "for",
+     "inputs":[Order_sock_desc(">Order"),
+               Expression_sock_desc("(*;cond;*)"),
+     ],
+     "outputs":[
+                Order_sock_desc("Order>"),
+                Order_sock_desc("(init;*;*)"),
+                Order_sock_desc("(*;*;Loop)"),
+                Order_sock_desc("Cycle{}")
+                ],
+    },
+    {"name": "forin",
+     "inputs":[Order_sock_desc(">Order"),
+               Data_sock_desc("collection"),
+     ],
+     "outputs":[
+                Order_sock_desc("Order>"),
+                Order_sock_desc("Cycle{}"),
+                Data_sock_desc("element")
+                ],
     },
     ]
 }
