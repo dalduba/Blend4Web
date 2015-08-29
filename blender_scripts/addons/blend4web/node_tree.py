@@ -247,12 +247,6 @@ b4w_api_json_path = os.path.join(curdir,"b4w_api.json")
 with open(b4w_api_json_path) as data_file:
     b4w_data = json.load(data_file)
 #--------------------------
-def clear_with_exceptions(ss, exceptions):
-    for s in ss:
-        if s.bl_idname in exceptions:
-            continue
-        ss.remove(s)
-
 def get_module(data, name):
     for m in b4w_data["modules"]:
         if m['name'] == name:
@@ -330,6 +324,9 @@ class AnyAPINode(B4WLogicNode):
                                     for prop in nn.dyn_props:
                                         add_method_sockets(n.inputs,
                                             [{"name":prop.s, "type": "_Data", "connectible": 1}], True)
+                                        add_method_sockets(n.inputs, [{"name":">Order", "type": "Order", "connectible": 1}], True)
+                                        add_method_sockets(n.outputs, [{"name":"Order>", "type": "Order", "connectible": 1}], True)
+                                        add_method_sockets(n.outputs, [{"name":"return", "type": "_Data", "connectible": 1}], True)
 
     api_type =  bpy.props.StringProperty(
         name = "API type",
@@ -571,6 +568,14 @@ node_categories = [
             "api_type": repr("OtherStuff"), "module_name": repr("variable"), "method_name": repr("set_var")
             }),
         ]),
+    MyNodeCategory("Function", "Function", items=[
+        NodeItem("AnyAPINode", label="Declaration",  settings={
+            "api_type": repr("FuncDecl"),
+            }),
+        NodeItem("AnyAPINode", label="Call",  settings={
+            "api_type": repr("FuncCall"),
+            }),
+        ]),
     MyNodeCategory("Data", "Data", items=[
         NodeItem("AnyAPINode", label="Get Attribute",  settings={
             "api_type": repr("OtherStuff"), "module_name": repr("data_get_set"), "method_name": repr("get_attr")
@@ -614,14 +619,6 @@ node_categories = [
             }),
         NodeItem("AnyAPINode", label="Return",  settings={
             "api_type": repr("OtherStuff"), "module_name": repr("algorythmic"), "method_name": repr("return")
-            }),
-        ]),
-    MyNodeCategory("Function", "Function", items=[
-        NodeItem("AnyAPINode", label="Declaration",  settings={
-            "api_type": repr("FuncDecl"),
-            }),
-        NodeItem("AnyAPINode", label="Call",  settings={
-            "api_type": repr("FuncCall"),
             }),
         ]),
     MyNodeCategory("Operators", "Operators", items=[
