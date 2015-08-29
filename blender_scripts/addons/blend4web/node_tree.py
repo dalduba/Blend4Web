@@ -664,6 +664,9 @@ class AnyAPINode(B4WLogicNode):
         if self.api_type == "Operators":
             api_name = "operators"
 
+        if self.api_type == "OtherStuff":
+            api_name = "other_stuff"
+
         if api_name == None:
             return
         
@@ -711,27 +714,27 @@ class AnyAPINode(B4WLogicNode):
             stage1_name = "category"
             stage2_name = "sensor"
 
+        draw_module_name = False
+        draw_method_name = False
         if self.api_type in ["JS", "Sensor", "B4W"]:
-            box = layout.box()
-            row = box.row()
-            row.prop_search(self, 'module_name', self, 'modules_names', text=stage1_name, icon='MARKER')
-            row = box.row()
-            row.prop_search(self, 'method_name', self, 'methods_names', text=stage2_name, icon='MARKER')
-            super(AnyAPINode, self).draw_dyn_props(self.dyn_props,layout)
-
-            if self.is_callback():
-                row = box.row()
-                row.prop(self, "callback_name", text="Callback Name")
+            draw_module_name = True
+            draw_method_name = True
 
         if self.api_type in ["Operators"]:
+            draw_method_name = True
+        if draw_method_name | draw_module_name:
             box = layout.box()
+        if draw_module_name:
+            row = box.row()
+            row.prop_search(self, 'module_name', self, 'modules_names', text=stage1_name, icon='MARKER')
+        if draw_method_name:
             row = box.row()
             row.prop_search(self, 'method_name', self, 'methods_names', text=stage2_name, icon='MARKER')
-            super(AnyAPINode, self).draw_dyn_props(self.dyn_props,layout)
+        super(AnyAPINode, self).draw_dyn_props(self.dyn_props,layout)
 
-            if self.is_callback():
-                row = box.row()
-                row.prop(self, "callback_name", text="Callback Name")
+        if self.is_callback():
+            row = box.row()
+            row.prop(self, "callback_name", text="Callback Name")
 
     def draw_label(self):
         if self.method_name:
@@ -802,8 +805,11 @@ node_categories = [
         ]),
     MyNodeCategory("Callbacks", "Callbacks", items=[
         # our basic node
-        NodeItem("CallbackInterfaceNode", label="Callback interface",),
+        NodeItem("CallbackInterfaceNode", label="Callback interface old",),
         NodeItem("FunctionNode", label="Function",),
+        NodeItem("AnyAPINode", label="Callback Interface",  settings={
+            "api_type": repr("OtherStuff"), "module_name": repr("callback"), "method_name": repr("callback_interface")
+            }),
         ]),
     MyNodeCategory("Algorithmic", "Algorithmic", items=[
         # our basic node
