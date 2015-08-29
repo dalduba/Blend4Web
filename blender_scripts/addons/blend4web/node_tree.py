@@ -12,6 +12,10 @@ OrderSocketColor = (0.9, 0.4, 0.216, 0.5)
 BoolSocketColor = (0.9, 0.4, 0.9, 0.5)
 DataSocketColor = (0.9, 0.99, 0.99, 0.5)
 
+class B4W_Name(bpy.types.PropertyGroup):
+    bl_idname = 'Blend4Web_String'
+    name = bpy.props.StringProperty(name="name")
+
 # Derived from the NodeTree base type, similar to Menu, Operator, Panel, etc.
 class B4WLogicNodeTree(NodeTree):
     # Description string
@@ -22,6 +26,10 @@ class B4WLogicNodeTree(NodeTree):
     bl_label = 'Blend4Web Logic Node Tree'
     # Icon identifier
     bl_icon = 'NODETREE'
+    functions_names = bpy.props.CollectionProperty(
+        name="B4W: functions names",
+        type=B4W_Name,
+        description="Functions names")
 
 # Mix-in class for all custom nodes in this tree type.
 # Defines a poll function to enable instantiation.
@@ -231,10 +239,6 @@ class AddOutSockets(bpy.types.Operator):
 
         return {'FINISHED'}
 
-class B4W_Name(bpy.types.PropertyGroup):
-    bl_idname = 'Blend4Web_String'
-    name = bpy.props.StringProperty(name="name")
-
 #  ----------read B4W API--
 import json
 import os
@@ -304,6 +308,29 @@ class AnyAPINode(B4WLogicNode):
     def true_init(self, context):
         self.update_node(context)
 
+    def var_update(self, context):
+        tree = self.id_data
+        tree.functions_names.clear()
+        for n in tree.nodes:
+            if n.bl_idname == "AnyAPINode":
+                if n.api_type == "FuncDecl":
+                    if not n.var_name == "":
+                        tree.functions_names.add()
+                        tree.functions_names[-1].name = n.var_name
+                if n.api_type == "FuncCall":
+                    for nn in tree.nodes:
+                        if nn.bl_idname == "AnyAPINode":
+                            if nn.api_type == "FuncDecl":
+                                if nn.var_name == n.var_name:
+                                    n.dyn_props.clear()
+                                    n.modules_names.clear()
+                                    n.methods_names.clear()
+                                    n.inputs.clear()
+                                    n.outputs.clear()
+                                    for prop in nn.dyn_props:
+                                        add_method_sockets(n.inputs,
+                                            [{"name":prop.s, "type": "_Data", "connectible": 1}], True)
+
     api_type =  bpy.props.StringProperty(
         name = "API type",
         description = "API type",
@@ -329,6 +356,12 @@ class AnyAPINode(B4WLogicNode):
         name="B4W: Dynamic props",
         type=B4W_dyn_param_union,
         description="B4W: Dynamic props")
+
+    var_name =  bpy.props.StringProperty(
+        name = "Variable or function name",
+        description = "Variable or function name",
+        update=var_update
+    )
 
     def update(self):
         pass
@@ -391,7 +424,9 @@ class AnyAPINode(B4WLogicNode):
 
         if self.api_type == "FuncDecl":
             add_method_sockets(self.outputs, [{"name":"Declaration>", "type": "Order", "connectible": 1}], True)
-            extend_not_connectible_arr(self.dyn_props, [{"name":"func_name", "type": "String", "connectible": 0}])
+            return
+
+        if self.api_type == "FuncCall":
             return
 
         if api_name == None:
@@ -463,9 +498,15 @@ class AnyAPINode(B4WLogicNode):
 
         if self.api_type == "FuncDecl":
             row = layout.row()
+            row.prop(self, "var_name", "func_name")
+            row = layout.row()
             opera = row.operator('node.b4w_js_add_out_sockets', text="Add input")
             opera.node_name = self.name
             opera.tree_name = self.id_data.name
+
+        if self.api_type == "FuncCall":
+            row = layout.row()
+            row.prop_search(self, 'var_name', self.id_data, 'functions_names', text="function", icon='MARKER')
 
     def draw_label(self):
         if self.api_type == "OtherStuff":
@@ -579,6 +620,9 @@ node_categories = [
         NodeItem("AnyAPINode", label="Declaration",  settings={
             "api_type": repr("FuncDecl"),
             }),
+        NodeItem("AnyAPINode", label="Call",  settings={
+            "api_type": repr("FuncCall"),
+            }),
         ]),
     MyNodeCategory("Operators", "Operators", items=[
         NodeItem("AnyAPINode", label="Bynary",  settings={
@@ -602,11 +646,11 @@ node_categories = [
     ]
 
 def register():
+    bpy.utils.register_class(B4W_Name)
     nodeitems_utils.register_node_categories("CUSTOM_NODES1", node_categories)
-
     # tree
     bpy.utils.register_class(B4WLogicNodeTree)
-    bpy.utils.register_class(B4W_Name)
+
     bpy.utils.register_class(B4W_dyn_param_union)
     # sockets
     bpy.utils.register_class(TargetSocket)
