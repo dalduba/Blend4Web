@@ -200,10 +200,22 @@ other_stuff = [
                Data_sock_desc("collection"),
      ],
      "outputs":[
-                Order_sock_desc("Order>"),
                 Order_sock_desc("Cycle{}"),
                 Data_sock_desc("element")
                 ],
+    },
+    {"name": "break",
+     "inputs":[Order_sock_desc(">Order"),],
+     "outputs":[],
+    },
+    {"name": "continue",
+     "inputs":[Order_sock_desc(">Order"),],
+     "outputs":[],
+    },
+    {"name": "return",
+     "inputs":[Order_sock_desc(">Order"),
+               Data_sock_desc("value")],
+     "outputs":[],
     },
     ]
 }

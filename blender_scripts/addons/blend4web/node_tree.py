@@ -686,9 +686,15 @@ node_categories = [
         NodeItem("AnyAPINode", label="For in",  settings={
             "api_type": repr("OtherStuff"), "module_name": repr("algorythmic"), "method_name": repr("forin")
             }),
-       # NodeItem("IfelseNode", label="If Else",),
-        #NodeItem("ForNode", label="For",),
-        #NodeItem("ForInNode", label="For In",),
+        NodeItem("AnyAPINode", label="Break",  settings={
+            "api_type": repr("OtherStuff"), "module_name": repr("algorythmic"), "method_name": repr("break")
+            }),
+        NodeItem("AnyAPINode", label="Continue",  settings={
+            "api_type": repr("OtherStuff"), "module_name": repr("algorythmic"), "method_name": repr("continue")
+            }),
+        NodeItem("AnyAPINode", label="Return",  settings={
+            "api_type": repr("OtherStuff"), "module_name": repr("algorythmic"), "method_name": repr("return")
+            }),
         ]),
     MyNodeCategory("Declarations", "Declarations", items=[
         NodeItem("FunctionDeclarationNode", label="Function",),
