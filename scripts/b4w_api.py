@@ -230,7 +230,7 @@ operators = [
 sensors = [
 {"name":"controls", "methods":[
     {"name": "keyboard",
-     "inputs":[{"socket_name":"key", "socket_type": "Key", "connectible": 0},],
+     "inputs":[{"name":"key", "socket_type": "Key", "connectible": 0},],
      "outputs":[]},
 
     {"name": "mouse_click",
