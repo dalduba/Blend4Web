@@ -583,7 +583,7 @@ node_categories = [
         NodeItem("AnyAPINode", label="Set Attribute",  settings={
             "api_type": repr("OtherStuff"), "module_name": repr("data_get_set"), "method_name": repr("set_attr")
             }),
-        NodeItem("AnyAPINode", label="Get Attribute",  settings={
+        NodeItem("AnyAPINode", label="Set Value By Key",  settings={
             "api_type": repr("OtherStuff"), "module_name": repr("data_get_set"), "method_name": repr("set_value_by_key")
             }),
         ]),
