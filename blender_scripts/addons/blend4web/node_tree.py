@@ -227,68 +227,6 @@ class DataSocket(NodeSocket):
     def draw_color(self, context, node):
         return DataSocketColor
 
-class VariableNode(B4WLogicNode):
-    bl_idname = 'VariableNode'
-    bl_label = 'Variable'
-
-    action_enum = [
-    ("SET", "SET", "---"),
-    ("GET", "GET", "---"),
-    ]
-
-    action = bpy.props.EnumProperty(name="OperatorType", items=action_enum)
-    def updateNode(self, context):
-        pass
-
-    variable_name = bpy.props.StringProperty(
-        default='',
-        description='name of the variable',
-        update=updateNode)
-
-    def draw_buttons(self, context, layout):
-        if self.action == "SET" and len(self.inputs) != 2:
-            self.inputs.clear()
-            self.outputs.clear()
-            self.inputs.new('OrderSocketType', ">Order")
-            self.inputs.new('DataSocketType', "Set")
-            self.outputs.new('OrderSocketType', "Order>")
-            print("set")
-        elif self.action == "GET" and len(self.inputs) == 2:
-            self.inputs.clear()
-            self.outputs.clear()
-            self.outputs.new('DataSocketType', "Get")
-            print("get")
-
-        layout.label("Name")
-        col = layout.column()
-        row = col.row()
-        row.prop(self, "action", text='')
-        row = col.row()
-        row.prop_search(self, 'variable_name', bpy.data, 'objects', text='')
-
-    def init(self, context):
-        self.inputs.new('OrderSocketType', ">Order")
-        self.inputs.new('DataSocketType', "Set")
-
-        self.outputs.new('OrderSocketType', "Order>")
-
-class GlobalVariableDeclarationNode(B4WLogicNode):
-    bl_idname = 'GlobalVariableDeclarationNode'
-    bl_label = 'Global variable declaration'
-
-    def updateNode(self, context):
-        pass
-
-    variable_name = bpy.props.StringProperty(
-        default='',
-        description='name of the variable',
-        update=updateNode)
-
-    def draw_buttons(self, context, layout):
-        layout.label("Name")
-        col = layout.column()
-        col.prop_search(self, 'variable_name', bpy.data, 'objects', text='')
-
 class JSScriptNode(B4WLogicNode):
     bl_idname = 'JSScriptNode'
     bl_label = 'JS Script'
@@ -699,6 +637,20 @@ node_categories = [
             "api_type": repr("Operators"), "module_name": repr("sensor")
             }),
         ]),
+    MyNodeCategory("Variable", "Variable", items=[
+        NodeItem("AnyAPINode", label="Define Global",  settings={
+            "api_type": repr("OtherStuff"), "module_name": repr("variable"), "method_name": repr("define_global")
+            }),
+        NodeItem("AnyAPINode", label="Define Local",  settings={
+            "api_type": repr("OtherStuff"), "module_name": repr("variable"), "method_name": repr("define_local")
+            }),
+        NodeItem("AnyAPINode", label="Get Variable",  settings={
+            "api_type": repr("OtherStuff"), "module_name": repr("variable"), "method_name": repr("get_var")
+            }),
+        NodeItem("AnyAPINode", label="Set Variable",  settings={
+            "api_type": repr("OtherStuff"), "module_name": repr("variable"), "method_name": repr("set_var")
+            }),
+        ]),
     MyNodeCategory("Data", "Data", items=[
         NodeItem("AnyAPINode", label="Get Attribute",  settings={
             "api_type": repr("OtherStuff"), "module_name": repr("data_get_set"), "method_name": repr("get_attr")
@@ -715,7 +667,6 @@ node_categories = [
         ]),
     MyNodeCategory("Objects", "Objects", items=[
         NodeItem("TargetNode", label="Target",),
-        NodeItem("VariableNode", label="Variable",),
         NodeItem("JSScriptNode", label="JS script",),
         ]),
     MyNodeCategory("Callbacks", "Callbacks", items=[
@@ -741,7 +692,6 @@ node_categories = [
         ]),
     MyNodeCategory("Declarations", "Declarations", items=[
         NodeItem("FunctionDeclarationNode", label="Function",),
-        NodeItem("GlobalVariableDeclarationNode", label="Global VariabAle",),
         ]),
     MyNodeCategory("Operators", "Operators", items=[
         NodeItem("AnyAPINode", label="Bynary",  settings={
@@ -791,10 +741,8 @@ def register():
     bpy.utils.register_class(B4WLogicNode)
     bpy.utils.register_class(AnyAPINode)
     bpy.utils.register_class(TargetNode)
-    bpy.utils.register_class(VariableNode)
     bpy.utils.register_class(JSScriptNode)
     bpy.utils.register_class(FunctionDeclarationNode)
-    bpy.utils.register_class(GlobalVariableDeclarationNode)
     bpy.utils.register_class(B4WLogicSocket)
 
 def unregister():
@@ -821,10 +769,8 @@ def unregister():
     # nodes
     bpy.utils.unregister_class(AnyAPINode)
     bpy.utils.unregister_class(TargetNode)
-    bpy.utils.unregister_class(VariableNode)
     bpy.utils.unregister_class(JSScriptNode)
     bpy.utils.unregister_class(FunctionDeclarationNode)
-    bpy.utils.unregister_class(GlobalVariableDeclarationNode)
     bpy.utils.unregister_class(B4W_Name)
     bpy.utils.unregister_class(B4W_dyn_param_union)
     bpy.utils.unregister_class(B4WLogicNode)

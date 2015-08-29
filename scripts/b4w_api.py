@@ -80,6 +80,38 @@ def Sensor_standard_output_desc(payload = True):
     return r
 
 other_stuff = [
+{"name":"variable", "methods":[
+    {"name": "define_local",
+     "inputs":[Order_sock_desc(">Order"),
+               String_sock_desc("name")],
+     "outputs":[Order_sock_desc("Order>"),],
+    },
+    {"name": "define_global",
+     "inputs":[String_sock_desc("name")],
+     "outputs":[],
+    },
+    {"name": "get_var",
+     "inputs":[
+         Order_sock_desc(">Order"),
+         String_sock_desc("name", 0),
+     ],
+     "outputs":[
+         Order_sock_desc("Order>"),
+         Data_sock_desc("variable"),
+          ]
+    },
+    {"name": "set_var",
+     "inputs":[
+         Order_sock_desc(">Order"),
+         String_sock_desc("name", 0),
+         Data_sock_desc("value"),
+     ],
+     "outputs":[
+         Order_sock_desc("Order>"),
+          ]
+    },
+    ]
+},
 {"name":"callback", "methods":[
     {"name": "callback_interface",
      "inputs":[Sensor_sock_desc("sensor"),
