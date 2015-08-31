@@ -52,6 +52,7 @@ b4w_modules = [
     "custom_nodeitems_builtins",
     "logic_node_tree",
     "server",
+    "node_script"
 ]
 
 for m in b4w_modules:
@@ -229,6 +230,7 @@ def register():
     bpy.app.handlers.load_post.append(old_edited_normals_convert)
     bpy.app.handlers.load_post.append(nla_slots_to_nodetree_convert)
 
+    node_script.register()
     bpy.app.handlers.load_post.append(mass_reexport.load_reexport_paths)
 
     do_not_register = False
@@ -271,7 +273,7 @@ def unregister():
     boundings_draw.unregister()
     server.B4WLocalServer.shutdown()
     server.unregister()
-
+    node_script.unregister()
     update_checker.unregister()
     addon_prefs.unregister()
 
