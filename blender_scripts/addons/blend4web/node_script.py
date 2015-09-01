@@ -30,6 +30,14 @@ class B4WLogicNodeTree(NodeTree):
         name="B4W: functions names",
         type=B4W_Name,
         description="Functions names")
+    variables_names = bpy.props.CollectionProperty(
+        name="B4W: variables names",
+        type=B4W_Name,
+        description="variables names")
+    types_names = bpy.props.CollectionProperty(
+        name="B4W: types names",
+        type=B4W_Name,
+        description="types names")
 
 # Mix-in class for all custom nodes in this tree type.
 # Defines a poll function to enable instantiation.
@@ -246,6 +254,10 @@ curdir = os.path.dirname(os.path.abspath(__file__))
 b4w_api_json_path = os.path.join(curdir,"b4w_api.json")
 with open(b4w_api_json_path) as data_file:
     b4w_data = json.load(data_file)
+
+global data_reloaded_at_startup
+data_reloaded_at_startup = False
+
 #--------------------------
 def get_module(data, name):
     for m in b4w_data["modules"]:
@@ -296,6 +308,16 @@ def extend_not_connectible_arr(dst, search_src):
             s.name = sd["name"]
             s['is_input'] = True
 
+def update_types(tree):
+    global data_reloaded_at_startup
+    if not data_reloaded_at_startup:
+        tree.types_names.clear()
+        print("reload")
+        for t in b4w_data["types"]:
+            tree.types_names.add()
+            tree.types_names[-1].name = t
+        data_reloaded_at_startup = True
+
 class AnyAPINode(B4WLogicNode):
     bl_idname = 'AnyAPINode'
     bl_label = 'AnyAPINode'
@@ -304,7 +326,12 @@ class AnyAPINode(B4WLogicNode):
 
     def var_update(self, context):
         tree = self.id_data
-        tree.functions_names.clear()
+        update_types(tree)
+        if self.bl_idname == "AnyAPINode":
+            if self.api_type == "Function":
+                tree.functions_names.clear()
+            if self.api_type == "Variable":
+                tree.variables_names.clear()
         for n in tree.nodes:
             if n.bl_idname == "AnyAPINode":
                 if n.api_type == "Function":
@@ -329,7 +356,24 @@ class AnyAPINode(B4WLogicNode):
                                             add_method_sockets(n.inputs, [{"name":">Order", "type": "Order", "connectible": 1}], True)
                                             add_method_sockets(n.outputs, [{"name":"Order>", "type": "Order", "connectible": 1}], True)
                                             add_method_sockets(n.outputs, [{"name":"return", "type": "_Data", "connectible": 1}], True)
+                if n.api_type == "Variable":
+                    if n.method_name == "define_global":
+                        if not n.var_name == "":
+                            tree.variables_names.add()
+                            tree.variables_names[-1].name = n.var_name
+                    if n.method_name == "get_var":
+                        for nn in tree.nodes:
+                            if nn.bl_idname == "AnyAPINode":
+                                if nn.api_type == "Variable":
+                                    if nn.method_name == "define_global":
+                                        if nn.var_name == n.var_name:
+                                            n.dyn_props.clear()
+                                            n.modules_names.clear()
+                                            n.methods_names.clear()
+                                            n.inputs.clear()
+                                            n.outputs.clear()
 
+                                            add_method_sockets(n.outputs,[{"name":"var", "type": nn.var_type, "connectible": 1}], True)
     api_type =  bpy.props.StringProperty(
         name = "API type",
         description = "API type",
@@ -361,6 +405,10 @@ class AnyAPINode(B4WLogicNode):
         description = "Variable or function name",
         update=var_update
     )
+    var_type =  bpy.props.StringProperty(
+        name = "Variable type",
+        description = "Variable type",
+    )
 
     def update(self):
         pass
@@ -385,6 +433,8 @@ class AnyAPINode(B4WLogicNode):
             return True
         return False
     def update_node(self, context):
+        tree = self.id_data
+        update_types(tree)
         self.dyn_props.clear()
         self.modules_names.clear()
         self.methods_names.clear()
@@ -424,11 +474,12 @@ class AnyAPINode(B4WLogicNode):
         if self.api_type == "Function":
             if self.method_name == "func_decl":
                 add_method_sockets(self.outputs, [{"name":"Declaration>", "type": "Order", "connectible": 1}], True)
-                return
+            return
 
-        if self.api_type == "Function":
-            if self.method_name == "func_call":
-                return
+        if self.api_type == "Variable":
+            if self.method_name == "define_global":
+                pass
+            return
 
         if api_name == None:
             return
@@ -505,11 +556,18 @@ class AnyAPINode(B4WLogicNode):
                 opera = row.operator('node.b4w_js_add_out_sockets', text="Add input")
                 opera.node_name = self.name
                 opera.tree_name = self.id_data.name
-
-        if self.api_type == "Function":
             if self.method_name == "func_call":
                 row = layout.row()
                 row.prop_search(self, 'var_name', self.id_data, 'functions_names', text="function", icon='MARKER')
+        if self.api_type == "Variable":
+            if self.method_name == "define_global":
+                row = layout.row()
+                row.prop_search(self, 'var_type', self.id_data, 'types_names', text="type", icon='MARKER')
+                row = layout.row()
+                row.prop(self, "var_name", "var_name")
+            if self.method_name == "get_var":
+                row = layout.row()
+                row.prop_search(self, 'var_name', self.id_data, 'variables_names', text="var", icon='MARKER')
 
     def draw_label(self):
         if self.api_type == "OtherStuff":
@@ -562,16 +620,16 @@ node_categories = [
         ]),
     MyNodeCategory("Variable", "Variable", items=[
         NodeItem("AnyAPINode", label="Define Global",  settings={
-            "api_type": repr("OtherStuff"), "module_name": repr("variable"), "method_name": repr("define_global")
+            "api_type": repr("Variable"), "method_name": repr("define_global")
             }),
         NodeItem("AnyAPINode", label="Define Local",  settings={
-            "api_type": repr("OtherStuff"), "module_name": repr("variable"), "method_name": repr("define_local")
+            "api_type": repr("Variable"), "method_name": repr("define_local")
             }),
         NodeItem("AnyAPINode", label="Get Variable",  settings={
-            "api_type": repr("OtherStuff"), "module_name": repr("variable"), "method_name": repr("get_var")
+            "api_type": repr("Variable"), "method_name": repr("get_var")
             }),
         NodeItem("AnyAPINode", label="Set Variable",  settings={
-            "api_type": repr("OtherStuff"), "module_name": repr("variable"), "method_name": repr("set_var")
+            "api_type": repr("Variable"), "method_name": repr("set_var")
             }),
         ]),
     MyNodeCategory("Function", "Function", items=[
