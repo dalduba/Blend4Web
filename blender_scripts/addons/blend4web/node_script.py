@@ -307,26 +307,28 @@ class AnyAPINode(B4WLogicNode):
         tree.functions_names.clear()
         for n in tree.nodes:
             if n.bl_idname == "AnyAPINode":
-                if n.api_type == "FuncDecl":
-                    if not n.var_name == "":
-                        tree.functions_names.add()
-                        tree.functions_names[-1].name = n.var_name
-                if n.api_type == "FuncCall":
-                    for nn in tree.nodes:
-                        if nn.bl_idname == "AnyAPINode":
-                            if nn.api_type == "FuncDecl":
-                                if nn.var_name == n.var_name:
-                                    n.dyn_props.clear()
-                                    n.modules_names.clear()
-                                    n.methods_names.clear()
-                                    n.inputs.clear()
-                                    n.outputs.clear()
-                                    for prop in nn.dyn_props:
-                                        add_method_sockets(n.inputs,
-                                            [{"name":prop.s, "type": "_Data", "connectible": 1}], True)
-                                        add_method_sockets(n.inputs, [{"name":">Order", "type": "Order", "connectible": 1}], True)
-                                        add_method_sockets(n.outputs, [{"name":"Order>", "type": "Order", "connectible": 1}], True)
-                                        add_method_sockets(n.outputs, [{"name":"return", "type": "_Data", "connectible": 1}], True)
+                if n.api_type == "Function":
+                    if n.method_name == "func_decl":
+                        if not n.var_name == "":
+                            tree.functions_names.add()
+                            tree.functions_names[-1].name = n.var_name
+                    if n.method_name == "func_call":
+                        for nn in tree.nodes:
+                            if nn.bl_idname == "AnyAPINode":
+                                if nn.api_type == "Function":
+                                    if nn.method_name == "func_decl":
+                                        if nn.var_name == n.var_name:
+                                            n.dyn_props.clear()
+                                            n.modules_names.clear()
+                                            n.methods_names.clear()
+                                            n.inputs.clear()
+                                            n.outputs.clear()
+                                            for prop in nn.dyn_props:
+                                                add_method_sockets(n.inputs,
+                                                    [{"name":prop.s, "type": "_Data", "connectible": 1}], True)
+                                            add_method_sockets(n.inputs, [{"name":">Order", "type": "Order", "connectible": 1}], True)
+                                            add_method_sockets(n.outputs, [{"name":"Order>", "type": "Order", "connectible": 1}], True)
+                                            add_method_sockets(n.outputs, [{"name":"return", "type": "_Data", "connectible": 1}], True)
 
     api_type =  bpy.props.StringProperty(
         name = "API type",
@@ -419,12 +421,14 @@ class AnyAPINode(B4WLogicNode):
         if self.api_type == "OtherStuff":
             api_name = "other_stuff"
 
-        if self.api_type == "FuncDecl":
-            add_method_sockets(self.outputs, [{"name":"Declaration>", "type": "Order", "connectible": 1}], True)
-            return
+        if self.api_type == "Function":
+            if self.method_name == "func_decl":
+                add_method_sockets(self.outputs, [{"name":"Declaration>", "type": "Order", "connectible": 1}], True)
+                return
 
-        if self.api_type == "FuncCall":
-            return
+        if self.api_type == "Function":
+            if self.method_name == "func_call":
+                return
 
         if api_name == None:
             return
@@ -493,17 +497,19 @@ class AnyAPINode(B4WLogicNode):
             row = layout.row()
             row.prop(self, "callback_name", text="Callback Name")
 
-        if self.api_type == "FuncDecl":
-            row = layout.row()
-            row.prop(self, "var_name", "func_name")
-            row = layout.row()
-            opera = row.operator('node.b4w_js_add_out_sockets', text="Add input")
-            opera.node_name = self.name
-            opera.tree_name = self.id_data.name
+        if self.api_type == "Function":
+            if self.method_name == "func_decl":
+                row = layout.row()
+                row.prop(self, "var_name", "func_name")
+                row = layout.row()
+                opera = row.operator('node.b4w_js_add_out_sockets', text="Add input")
+                opera.node_name = self.name
+                opera.tree_name = self.id_data.name
 
-        if self.api_type == "FuncCall":
-            row = layout.row()
-            row.prop_search(self, 'var_name', self.id_data, 'functions_names', text="function", icon='MARKER')
+        if self.api_type == "Function":
+            if self.method_name == "func_call":
+                row = layout.row()
+                row.prop_search(self, 'var_name', self.id_data, 'functions_names', text="function", icon='MARKER')
 
     def draw_label(self):
         if self.api_type == "OtherStuff":
@@ -570,10 +576,10 @@ node_categories = [
         ]),
     MyNodeCategory("Function", "Function", items=[
         NodeItem("AnyAPINode", label="Declaration",  settings={
-            "api_type": repr("FuncDecl"),
+            "api_type": repr("Function"), "method_name": repr("func_decl")
             }),
         NodeItem("AnyAPINode", label="Call",  settings={
-            "api_type": repr("FuncCall"),
+            "api_type": repr("Function"),"method_name": repr("func_call")
             }),
         ]),
     MyNodeCategory("Data", "Data", items=[
