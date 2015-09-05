@@ -357,7 +357,7 @@ class AnyAPINode(B4WLogicNode):
                                             add_method_sockets(n.outputs, [{"name":"Order>", "type": "Order", "connectible": 1}], True)
                                             add_method_sockets(n.outputs, [{"name":"return", "type": "_Data", "connectible": 1}], True)
                 if n.api_type == "Variable":
-                    if n.method_name == "define_global":
+                    if n.method_name in ["define_global", "define_local"]:
                         if not n.var_name == "":
                             tree.variables_names.add()
                             tree.variables_names[-1].name = n.var_name
@@ -365,7 +365,7 @@ class AnyAPINode(B4WLogicNode):
                         for nn in tree.nodes:
                             if nn.bl_idname == "AnyAPINode":
                                 if nn.api_type == "Variable":
-                                    if nn.method_name == "define_global":
+                                    if nn.method_name in ["define_global", "define_local"]:
                                         if nn.var_name == n.var_name:
                                             n.dyn_props.clear()
                                             n.modules_names.clear()
@@ -484,6 +484,9 @@ class AnyAPINode(B4WLogicNode):
         if self.api_type == "Variable":
             if self.method_name == "define_global":
                 pass
+            if self.method_name == "define_local":
+                add_method_sockets(self.inputs, [{"name":">Order", "type": "Order", "connectible": 1}], True)
+                add_method_sockets(self.outputs, [{"name":"Order>", "type": "Order", "connectible": 1}], True)
             return
 
         if api_name == None:
@@ -565,7 +568,7 @@ class AnyAPINode(B4WLogicNode):
                 row = layout.row()
                 row.prop_search(self, 'var_name', self.id_data, 'functions_names', text="function", icon='MARKER')
         if self.api_type == "Variable":
-            if self.method_name == "define_global":
+            if self.method_name in ["define_global", "define_local"]:
                 row = layout.row()
                 row.prop_search(self, 'var_type', self.id_data, 'types_names', text="type", icon='MARKER')
                 row = layout.row()
