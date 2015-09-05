@@ -361,7 +361,7 @@ class AnyAPINode(B4WLogicNode):
                         if not n.var_name == "":
                             tree.variables_names.add()
                             tree.variables_names[-1].name = n.var_name
-                    if n.method_name == "get_var":
+                    if n.method_name in ["get_var", "set_var"]:
                         for nn in tree.nodes:
                             if nn.bl_idname == "AnyAPINode":
                                 if nn.api_type == "Variable":
@@ -372,8 +372,13 @@ class AnyAPINode(B4WLogicNode):
                                             n.methods_names.clear()
                                             n.inputs.clear()
                                             n.outputs.clear()
-
-                                            add_method_sockets(n.outputs,[{"name":"var", "type": nn.var_type, "connectible": 1}], True)
+                                            if n.method_name == "get_var":
+                                                add_method_sockets(n.outputs,[{"name":"var", "type": nn.var_type, "connectible": 1}], True)
+                                            if n.method_name == "set_var":
+                                                add_method_sockets(n.inputs,[{"name":">Order", "type": "Order", "connectible": 1}], True)
+                                                add_method_sockets(n.outputs,[{"name":"Order>", "type": "Order", "connectible": 1}], True)
+                                                add_method_sockets(n.inputs,[{"name":"var", "type": nn.var_type, "connectible": 1}], True)
+ 
     api_type =  bpy.props.StringProperty(
         name = "API type",
         description = "API type",
@@ -565,7 +570,7 @@ class AnyAPINode(B4WLogicNode):
                 row.prop_search(self, 'var_type', self.id_data, 'types_names', text="type", icon='MARKER')
                 row = layout.row()
                 row.prop(self, "var_name", "var_name")
-            if self.method_name == "get_var":
+            if self.method_name in ["get_var", "set_var"]:
                 row = layout.row()
                 row.prop_search(self, 'var_name', self.id_data, 'variables_names', text="var", icon='MARKER')
 
