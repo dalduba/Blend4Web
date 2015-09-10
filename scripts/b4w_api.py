@@ -5,20 +5,21 @@ import json
 B4W_PATH = ".."
 
 # api_lib = {
-#     "callbacks": {
-#         "callback_name": {
-#             "callback_params": [{
-#                 "param_name": "name",
-#                 "param_type": "type",
-#                 "param_desc": "description"
-#             }, ...
-#             ]
-#         }
-#     },
+#     "callbacks": [{
+#         "name": "callback_name",
+#         "desc": "description"
+#         "outputs": [{
+#             "name": "name",
+#             "type": "type",
+#             "desc": "description"
+#         }, ...
+#         ]
+#     }],
 #     "typedefs": {"new_name": "old_name"},
 #     "types": ["type_name", ...],
 #     "b4w_api": [{
 #         "name": "name",
+#         "desc": "description"
 #         "methods": [{
 #             "name": "name",
 #             "inputs": [{
@@ -1140,124 +1141,172 @@ def add_all_module(api_lib, api_name):
         if "methods" in module:
             for meth in module["methods"]:
                 copy_meth = copy.deepcopy(meth)
-                copy_meth["name"] = module['name']+"."+copy_meth["name"]
+                copy_meth["name"] = module["name"]+"."+copy_meth["name"]
                 methods.append(copy_meth)
 
     modules.append({"name": "all", "methods": methods})
-def get_b4w_api():
 
+def parse_tag_tail(tag_head, tag_body):
+    if tag_head in ["param", "const", "returns"]:
+        param_all_parts = re.match("\{(.*)\}(.*)", tag_body)
+        data = {"type": param_all_parts.group(1).strip()}
+
+        if tag_head == "param":
+            param_tail_parts = re.match("(\[.*\]|[^\s]*)(.*)", param_all_parts.group(2).strip())
+            data["name"] = param_tail_parts.group(1).strip()
+            data["desc"] = param_tail_parts.group(2).strip()
+        elif tag_head == "const":
+            data["name"] = param_all_parts.group(2).strip()
+        elif tag_head == "returns":
+            data["desc"] = param_all_parts.group(2).strip()
+    elif tag_head in ["type"]:
+        data = tag_body[1:-1]
+    elif tag_head in ["deprecated", "method", "local", "module", "see", "typedef", "callback"]:
+        data = tag_body
+    else:
+        data = None
+    return data
+
+def extract_tag_pair(comment_part):
+    try:
+        tag_head, tag_body = re.split("\s+", comment_part, 1)
+        tag_body_data = parse_tag_tail(tag_head, tag_body)
+        return tag_head, tag_body_data
+    except:
+        return comment_part, ""
+
+def remove_comment_stars(comment_part):
+    return re.sub("\n\s*\*", "\n", comment_part).strip()
+
+def find_all_comments(js_text):
+    return [(match.group(1).strip(), match.group(2).strip() if match.group(2) else "")
+                    for match in re.finditer("/\*\*(.*?)\*/([\n\s]*[^/]*)?\n?", js_text, re.DOTALL)]
+
+def auto_detect_func_name(lines_after_comment):
+    for regexp in ["function (\w+)", "\s*(\w+)\s*=\s*function"]:
+        match = re.search(regexp, lines_after_comment)
+        if match:
+            return match.group(1)
+    return None
+
+def auto_detect_func_params(lines_after_comment):
+    match = re.search("\(([\w\s,]+)\)", lines_after_comment)
+    if match:
+        return [arg.strip() for arg in match.group(1).split(",")]
+    else:
+        return None
+
+def parse_comment(comment, lines_after_comment):
+    comment_parts = re.split("\n\s*@", comment)
+    tags = {
+        "description": comment_parts[0].strip(),
+        "detected_method_name": auto_detect_func_name(lines_after_comment),
+        "detected_method_params": auto_detect_func_params(lines_after_comment)
+    }
+    for part in comment_parts[1:]:
+        tag_head, tag_body = extract_tag_pair(part)
+        if tag_head in tags:
+            tag_value = tags[tag_head]
+            if not isinstance(tags[tag_head],list):
+                tags[tag_head] = [tag_value]
+            tags[tag_head].append(tag_body)
+        else:
+            tags[tag_head] = tag_body
+    return tags
+
+def parse_comments(js_text):
+    return [parse_comment(remove_comment_stars(comment[0]), comment[1]) for comment in find_all_comments(js_text)]
+
+def get_b4w_api():
     path_to_src = os.path.join(B4W_PATH, "src")
     path_to_ext = os.path.join(path_to_src, "ext")
     os.path.normpath(path_to_ext)
     if not os.path.exists(path_to_ext):
         return None
+    files = os.listdir(path_to_ext)
 
     api_lib = {}
     api_lib["b4w_api"] = []
-
-    expr_begin_comment = re.compile("\/\*\*")
-    expr_end_comment = re.compile("\*\/")
-    expr_typedef       = re.compile("@typedef (.*)")
-    expr_type          = re.compile("@type \{(.*)\}")
-    expr_callback      = re.compile("@callback (.*)")
-    expr_const         = re.compile("@const.*\{(.*)\}.*module:(.*)\.(.*)")
-    expr_method        = re.compile("@method.*module:(.*)\.(.*)")
-    expr_param         = re.compile("@param.* \{(.*)\} (.*?) (.*)")
-    expr_returns       = re.compile("@returns.* \{(.*)\} (.*)")
-    expr_deprecated    = re.compile("@deprecated *([^ ].*)")
-
-    files = os.listdir(path_to_ext)
 
     typedefs = {}
     types = set()
     callbacks = []
     callbacks_dict = {}
     for file in files:
-        module_name = file.split(".")[0]
 
-        api_lib["b4w_api"].append({"name": module_name})
+
         file_src = open(os.path.join(path_to_ext, file))
         methods = []
         const = []
-        in_comment = False
-        new_type_name = ""
         cur_callback = ""
-        for line in file_src.readlines():
-            begin_comment_data = re.search(expr_begin_comment, line)
-            if begin_comment_data:
-                in_comment = True
 
-            end_comment_data = re.search(expr_end_comment, line)
-            if end_comment_data:
-                in_comment = False
+        file_text = file_src.read()
+        comments_data = parse_comments(file_text)
 
-            if in_comment:
-                typedef_name_data = re.search(expr_typedef, line)
-                if typedef_name_data:
-                    new_type_name = typedef_name_data.group(1);
-
-                typedef_type_data = re.search(expr_type, line)
-                if typedef_type_data and new_type_name:
-                    typedefs[new_type_name] = typedef_type_data.group(1)
-
-                callback_name_data = re.search(expr_callback, line)
-                if callback_name_data:
-                    in_callback = True
-                    cur_callback = callback_name_data.group(1)
-                    callbacks.append({"name":cur_callback})
-
-                const_data = re.search(expr_const, line)
-                if const_data:
-                    const.append({"const_name":const_data.group(3),
-                                  "const_type":const_data.group(1)})
-
-                method_data = re.search(expr_method, line)
-                if method_data:
-                    in_method = True
-                    methods.append({"name":method_data.group(2)})
-
-                param_data = re.search(expr_param, line)
-                if param_data:
-                    param_type = check_aliases(param_data.group(1), typedefs)
-                    types.add(param_type)
-                    if in_method and len(methods):
-                        if "inputs" not in methods[-1]:
-                            methods[-1]["inputs"] = []
-                        methods[-1]["inputs"].append(
-                                {"type": param_type,
-                                 "name": param_data.group(2),
-                                 "desc": param_data.group(3)})
-                    elif in_callback and cur_callback not in callbacks_dict:
-                        if "outputs" not in callbacks[-1]:
-                            callbacks[-1]["outputs"] = []
-                        callbacks_dict[cur_callback] = callbacks[-1]
-                        callbacks[-1]["outputs"].append(
-                                {"type": param_type,
-                                 "name": param_data.group(2),
-                                 "desc": param_data.group(3)})
-
-                return_data = re.search(expr_returns, line)
-                if return_data:
-                    if len(methods):
-                        methods[-1]["outputs"] = [{"name": return_data.group(1),
-                                                      "type": return_data.group(1),
-                                                        "desc": return_data.group(2)}]
-
-                depricated_data = re.search(expr_deprecated, line)
-                if depricated_data:
-                    if len(methods):
-                        methods[-1]["depricated"] = {"is_depricated": True,
-                                                     "desc": depricated_data.group(1)}
+        module = {"name": "unnamed"}
+        def type_update(params):
+            if isinstance(params, list):
+                for param in params:
+                    param["type"] = check_aliases(param["type"], typedefs)
+                    types.add(param["type"])
             else:
-                in_callback = False
-                in_method = False
-                new_type_name = ""
+                params["type"] = check_aliases(params["type"], typedefs)
+                types.add(params["type"])
+                params = [params]
+            return params
 
+        for comment_data in comments_data:
+            if "module" in comment_data:
+                module["name"] = comment_data["module"]
+                if comment_data["description"]:
+                    module["desc"] = comment_data["description"]
+
+            if "typedef" in comment_data:
+                typedefs[comment_data["typedef"]] = comment_data["type"]
+
+            if "callback" in comment_data:
+                callback = {"name":comment_data["callback"]}
+
+                if "param" in comment_data:
+                    callback["outputs"] = type_update(comment_data["param"])
+
+                if "description" in comment_data:
+                    callback["desc"] = comment_data["description"]
+                callbacks.append(callback)
+
+            if "const" in comment_data:
+                const.append({"const_name":comment_data["const"]["name"].split(".")[-1],
+                              "const_type":comment_data["const"]["type"],
+                              "const_desc":comment_data["description"]})
+
+            if "method" in comment_data:
+                method = {"name":comment_data["method"].split(".")[-1],
+                          "desc":comment_data["description"]}
+
+                if "param" in comment_data:
+                    method["inputs"] = type_update(comment_data["param"])
+                else:
+                    method["inputs"] = []
+
+                if "returns" in comment_data:
+                    method["outputs"] = type_update(comment_data["returns"])
+                else:
+                    method["outputs"] = []
+
+                if "depricated" in comment_data:
+                    method["depricated"] = {
+                        "is_depricated":True,
+                        "desc": comment_data["depricated"]
+                    }
+
+                methods.append(method)
 
         if len(methods):
-            api_lib["b4w_api"][-1]["methods"] = methods
+            module["methods"] = methods
         if len(const):
-            api_lib["b4w_api"][-1]["module_const"] = const
+            module["module_const"] = const
+
+        api_lib["b4w_api"].append(module)
 
     api_lib["b4w_api"].append({"name":"callbacks", "methods":callbacks})
     api_lib["types"] = list(types)
@@ -1272,6 +1321,7 @@ def get_b4w_api():
     add_all_module(api_lib, "sensors")
     add_all_module(api_lib, "js_api")
     add_all_module(api_lib, "b4w_api")
+
     return api_lib
 
 def check_aliases(name, typedefs):
@@ -1291,8 +1341,6 @@ def dump(data):
 
     file.write(json.dumps(data))
 
-import pprint
 if __name__ == '__main__':
     data = get_b4w_api()
     dump(data)
-    pprint.pprint(data)

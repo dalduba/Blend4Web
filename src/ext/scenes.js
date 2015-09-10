@@ -23,7 +23,8 @@ var m_util     = require("__util");
 
 /**
  * Color correction params.
- * @typedef {Object} ColorCorrectionParams
+ * @typedef ColorCorrectionParams
+ * @type {Object}
  * @property {Number} brightness Brightness
  * @property {Number} contrast Constrast
  * @property {Number} exposure Exposure

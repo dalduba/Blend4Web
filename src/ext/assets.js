@@ -17,7 +17,8 @@ var m_assets = require("__assets");
  * Asset has the following structure: [uri, type, filepath, optional_param],
  * where uri - asset identifier, type - asset type, filepath - 
  * path to resource (URL), optional_param - any param passed to {@link module:assets~AssetCallback|AssetCallback}
- * @typedef {Array} Asset
+ * @typedef Asset
+ * @type {Array}
  * @alias module:assets.Asset
  */
 
