@@ -428,7 +428,7 @@ class AnyAPINode(B4WLogicNode):
 
         if api_name == None:
             return
-        
+
         for m in b4w_data[api_name]:
             self.modules_names.add()
             self.modules_names[-1].name = m['name']
@@ -512,6 +512,83 @@ class AnyAPINode(B4WLogicNode):
             return self.api_type+": "+self.module_name+'.'+self.method_name
         else:
             return self.api_type
+#-------------------------------
+def process_node_script(node_tree):
+    data = {}
+
+    # data["nodes"] = [{}, {},..., {}]
+    # data["links"] = [
+    #     {
+    #         "from_node": node name
+    #         "to_node": node name
+    #         "from_socket": socket identifier
+    #         "to_socket": socket identifier
+    #     }, ...
+    # ]
+
+    data["nodes"] = []
+    data["links"] = []
+    data["sensor_nodes"] = []
+    data["global_variable_decl_nodes"] = []
+    data["global_function_decl_nodes"] = []
+    data["usage_modules"] = set()
+    # may be another data
+
+    for node in node_tree.nodes:
+        node_data = {}
+
+        node_data["name"] = node.name
+        node_data["api_type"] = node.api_type
+
+        if node_data["api_type"] == "B4W":
+            if "module_name" in node and not node["module_name"] in usage_modules:
+                data["usage_modules"].add(node["module_name"])
+        elif node_data["api_type"] == "Sensor":
+            data["sensor_nodes"].append(node_data)
+        elif node_data["api_type"] == "FuncDecl":
+            data["global_function_decl_nodes"].append(node_data)
+
+        if "method_name" in node:
+            node_data["method_name"] = node["method_name"]
+            if node_data["method_name"] == "define_global":
+                # set variable_name = node["dyn_props"]["s"]
+                # data["global_variable_decl_nodes"].append(variable_name)
+
+        # fill another "data".
+
+        node_data["inputs"] = []
+        for sock in node.inputs:
+            socket_data = {}
+            socket_data["name"] = sock.name
+            socket_data["identifier"] = sock.identifier
+            node_data["inputs"].append(socket_data)
+
+        node_data["outputs"] = []
+        for sock in node.outputs:
+            socket_data = {}
+            socket_data["name"] = sock.name
+            socket_data["identifier"] = sock.identifier
+            node_data["outputs"].append(socket_data)
+
+        data["nodes"].append(node_data)
+
+    for link in node_tree.links:
+        link_data = {}
+
+        link_data["from_node"] = link.from_node.name
+        link_data["to_node"] = link.to_node.name
+        link_data["from_socket"] = link.from_socket.identifier
+        link_data["to_socket"] = link.to_socket.identifier
+        data["links"].append(link_data)
+
+class B4WNodeScriptToJSOperator(bpy.types.Operator):
+    bl_idname = "b4w.node_to_js"
+    bl_label = "B4W Export node script to JS"
+    bl_options = {"INTERNAL"}
+
+    def execute(self, context):
+        # process_node_script(node script group)
+        return {"FINISHED"}
 
 #-------------------------------
 
@@ -645,6 +722,9 @@ node_categories = [
 def register():
     bpy.utils.register_class(B4W_Name)
     nodeitems_utils.register_node_categories("B4W_NODE_SCRIPT_CUSTOM_NODES", node_categories)
+    # exporter
+    bpy.utils.register_class(B4WNodeScriptToJSOperator)
+
     # tree
     bpy.utils.register_class(B4WLogicNodeTree)
 
@@ -664,6 +744,8 @@ def register():
 
 def unregister():
     nodeitems_utils.unregister_node_categories("B4W_NODE_SCRIPT_CUSTOM_NODES")
+    # exporter
+    bpy.utils.register_class(B4WNodeScriptToJSOperator)
 
     # tree
     bpy.utils.unregister_class(B4WLogicNodeTree)

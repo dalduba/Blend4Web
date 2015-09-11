@@ -143,6 +143,8 @@ class B4W_WorldExportOptions(WorldButtonsPanel, Panel):
 
         row = layout.row()
         row.prop(world, "b4w_do_not_export", text="Do Not Export")
+        row = layout.row()
+        row.operator("b4w.node_to_js", text="Export node tree", icon="NODETREE")
 
 def register():
     bpy.utils.register_class(B4W_WORLD_PT_world)
