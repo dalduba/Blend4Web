@@ -2,6 +2,7 @@ __author__ = 'dal'
 import bpy
 from bpy.types import NodeTree, Node, NodeSocket
 from bpy.props import StringProperty
+from bpy.types import Panel
 import copy
 # Implementation of custom nodes from Python
 SensorSocketColor = (0.0, 1.0, 0.216, 0.5)
@@ -653,6 +654,19 @@ def process_node_script(node_tree):
         link_data["to_socket"] = link.to_socket.identifier
         data["links"].append(link_data)
 
+class NODE_ExportNodeScriptPanel(Panel):
+    bl_space_type = 'NODE_EDITOR'
+    bl_region_type = 'UI'
+    bl_label = 'Node Script to JS'
+    @classmethod
+    def poll(cls, context):
+        snode = context.space_data
+        return snode is not None and snode.node_tree is not None
+    def draw(self, context):
+        row = self.layout.row()
+        row.operator("b4w.node_to_js", text="Export node tree", icon="NODETREE")
+
+
 class B4WNodeScriptToJSOperator(bpy.types.Operator):
     bl_idname = "b4w.node_to_js"
     bl_label = "B4W Export node script to JS"
@@ -813,6 +827,7 @@ def register():
     bpy.utils.register_class(TargetNode)
     bpy.utils.register_class(JSScriptNode)
     bpy.utils.register_class(B4WLogicSocket)
+    bpy.utils.register_class(NODE_ExportNodeScriptPanel)
 
 def unregister():
     nodeitems_utils.unregister_node_categories("B4W_NODE_SCRIPT_CUSTOM_NODES")
@@ -836,6 +851,7 @@ def unregister():
     bpy.utils.unregister_class(B4W_dyn_param_union)
     bpy.utils.unregister_class(B4WLogicNode)
     bpy.utils.unregister_class(B4WLogicSocket)
+    bpy.utils.unregister_class(NODE_ExportNodeScriptPanel)
 
 if __name__ == "__main__":
     register()
