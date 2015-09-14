@@ -624,7 +624,7 @@ def process_node_script(node_tree):
             node_data["method_name"] = node["method_name"]
             if node_data["method_name"] == "define_global":
                 # set variable_name = node["dyn_props"]["s"]
-                # data["global_variable_decl_nodes"].append(variable_name)
+                data["global_variable_decl_nodes"].append(variable_name)
 
         # fill another "data".
 
