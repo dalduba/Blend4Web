@@ -587,6 +587,7 @@ class AnyAPINode(B4WLogicNode):
             return self.api_type
 #-------------------------------
 def process_node_script(node_tree):
+    print (node_tree)
     data = {}
 
     # data["nodes"] = [{}, {},..., {}]
@@ -614,7 +615,7 @@ def process_node_script(node_tree):
         node_data["api_type"] = node.api_type
 
         if node_data["api_type"] == "B4W":
-            if "module_name" in node and not node["module_name"] in usage_modules:
+            if "module_name" in node and not node["module_name"] in data["usage_modules"]:
                 data["usage_modules"].add(node["module_name"])
         elif node_data["api_type"] == "Sensor":
             data["sensor_nodes"].append(node_data)
@@ -624,8 +625,9 @@ def process_node_script(node_tree):
         if "method_name" in node:
             node_data["method_name"] = node["method_name"]
             if node_data["method_name"] == "define_global":
+                pass
                 # set variable_name = node["dyn_props"]["s"]
-                data["global_variable_decl_nodes"].append(variable_name)
+                # data["global_variable_decl_nodes"].append(variable_name)
 
         # fill another "data".
 
@@ -654,6 +656,9 @@ def process_node_script(node_tree):
         link_data["to_socket"] = link.to_socket.identifier
         data["links"].append(link_data)
 
+    import pprint
+    pprint.pprint(data)
+
 class NODE_ExportNodeScriptPanel(Panel):
     bl_space_type = 'NODE_EDITOR'
     bl_region_type = 'UI'
@@ -661,11 +666,10 @@ class NODE_ExportNodeScriptPanel(Panel):
     @classmethod
     def poll(cls, context):
         snode = context.space_data
-        return snode is not None and snode.node_tree is not None
+        return snode is not None and snode.node_tree is not None and snode.tree_type == "B4WNodeScriptTreeType"
     def draw(self, context):
         row = self.layout.row()
         row.operator("b4w.node_to_js", text="Export node tree", icon="NODETREE")
-
 
 class B4WNodeScriptToJSOperator(bpy.types.Operator):
     bl_idname = "b4w.node_to_js"
@@ -673,7 +677,7 @@ class B4WNodeScriptToJSOperator(bpy.types.Operator):
     bl_options = {"INTERNAL"}
 
     def execute(self, context):
-        # process_node_script(node script group)
+        process_node_script(context.space_data.node_tree)
         return {"FINISHED"}
 
 #-------------------------------
