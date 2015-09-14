@@ -73,6 +73,8 @@ def Sensor_sock_desc(name):
     return {"name":name, "type": "sensor", "connectible": 1}
 def Order_sock_desc(name):
     return {"name":name, "type": "Order", "connectible": 1}
+def Type_sock_desc(name):
+    return {"name":name, "type": "Type", "connectible": 0}
 
 def Sensor_standard_output_desc(payload = True):
     r = [{"name":"sensor", "type":"Sensor"}, {"name":"value"}]
@@ -81,36 +83,37 @@ def Sensor_standard_output_desc(payload = True):
     return r
 
 other_stuff = [
-{"name":"variable", "methods":[
-    {"name": "define_local",
-     "inputs":[Order_sock_desc(">Order"),
-               String_sock_desc("name")],
-     "outputs":[Order_sock_desc("Order>"),],
-    },
-    {"name": "define_global",
-     "inputs":[String_sock_desc("name")],
-     "outputs":[],
-    },
-    {"name": "get_var",
-     "inputs":[
-         String_sock_desc("name", 0),
-     ],
-     "outputs":[
-         Data_sock_desc("variable"),
-          ]
-    },
-    {"name": "set_var",
-     "inputs":[
-         Order_sock_desc(">Order"),
-         String_sock_desc("name", 0),
-         Data_sock_desc("value"),
-     ],
-     "outputs":[
-         Order_sock_desc("Order>"),
-          ]
-    },
-    ]
-},
+# {"name":"variable", "methods":[
+#     {"name": "define_local",
+#      "inputs":[Order_sock_desc(">Order"),
+#                String_sock_desc("name"),
+#                Type_sock_desc("Type")],
+#      "outputs":[Order_sock_desc("Order>"),],
+#     },
+#     {"name": "define_global",
+#      "inputs":[String_sock_desc("name")],
+#      "outputs":[],
+#     },
+#     {"name": "get_var",
+#      "inputs":[
+#          String_sock_desc("name", 0),
+#      ],
+#      "outputs":[
+#          Data_sock_desc("variable"),
+#           ]
+#     },
+#     {"name": "set_var",
+#      "inputs":[
+#          Order_sock_desc(">Order"),
+#          String_sock_desc("name", 0),
+#          Data_sock_desc("value"),
+#      ],
+#      "outputs":[
+#          Order_sock_desc("Order>"),
+#           ]
+#     },
+#     ]
+# },
 {"name":"callback", "methods":[
     {"name": "callback_interface",
      "inputs":[Sensor_sock_desc("sensor"),

@@ -771,7 +771,7 @@ node_categories = [
             }),
         ]),
     MyNodeCategory("Operators", "Operators", items=[
-        NodeItem("AnyAPINode", label="Bynary",  settings={
+        NodeItem("AnyAPINode", label="Binary",  settings={
             "api_type": repr("Operators"), "module_name": repr("binary")
             }),
         NodeItem("AnyAPINode", label="Unary",  settings={
