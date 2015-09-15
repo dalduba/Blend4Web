@@ -609,43 +609,57 @@ def process_node_script(node_tree):
     # may be another data
 
     for node in node_tree.nodes:
-        node_data = {}
+        if node.bl_idname in ["AnyAPINode"]:
 
-        node_data["name"] = node.name
-        node_data["api_type"] = node.api_type
+            node_data = {}
 
-        if node_data["api_type"] == "B4W":
-            if "module_name" in node and not node["module_name"] in data["usage_modules"]:
-                data["usage_modules"].add(node["module_name"])
-        elif node_data["api_type"] == "Sensor":
-            data["sensor_nodes"].append(node_data)
-        elif node_data["api_type"] == "FuncDecl":
-            data["global_function_decl_nodes"].append(node_data)
+            node_data["name"] = node.name
+            node_data["api_type"] = node.api_type
 
-        if "method_name" in node:
-            node_data["method_name"] = node["method_name"]
-            if node_data["method_name"] == "define_global":
-                pass
-                # set variable_name = node["dyn_props"]["s"]
-                # data["global_variable_decl_nodes"].append(variable_name)
+            if node_data["api_type"] == "B4W":
+                if "module_name" in node and not node["module_name"] in data["usage_modules"]:
+                    data["usage_modules"].add(node["module_name"])
+            elif node_data["api_type"] == "Sensor":
+                data["sensor_nodes"].append(node_data)
+            elif node_data["api_type"] == "FuncDecl":
+                data["global_function_decl_nodes"].append(node_data)
 
-        # fill another "data".
+            props = {}
+            for p in node.dyn_props:
+                props[p.name] = {"type": p.type, "value":getattr(p, get_prop_name_by_type(p.type))}
 
-        node_data["inputs"] = []
-        for sock in node.inputs:
-            socket_data = {}
-            socket_data["name"] = sock.name
-            socket_data["identifier"] = sock.identifier
-            node_data["inputs"].append(socket_data)
+            if "method_name" in node:
+                node_data["method_name"] = node["method_name"]
+                if node_data["method_name"] in ["define_global", "define_local"]:
+                    props["var_name"] = {"type": "String", "value": node.var_name}
+                    props["var_type"] = {"type": "String", "value": node.var_type}
+                if node_data["method_name"] == "get_var":
+                    props["var_name"] = {"type": "String", "value": node.var_name}
 
-        node_data["outputs"] = []
-        for sock in node.outputs:
-            socket_data = {}
-            socket_data["name"] = sock.name
-            socket_data["identifier"] = sock.identifier
-            node_data["outputs"].append(socket_data)
+            if "module_name" in node:
+                node_data["module_name"] = node["module_name"]
 
-        data["nodes"].append(node_data)
+            node_data["props"] = props
+
+            node_data["inputs"] = []
+            for sock in node.inputs:
+                socket_data = {}
+                socket_data["name"] = sock.name
+                socket_data["identifier"] = sock.identifier
+                socket_data["type"] = sock.prop.type
+                socket_data["value"] = getattr(sock.prop, get_prop_name_by_type(sock.prop.type))
+                node_data["inputs"].append(socket_data)
+
+            node_data["outputs"] = []
+            for sock in node.outputs:
+                socket_data = {}
+                socket_data["name"] = sock.name
+                socket_data["identifier"] = sock.identifier
+                socket_data["type"] = sock.prop.type
+                socket_data["value"] = getattr(sock.prop, get_prop_name_by_type(sock.prop.type))
+                node_data["outputs"].append(socket_data)
+
+            data["nodes"].append(node_data)
 
     for link in node_tree.links:
         link_data = {}
