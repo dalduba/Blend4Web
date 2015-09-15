@@ -616,14 +616,6 @@ def process_node_script(node_tree):
             node_data["name"] = node.name
             node_data["api_type"] = node.api_type
 
-            if node_data["api_type"] == "B4W":
-                if "module_name" in node and not node["module_name"] in data["usage_modules"]:
-                    data["usage_modules"].add(node["module_name"])
-            elif node_data["api_type"] == "Sensor":
-                data["sensor_nodes"].append(node_data)
-            elif node_data["api_type"] == "FuncDecl":
-                data["global_function_decl_nodes"].append(node_data)
-
             props = {}
             for p in node.dyn_props:
                 props[p.name] = {"type": p.type, "value":getattr(p, get_prop_name_by_type(p.type))}
@@ -658,6 +650,16 @@ def process_node_script(node_tree):
                 socket_data["type"] = sock.prop.type
                 socket_data["value"] = getattr(sock.prop, get_prop_name_by_type(sock.prop.type))
                 node_data["outputs"].append(socket_data)
+
+            if node_data["api_type"] == "B4W":
+                if "module_name" in node and not node["module_name"] in data["usage_modules"]:
+                    data["usage_modules"].add(node["module_name"])
+            elif node_data["api_type"] == "Sensor":
+                data["sensor_nodes"].append(node_data)
+            elif node_data["api_type"] == "FuncDecl":
+                data["global_function_decl_nodes"].append(node_data)
+            elif node_data["api_type"] == "Variable" and node_data["method_name"] == "define_global":
+                data["global_variable_decl_nodes"].append(node_data)
 
             data["nodes"].append(node_data)
 
