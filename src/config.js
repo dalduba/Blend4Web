@@ -1,3 +1,20 @@
+/**
+ * Copyright (C) 2014-2015 Triumph LLC
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 "use strict";
 
 /**
@@ -31,7 +48,7 @@ exports.defaults = {
 
     alpha_clip_filtering_hack  : false,
 
-    min_format_version         : [5, 5],
+    min_format_version         : [5, 7],
 
     max_fps                    : 10000, // not accurate
 
@@ -48,8 +65,6 @@ exports.defaults = {
     background_color           : [0.0, 0.0, 0.0, 0.0],
 
     lod_transition_ratio       : 0.01,
-
-    render_resolution_factor   : 1.0,
 
     canvas_resolution_factor   : 1.0,
 
@@ -153,8 +168,6 @@ exports.defaults = {
 
     mobile_firefox_media_hack  : false,
 
-    intel_cubemap_hack         : false,
-
     enable_selectable          : true,
 
     enable_outlining           : true,
@@ -171,7 +184,15 @@ exports.defaults = {
 
     loaded_data_version        : [0, 0],
 
-    edge_min_tex_size_hack     : false
+    edge_min_tex_size_hack     : false,
+
+    quality_aa_method          : true,
+
+    amd_skinning_hack          : false,
+
+    url_params                 : null,
+
+    safari_canvas_alpha_hack   : false
 }
 
 exports.defaults_save = m_util.clone_object_r(exports.defaults);
@@ -205,6 +226,8 @@ exports.paths = {
     js_src_search_paths: [
         "b4w.min.js",
         "b4w.full.min.js",
+        "b4w.simple.min.js",
+        "b4w.whitespace.min.js",
         "src/b4w.js",
         "USER_DEFINED_MODULE"   // replaced when something compiled with the engine
     ],
@@ -253,7 +276,6 @@ exports.sfx_save = m_util.clone_object_r(exports.sfx);
 exports.outlining = {
     outlining_overview_mode : false,
     outline_color           : [1, 0.4, 0.05],
-    outline_intensity       : 1.0,
     outline_duration        : 0.2,
     outline_period          : 3.8,
     outline_relapses        : 1.0
@@ -264,7 +286,7 @@ exports.debug_subs = {
     enabled     : false,
     subs_type   : "MAIN_OPAQUE",
     subs_number : 0,
-    slink_type  : "DEPTH"
+    slink_type  : "COLOR"
 }
 exports.debug_subs_save = m_util.clone_object_r(exports.debug_subs);
 
@@ -305,8 +327,6 @@ exports.apply_quality = function() {
 
         cfg_def.procedural_fog = true;
 
-        cfg_def.render_resolution_factor = 1.75;
-
         cfg_scs.grass_tex_size = 4.0*512;
 
         cfg_def.texture_min_filter = 3;
@@ -323,7 +343,7 @@ exports.apply_quality = function() {
 
         cfg_def.antialiasing = true;
 
-        cfg_def.smaa = true;
+        cfg_def.smaa = false;
 
         cfg_def.compositing = true;
 
@@ -364,8 +384,6 @@ exports.apply_quality = function() {
         cfg_def.dynamic_grass = true;
 
         cfg_def.procedural_fog = true;
-
-        cfg_def.render_resolution_factor = 1.0;
 
         cfg_scs.grass_tex_size = 2*512;
 
@@ -424,8 +442,6 @@ exports.apply_quality = function() {
         cfg_def.dynamic_grass = false;
 
         cfg_def.procedural_fog = false;
-
-        cfg_def.render_resolution_factor = 1; // can be 0.5
 
         cfg_scs.grass_tex_size = 1*512;
 
@@ -536,9 +552,6 @@ function set(prop, value) {
     case "quality":
         exports.defaults.quality = value;
         break;
-    case "render_resolution_factor":
-        exports.defaults.render_resolution_factor = value;
-        break;
     case "sfx_mix_mode":
         exports.sfx.mix_mode = value;
         break;
@@ -571,6 +584,9 @@ function set(prop, value) {
         break;
     case "glow_materials":
         exports.defaults.glow_materials = value;
+        break;
+    case "url_params":
+        exports.defaults.url_params = value;
         break;
     default:
         m_print.error("Unknown config property: " + prop);
@@ -626,8 +642,6 @@ exports.get = function(prop) {
         return exports.defaults.precision;
     case "quality":
         return exports.defaults.quality;
-    case "render_resolution_factor":
-        return exports.defaults.render_resolution_factor;
     case "sfx_mix_mode":
         return exports.sfx.mix_mode;
     case "shaders_dir":
@@ -650,6 +664,8 @@ exports.get = function(prop) {
         return exports.outlining.outlining_overview_mode;
     case "glow_materials":
         return exports.defaults.glow_materials;
+    case "url_params":
+        return exports.defaults.url_params;
     default:
         m_print.error("Unknown config property: " + prop);
         break;

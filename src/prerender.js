@@ -1,3 +1,20 @@
+/**
+ * Copyright (C) 2014-2015 Triumph LLC
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 "use strict";
 
 /**
@@ -55,7 +72,7 @@ exports.prerender_subs = function(subs) {
         default:
             // prevent rare bugs when blend is only one rendered
             if (subs.type === "MAIN_OPAQUE" || subs.type === "DEPTH" 
-                    || has_render_bundles)
+                    || subs.type === "MAIN_GLOW" || has_render_bundles)
                 subs.do_render = true;
             else {
                 // clear subscene if it switches "do_render" flag to false
@@ -143,7 +160,7 @@ function prerender_bundle(bundle, subs) {
         return false;
 
     if (subs.type == "WIREFRAME")
-        if (bundle.batch.wireframe_mode == m_debug.WIREFRAME_MODES["WM_DEBUG_SPHERES"])
+        if (bundle.batch.wireframe_mode == m_debug.WM_DEBUG_SPHERES)
             return bundle.batch.debug_sphere;
         else
             return !bundle.batch.debug_sphere;

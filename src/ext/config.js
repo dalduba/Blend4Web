@@ -1,3 +1,20 @@
+/**
+ * Copyright (C) 2014-2015 Triumph LLC
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 "use strict";
 
 /**
@@ -76,9 +93,6 @@
  * <dt>quality
  * <dd>Number, preferred rendering quality profile (one of P_LOW, P_HIGH,
  * P_ULTRA, P_CUSTOM enums).
- * <dt>render_resolution_factor
- * <dd>Number, internal rendering resolution factor (use the CUSTOM profile
- * in order to change this parameter).
  * <dt>sfx_mix_mode
  * <dd>Boolean, enable the mixer mode in the SFX subsystem.
  * <dt>shaders_dir
@@ -107,7 +121,7 @@
  * @cc_externs enable_outlining gyro_use outlining_overview_mode
  * @cc_externs physics_enabled physics_uranium_path physics_calc_fps physics_use_workers
  * @cc_externs precision quality
- * @cc_externs render_resolution_factor sfx_mix_mode shaders_dir show_hud_debug_info
+ * @cc_externs sfx_mix_mode shaders_dir show_hud_debug_info
  * @cc_externs smaa smaa_search_texture_path smaa_area_texture_path
  * @cc_externs wireframe_debug
  */

@@ -1,3 +1,20 @@
+/**
+ * Copyright (C) 2014-2015 Triumph LLC
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 "use strict";
 
 /** 
@@ -87,8 +104,26 @@ exports.AT_AUDIO_ELEMENT = m_assets.AT_AUDIO_ELEMENT;
  * @param {PackCallback} [pack_cb] Callback executed after the whole pack of assets is loaded
  * @param {ProgressCallback} [progress_cb] Callback for the progress of loading
  */
-exports.enqueue = function(asset_pack, asset_cb, pack_cb) {
-    m_assets.enqueue(asset_pack, asset_cb, pack_cb);
+exports.enqueue = function(assets_pack, asset_cb, pack_cb, progress_cb) {
+    if (assets_pack.length)
+        if (assets_pack["id"])
+            m_assets.enqueue(assets_pack, asset_cb, pack_cb, progress_cb);
+        else {
+            var new_asset_pack = [];
+            for (var i = 0; i < assets_pack.length; i++) {
+                var pack_elem = assets_pack[i];
+                new_asset_pack.push({
+                    id: pack_elem[0],
+                    type: pack_elem[1],
+                    url: pack_elem[2],
+                    request: pack_elem.request ? pack_elem.request : "GET",
+                    post_type: null,
+                    post_data: null,
+                    param: pack_elem[3]
+                });
+            }
+            m_assets.enqueue(new_asset_pack, asset_cb, pack_cb, progress_cb);
+        }
 }
 
 }

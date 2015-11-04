@@ -1,3 +1,20 @@
+/**
+ * Copyright (C) 2014-2015 Triumph LLC
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 "use strict";
 
 /**
@@ -44,6 +61,9 @@ var DEFAULT_PART_SYS_QUAT = new Float32Array([0, -Math.sqrt(0.5), 0, Math.sqrt(0
 
 var _vec4_tmp = new Float32Array(4);
 
+exports.BATCH_INHERITED_TEXTURES = BATCH_INHERITED_TEXTURES
+var BATCH_INHERITED_TEXTURES = ["u_colormap0", "u_colormap1", "u_stencil0",
+    "u_specmap0", "u_normalmap0", "u_mirrormap"];
 /**
  * Create abstract batch
  * @param type Batch type: MAIN, SHADOW,...
@@ -78,7 +98,6 @@ function init_batch(type) {
         attribute_setters: [],
         particle_system: null,
         bufs_data: null,
-        bone_pointers: null,
 
         use_shape_keys: false,
 
@@ -95,6 +114,7 @@ function init_batch(type) {
         cube_fog: new Float32Array(16),
 
         // rendering properties
+        alpha_clip: false,
         blend: false,
         color_mask: false,
         depth_mask: false,
@@ -112,6 +132,7 @@ function init_batch(type) {
         procedural_sky: false,
         draw_mode: m_geometry.DM_DEFAULT,
         zsort_type: m_geometry.ZSORT_DISABLED,
+        can_fork_outline: false,
         forked_batch : false,
         psys_name: "",
         shadow_source: "",
@@ -188,36 +209,27 @@ function init_batch(type) {
 
 /**
  * Generate object batches for graph subscenes.
+ * NOTE: bpy objects are expressly preferred than the new ones for the 
+ * batching as parameters (as proxy objects) because of specific 
+ * linking: bpy_obj._object->obj; nevertheless many "low-level" operations, 
+ * some utility functions and the final batching actions rely on the new objects
  */
-exports.generate_main_batches = function(scene, mesh_objects, lamps,
-                                         metabatches, meta_objects) {
-    var graph = scene._render.graph;
-    var dynamic_objects = [];
-    var static_objects = [];
-    for (var i = 0; i < mesh_objects.length; i++) {
+exports.generate_main_batches = function(scene, bpy_mesh_objects, lamps, 
+        meta_objects) {
 
-        var obj = mesh_objects[i];
-
-        if (obj.is_hair_dupli)
-            continue;
-
-        if (m_obj_util.is_dynamic(obj))
-            dynamic_objects.push(obj);
-        else
-            static_objects.push(obj);
-    }
+    var bpy_dynamic_objs = [];
+    var bpy_static_objs = [];
+    separate_dynamic_objs(bpy_mesh_objects, bpy_dynamic_objs, bpy_static_objs);
 
     // create merged metabatches
     var all_mbatches = [];
     all_mbatches = all_mbatches.concat(
-            make_dynamic_metabatches(dynamic_objects, graph));
+            make_dynamic_metabatches(bpy_dynamic_objs, scene._render.graph));
     all_mbatches = all_mbatches.concat(
-            make_static_metabatches(static_objects, graph, 
+            make_static_metabatches(bpy_static_objs, scene._render.graph, 
             scene["b4w_batch_grid_size"]));
 
-    var merged_mbatches = merge_metabatches(all_mbatches);
-
-    metabatches.push.apply(metabatches, merged_mbatches);
+    var metabatches = merge_metabatches(all_mbatches);
 
     for (var i = 0; i < metabatches.length; i++) {
         var batch = metabatches[i].batch;
@@ -230,7 +242,7 @@ exports.generate_main_batches = function(scene, mesh_objects, lamps,
             // create meta-objects and attach static batches
             var unique_name = m_util.unique_name("%meta%" + batch.type + "%" +
                                         batch.material_names.join("%") + "%");
-            var meta_obj = m_obj_util.create_meta_object(unique_name, "MESH");
+            var meta_obj = m_obj_util.create_object(unique_name, "MESH");
 
             meta_obj.render = metabatches[i].render;
             m_obj_util.append_scene_data(meta_obj, scene);
@@ -240,8 +252,9 @@ exports.generate_main_batches = function(scene, mesh_objects, lamps,
         } else {
             // attach dynamic batches and static COLOR_ID batches to objects
             var unique_obj_names = [];
-            for (var j = 0; j < metabatches[i].rel_objects.length; j++) {
-                var obj = metabatches[i].rel_objects[j];
+            for (var j = 0; j < metabatches[i].rel_bpy_objects.length; j++) {
+                var bpy_obj = metabatches[i].rel_bpy_objects[j];
+                var obj = bpy_obj._object;
 
                 if (unique_obj_names.indexOf(obj.name) == -1) {
                     m_obj_util.append_batch(obj, scene, batch);
@@ -259,7 +272,7 @@ exports.generate_main_batches = function(scene, mesh_objects, lamps,
             var render = metabatches[i].render;
             if (render.type == "DYNAMIC") {
                 // single object for dynamic batch
-                var obj = metabatches[i].rel_objects[0];
+                var obj = metabatches[i].rel_bpy_objects[0]._object;
                 if (BATCH_TYPES_DEBUG_SPHERE.indexOf(
                         metabatches[i].batch.type) > -1) {
                     // every object can have only one debug sphere
@@ -297,8 +310,8 @@ exports.generate_main_batches = function(scene, mesh_objects, lamps,
         }
     }
 
-    for (var i = 0; i < mesh_objects.length; i++) {
-        var sc_data = m_obj_util.get_scene_data(mesh_objects[i], scene);
+    for (var i = 0; i < bpy_mesh_objects.length; i++) {
+        var sc_data = m_obj_util.get_scene_data(bpy_mesh_objects[i]._object, scene);
         var batches = sc_data.batches;
         for (var j = 0; j < batches.length; j++)
             update_batch_subtype(batches[j]);
@@ -308,6 +321,21 @@ exports.generate_main_batches = function(scene, mesh_objects, lamps,
         var batches = sc_data.batches;
         for (var j = 0; j < batches.length; j++)
             update_batch_subtype(batches[j]);
+    }
+}
+
+function separate_dynamic_objs(bpy_mesh_objects, dynamic_objs, static_objs) {
+    for (var i = 0; i < bpy_mesh_objects.length; i++) {
+        var bpy_obj = bpy_mesh_objects[i];
+        var obj = bpy_obj._object;
+
+        if (obj.is_hair_dupli)
+            continue;
+
+        if (m_obj_util.is_dynamic(obj))
+            dynamic_objs.push(bpy_obj);
+        else
+            static_objs.push(bpy_obj);
     }
 }
 
@@ -363,7 +391,7 @@ exports.generate_sky_meta_obj = function(scene, sky) {
     update_batch_subtype(batch);
 
     var unique_name = m_util.unique_name("%meta_sky%");
-    var meta_obj = m_obj_util.create_meta_object(unique_name, "MESH");
+    var meta_obj = m_obj_util.create_object(unique_name, "MESH");
     m_obj_util.append_scene_data(meta_obj, scene);
     var sc_data = m_obj_util.get_scene_data(meta_obj, scene);
 
@@ -436,13 +464,14 @@ exports.create_forked_batches = function(obj, graph, scene) {
             batch.subtype = "REFLECT";
         }
 
-        if (batch_src.type == "COLOR_ID") {
-            if (outline_mask_subs && picking_mask_subs) {
-                batch = copy_forked_batch(batch_src);
-                batch.subtype = "OUTLINE";
-            } else if (outline_mask_subs && !picking_mask_subs)
-                batch_src.subtype = "OUTLINE";
-        }
+        if (batch_src.type == "COLOR_ID" && batch_src.can_fork_outline)
+            if (outline_mask_subs && obj.render.outlining)
+                if (picking_mask_subs && 
+                        obj.render.selectable) {
+                    batch = copy_forked_batch(batch_src);
+                    batch.subtype = "OUTLINE";    
+                } else
+                    batch_src.subtype = "OUTLINE";
 
         if (batch) {
             batch.forked_batch = true;
@@ -478,13 +507,11 @@ function batch_copy_wo_bufs(batch) {
     return batch_copy;
 }
 
-function make_dynamic_metabatches(dyn_objects, graph) {
+function make_dynamic_metabatches(bpy_dynamic_objs, graph) {
     var metabatches = [];
-    for (var i = 0; i < dyn_objects.length; i++) {
-        var obj = dyn_objects[i];
-        var bpy_obj = obj.temp_bpy_obj;
-
-        var render = obj.render;
+    for (var i = 0; i < bpy_dynamic_objs.length; i++) {
+        var bpy_obj = bpy_dynamic_objs[i];
+        var render = bpy_obj._object.render;
 
         var bb_local = m_bounds.zero_bounding_box();
         m_bounds.copy_bb(render.bb_original, bb_local);
@@ -537,30 +564,30 @@ function make_dynamic_metabatches(dyn_objects, graph) {
                 render.tsr);
         render.be_world = be_world;
 
-        metabatches = metabatches.concat(make_object_metabatches(obj, render, graph));
+        metabatches = metabatches.concat(make_object_metabatches(bpy_obj, render, graph));
     }
     return metabatches;
 }
 
-function make_static_metabatches(static_objects, graph, grid_size) {
+function make_static_metabatches(bpy_static_objs, graph, grid_size) {
     var metabatches = [];
 
-    var clusters = create_object_clusters(static_objects, grid_size);
+    var clusters = create_object_clusters(bpy_static_objs, grid_size);
 
     for (var i = 0; i < clusters.length; i++) {
         var render = clusters[i].render;
-        var objs = clusters[i].objects;
+        var bpy_objs = clusters[i].bpy_objects;
 
-        for (var j = 0; j < objs.length; j++) {
-            var obj = objs[j];
-            var bpy_obj = obj.temp_bpy_obj;
-            var obj_metabatches = make_object_metabatches(obj, render, graph);
+        for (var j = 0; j < bpy_objs.length; j++) {
+            var bpy_obj = bpy_objs[j];
+            var obj_render = bpy_obj._object.render;
+            var obj_metabatches = make_object_metabatches(bpy_obj, render, graph);
 
-            if (obj.render.billboard && !obj.render.billboard_pres_glob_orientation) {
+            if (obj_render.billboard && !obj_render.billboard_pres_glob_orientation) {
                 var tsr = m_tsr.create();
-                m_tsr.set_trans(obj.render.trans, tsr);
+                m_tsr.set_trans(obj_render.trans, tsr);
             } else
-                var tsr = tsr_from_render(obj.render);
+                var tsr = tsr_from_render(obj_render);
 
             var params = {};
 
@@ -568,7 +595,7 @@ function make_static_metabatches(static_objects, graph, grid_size) {
                 params["au_center_pos"] = [tsr[0], tsr[1], tsr[2]];
 
             if (render.wind_bending) {
-                params["au_wind_bending_amp"] = [obj.render.wind_bending_amp];
+                params["au_wind_bending_amp"] = [obj_render.wind_bending_amp];
 
                 params["au_wind_bending_freq"]
                         = [bpy_obj["b4w_wind_bending_freq"]];
@@ -589,10 +616,11 @@ function make_static_metabatches(static_objects, graph, grid_size) {
                     // make dynamic metabatch for COLOR_ID batch type
                     // use object render instead of cluster render
                     if (batch.type == "COLOR_ID") {
-                        var obj_render = obj_metabatches[k].render = obj.render;
+                        obj_metabatches[k].render = obj_render;
                         batch.odd_id_prop = bpy_obj["uuid"];
                         update_batch_render(batch, obj_render);
-                        update_batch_id(batch, m_util.calc_variable_id(obj_render, 0));
+                        var render_id = calculate_render_id(obj_render);
+                        update_batch_id(batch, render_id, 0);
                     }
                     submesh = m_geometry.submesh_apply_transform(submesh, tsr);
                     submesh = m_geometry.submesh_apply_params(submesh, params);
@@ -616,13 +644,12 @@ function make_static_metabatches(static_objects, graph, grid_size) {
 /**
  * Create batches and metadata for single object
  */
-function make_object_metabatches(obj, render, graph) {
-    var bpy_obj = obj.temp_bpy_obj;
+function make_object_metabatches(bpy_obj, render, graph) {
     var metabatches = [];
 
     // NOTE: generate all batches
     var batch_types = get_batch_types(graph, render);
-    var render_id = m_util.calc_variable_id(render, 0);
+    var render_id = calculate_render_id(render);
     var mesh = bpy_obj["data"];
     var materials = mesh["materials"];
     var batches_main = new Array(materials.length);
@@ -634,8 +661,6 @@ function make_object_metabatches(obj, render, graph) {
 
     for (var i = 0; i < batch_types.length; i++) {
         var type = batch_types[i];
-        if (bpy_obj["b4w_do_not_render"] && type != "PHYSICS")
-            continue;
 
         // j == submesh index == material index
         for (var j = 0; j < materials.length; j++) {
@@ -647,6 +672,9 @@ function make_object_metabatches(obj, render, graph) {
             if (m_geometry.has_empty_submesh(mesh, j))
                 continue;
             var batch = init_batch(type);
+
+            if (type == "COLOR_ID")
+                batch.can_fork_outline = !(bpy_obj["b4w_do_not_render"] || material["b4w_do_not_render"]);
 
             if (type == "MAIN")
                 batches_main[j] = batch;
@@ -670,7 +698,7 @@ function make_object_metabatches(obj, render, graph) {
             update_batch_id(batch, render_id);
 
             var submesh = m_geometry.extract_submesh(mesh, j,
-                    batch.common_attributes, batch.bone_pointers,
+                    batch.common_attributes, render.bone_skinning_info,
                     batch.vertex_colors_usage, batch.uv_maps_usage);
 
             if (material["name"] == "LENS_FLARES")
@@ -681,7 +709,7 @@ function make_object_metabatches(obj, render, graph) {
                 submesh: submesh,
                 mat_names: [material["name"]],
                 render: render,
-                rel_objects: [obj]
+                rel_bpy_objects: [bpy_obj]
             });
         }
     }
@@ -723,7 +751,7 @@ function make_object_metabatches(obj, render, graph) {
         else
             var em_submesh = null;
 
-        var particles_metabatches = make_particles_metabatches(obj, render,
+        var particles_metabatches = make_particles_metabatches(bpy_obj, render,
                 graph, render_id, emitter_vc, em_submesh);
 
         if (render_emitter)
@@ -766,9 +794,9 @@ function build_emitter_submesh(mesh, psystems, emitter_vc) {
 /**
  * Create batches and metadata for object particle systems
  */
-function make_particles_metabatches(obj, render, graph, render_id, emitter_vc,
+function make_particles_metabatches(bpy_obj, render, graph, render_id, emitter_vc,
         em_submesh) {
-    var bpy_obj = obj.temp_bpy_obj;
+    var obj = bpy_obj._object;
     var metabatches = [];
 
     var psystems = bpy_obj["particle_systems"];
@@ -788,7 +816,7 @@ function make_particles_metabatches(obj, render, graph, render_id, emitter_vc,
 
                 var batch = init_batch("PARTICLES");
                 var pmaterial = select_psys_material(psys, mesh["materials"]);
-
+                
                 if (psys["settings"]["render_type"] === "HALO")
                     batch.halo_particles = true;
 
@@ -811,7 +839,7 @@ function make_particles_metabatches(obj, render, graph, render_id, emitter_vc,
                     submesh: submesh,
                     mat_names: [pmaterial["name"]],
                     render: render,
-                    rel_objects: [obj]
+                    rel_bpy_objects: [bpy_obj]
                 });
             }
 
@@ -860,42 +888,41 @@ function make_particles_metabatches(obj, render, graph, render_id, emitter_vc,
                         pset["dupli_object"]._object.render, true)];
 
                 var hair_metabatches = make_hair_particles_metabatches(
-                        obj, render, emitter_vc, em_submesh,
-                        [pset["dupli_object"]._object], particles_batch_types,
+                        bpy_obj, render, emitter_vc, em_submesh,
+                        [pset["dupli_object"]], particles_batch_types,
                         [ptrans], pset, psys, use_grass_map, seed, false);
 
                 metabatches = metabatches.concat(hair_metabatches);
 
             } else if (pset["render_type"] == "GROUP") {
-                var dg_objs = [];
-                var bpy_dg_objs = pset["dupli_group"]["objects"];
-                for (var j = 0; j < bpy_dg_objs.length; j++)
-                    dg_objs.push(bpy_dg_objs[j]._object);
-
-                var reset_seed = false;
-
+                var bpy_part_objs = pset["dupli_group"]["objects"];
                 var particles_batch_types = [];
-                for (var j = 0; j < dg_objs.length; j++) {
+                for (var j = 0; j < bpy_part_objs.length; j++) {
                     var btypes = get_batch_types(graph,
-                            pset["dupli_group"]["objects"][j]._object.render, true);
+                            bpy_part_objs[j]._object.render, true);
                     particles_batch_types.push(btypes);
                 }
 
+                var reset_seed = false;
+                var part_objs = [];
+                for (var j = 0; j < bpy_part_objs.length; j++)
+                    part_objs.push(bpy_part_objs[j]._object);
+
                 if (pset["use_whole_group"]) {
                     var ptrans_dist = distribute_ptrans_group(ptrans,
-                            dg_objs, use_particles_rotation, data_len);
+                            part_objs, use_particles_rotation, data_len);
                     reset_seed = true;
                 } else if (pset["use_group_count"]) {
                     var ptrans_dist = distribute_ptrans_by_dupli_weights(
-                            ptrans, dg_objs, pset["dupli_weights"], seed,
+                            ptrans, part_objs, pset["dupli_weights"], seed,
                             use_particles_rotation, data_len);
                 } else {
                     var ptrans_dist = distribute_ptrans_equally(ptrans,
-                        dg_objs, seed, use_particles_rotation, data_len);
+                        part_objs, seed, use_particles_rotation, data_len);
                 }
 
                 var hair_metabatches = make_hair_particles_metabatches(
-                        obj, render, emitter_vc, em_submesh, dg_objs,
+                        bpy_obj, render, emitter_vc, em_submesh, bpy_part_objs,
                         particles_batch_types, ptrans_dist, pset, psys,
                         use_grass_map, seed, reset_seed);
 
@@ -985,15 +1012,15 @@ function merge_metabatches(metabatches) {
             var batch_data = {
                 batch: batch,
                 render: metabatches[i].render,
-                rel_objects: [],
+                rel_bpy_objects: [],
                 submeshes: [],
                 mat_names: []
             };
             batches_ids[batch.id] = unique_data.length;
             unique_data.push(batch_data);
         }
-        batch_data.rel_objects = batch_data.rel_objects.concat(
-                metabatches[i].rel_objects);
+        batch_data.rel_bpy_objects = batch_data.rel_bpy_objects.concat(
+                metabatches[i].rel_bpy_objects);
         // ignore empty submeshes ???
         if (metabatches[i].submesh && metabatches[i].submesh.base_length)
             batch_data.submeshes.push(metabatches[i].submesh);
@@ -1037,7 +1064,7 @@ function merge_metabatches(metabatches) {
             render: unique_data[i].render,
             submesh: submesh,
             mat_names: unique_data[i].mat_names,
-            rel_objects: unique_data[i].rel_objects
+            rel_bpy_objects: unique_data[i].rel_bpy_objects
         }
         merged_metabatches.push(metabatch);
     }
@@ -1110,26 +1137,33 @@ function exclude_batch_types(batch_types, unwanted_types) {
 }
 
 function get_batch_types(graph, render, is_hair_particles) {
-    var batch_types = ["MAIN", "NODES_GLOW"];
+    var batch_types;
 
-    if ((render.selectable && m_scenegraph.find_subs(graph, "COLOR_PICKING") ||
-            render.outlining && m_scenegraph.find_subs(graph, "OUTLINE_MASK"))
-            && !is_hair_particles)
-        batch_types.push("COLOR_ID");
+    if (render.do_not_render && !is_hair_particles) {
+        batch_types = []
+        if (render.selectable && m_scenegraph.find_subs(graph, "COLOR_PICKING"))
+            batch_types.push("COLOR_ID");
+    } else {
+        batch_types = ["MAIN", "NODES_GLOW"];
 
-    if (m_scenegraph.find_subs(graph, "WIREFRAME"))
-        batch_types.push("WIREFRAME");
+        if ((render.selectable && m_scenegraph.find_subs(graph, "COLOR_PICKING") ||
+                render.outlining && m_scenegraph.find_subs(graph, "OUTLINE_MASK"))
+                && !is_hair_particles)
+            batch_types.push("COLOR_ID");
+
+        if (m_scenegraph.find_subs(graph, "WIREFRAME"))
+            batch_types.push("WIREFRAME");
+
+        if (m_scenegraph.find_subs(graph, "DEPTH") ||
+                m_scenegraph.find_subs(graph, "SHADOW_CAST"))
+            batch_types.push("DEPTH");
+
+        if (m_scenegraph.find_subs(graph, "GRASS_MAP"))
+            batch_types.push("GRASS_MAP");
+    }
 
     // NOTE: need condition
     batch_types.push("PHYSICS");
-
-    if (m_scenegraph.find_subs(graph, "DEPTH") ||
-            m_scenegraph.find_subs(graph, "SHADOW_CAST"))
-        batch_types.push("DEPTH");
-
-    if (m_scenegraph.find_subs(graph, "GRASS_MAP"))
-        batch_types.push("GRASS_MAP");
-
 
     if (render.shadow_cast_only || render.reflexible_only) {
         var unwanted_types = null;
@@ -1402,8 +1436,6 @@ function update_batch_material_main(batch, material, update_tex_color) {
 
         set_batch_directive(batch, "SHADELESS", material["use_shadeless"] ? 1 : 0);
 
-        // TODO: set up SHADELESS_MAT on lighting nodes
-        set_batch_directive(batch, "SHADELESS_MAT", material["use_shadeless"] ? 1 : 0);
         batch.use_shadeless = material["use_shadeless"];
     }
 
@@ -1471,27 +1503,32 @@ function update_batch_game_settings(batch, material) {
         batch.blend = true;
         batch.zsort_type = m_geometry.ZSORT_BACK_TO_FRONT;
         batch.depth_mask = true;
+        batch.alpha_clip = false;
         break;
     case "ALPHA":       // Alpha Blend      don't sort      blend
         batch.blend = true;
         batch.zsort_type = m_geometry.ZSORT_DISABLED;
         batch.depth_mask = true;
+        batch.alpha_clip = false;
         break;
     case "CLIP":        // Alpha Clip       don't sort      discard
         batch.blend = false;
         batch.zsort_type = m_geometry.ZSORT_DISABLED;
         batch.depth_mask = true;
+        batch.alpha_clip = true;
         break;
     case "ADD":         // Add              don't sort      blend, depthMask(false)
         batch.blend = true;
         batch.zsort_type = m_geometry.ZSORT_DISABLED;
         batch.depth_mask = false;
+        batch.alpha_clip = false;
         break;
     case "OPAQUE":      // Opaque           don't sort      don't blend
         batch.blend = false;
         batch.zsort_type = m_geometry.ZSORT_DISABLED;
         //batch.zsort_type = geometry.ZSORT_FRONT_TO_BACK;
         batch.depth_mask = true;
+        batch.alpha_clip = false;
         break;
     default:
         throw new Error("Unknown alpha blend mode: " + alpha_blend);
@@ -1920,15 +1957,12 @@ function update_batch_material_nodes(batch, material, shader_type) {
         case "MATERIAL_BEGIN":
             var mat_data = attr.data.value;
             set_batch_c_attr(batch, "a_normal");
-            set_batch_directive(batch, "SHADELESS_MAT", mat_data.use_shadeless? 1: 0);
-            batch.use_shadeless = mat_data.use_shadeless;
             has_material_nodes = true;
             break;
         case "TEXTURE_COLOR":
         case "TEXTURE_ENVIRONMENT":
             var name = attr.data.name;
             var tex = attr.data.value;
-
             if (tex._render.allow_node_dds !== false)
                 if (attr.type != "TEXTURE_ENVIRONMENT")
                     tex._render.allow_node_dds = true;
@@ -2023,8 +2057,13 @@ function update_batch_material_depth(batch, material) {
 
     if (material["use_nodes"] && alpha_blend == "CLIP")
         update_batch_material_nodes(batch, material, "DEPTH");
-    else
+    else {
         apply_shader(batch, "depth.glslv", "depth.glslf");
+
+        m_vec4.set(material["diffuse_color"][0], material["diffuse_color"][1],
+            material["diffuse_color"][2], material["alpha"],
+            batch.diffuse_color);
+    }
 
     set_batch_c_attr(batch, "a_position");
     set_batch_c_attr(batch, "a_normal");
@@ -2096,7 +2135,6 @@ function update_batch_material_physics(batch, material) {
 
 function update_batch_material_color_id(batch, material) {
     if (material["name"] === "LENS_FLARES" ||
-            material["b4w_do_not_render"] ||
             material["type"] === "HALO")
         return false;
 
@@ -2117,8 +2155,13 @@ function update_batch_material_color_id(batch, material) {
 
     if (material["use_nodes"] && alpha_blend == "CLIP")
         update_batch_material_nodes(batch, material, "COLOR_ID");
-    else
+    else {
         apply_shader(batch, "color_id.glslv", "color_id.glslf");
+        
+        m_vec4.set(material["diffuse_color"][0], material["diffuse_color"][1],
+            material["diffuse_color"][2], material["alpha"],
+            batch.diffuse_color);
+    }
 
     set_batch_c_attr(batch, "a_position");
 
@@ -2439,16 +2482,21 @@ function update_batch_render(batch, render) {
     if (render.is_skinning) {
         set_batch_c_attr(batch, "a_influence");
         set_batch_directive(batch, "SKINNED", 1);
-
-        if (render.frames_blending)
-            set_batch_directive(batch, "FRAMES_BLENDING", 1);
-        else
+        if (cfg_def.amd_skinning_hack) {
+            set_batch_directive(batch, "DISABLE_TANGENT_SKINNING", 1);
             set_batch_directive(batch, "FRAMES_BLENDING", 0);
-
+        } else {
+            set_batch_directive(batch, "DISABLE_TANGENT_SKINNING", 0);
+            if (render.frames_blending)
+                set_batch_directive(batch, "FRAMES_BLENDING", 1);
+            else
+                set_batch_directive(batch, "FRAMES_BLENDING", 0);
+        }
         set_batch_directive(batch, "MAX_BONES", render.max_bones);
     } else {
         set_batch_directive(batch, "SKINNED", 0);
         set_batch_directive(batch, "FRAMES_BLENDING", 0);
+        set_batch_directive(batch, "DISABLE_TANGENT_SKINNING", 0);
     }
 
     if (render.vertex_anim) {
@@ -2468,9 +2516,6 @@ function update_batch_render(batch, render) {
         set_batch_directive(batch, "DISABLE_FOG", 1);
     else
         set_batch_directive(batch, "DISABLE_FOG", 0);
-
-    if (render.bone_pointers)
-        batch.bone_pointers = render.bone_pointers;
 
     if (batch.has_nodes) {
 
@@ -2520,17 +2565,6 @@ function update_batch_lights(batch, lamps, scene) {
     var shadow_lamp = m_obj_util.get_first_lamp_with_shadows(lamps) || lamps[0];
     var shaders_info = batch.shaders_info;
 
-    if (batch.lamp_uuid_indexes) {
-        var lamp_size = 0;
-        for (var key in batch.lamp_uuid_indexes)
-            lamp_size++;
-        batch.lamp_light_positions = new Float32Array(lamp_size * 3);
-        batch.lamp_light_directions = new Float32Array(lamp_size * 3);
-        batch.lamp_light_color_intensities = new Float32Array(lamp_size * 3);
-        batch.lamp_light_factors = new Float32Array(lamp_size * 4);
-        m_shaders.set_directive(shaders_info, "NUM_LAMP_LIGHTS", lamp_size);
-    }
-
     var lamp_index = 0;
     for (var i = 0; i < batch.shaders_info.node_elements.length; i++) {
         var node = batch.shaders_info.node_elements[i];
@@ -2569,18 +2603,28 @@ function update_batch_lights(batch, lamps, scene) {
                          ["LAMP_SPOT_BLEND", m_shaders.glsl_value(blend || 0.01)],
                          ["LAMP_LIGHT_DIST", m_shaders.glsl_value(light.distance)],
                          ["LAMP_SHADOW_MAP_IND", shadow_map_ind]];
-
-            if (batch.lamp_uuid_indexes)
-                set_lamp_data(batch, lamp);
         }
+    }
+
+    if (batch.lamp_uuid_indexes) {
+        var lamp_size = 0;
+        for (var key in batch.lamp_uuid_indexes)
+            lamp_size++;
+        batch.lamp_light_positions = new Float32Array(lamp_size * 3);
+        batch.lamp_light_directions = new Float32Array(lamp_size * 3);
+        batch.lamp_light_color_intensities = new Float32Array(lamp_size * 3);
+        batch.lamp_light_factors = new Float32Array(lamp_size * 4);
+        m_shaders.set_directive(shaders_info, "NUM_LAMP_LIGHTS", lamp_size);
+
+        for (var i = 0; i < lamps.length; i++)
+            set_lamp_data(batch, lamps[i]);
     }
 }
 
 exports.set_lamp_data = set_lamp_data;
 function set_lamp_data(batch, lamp) {
-    var lamp_uuid = lamp.temp_bpy_obj["uuid"];
-    if (lamp_uuid in batch.lamp_uuid_indexes) {
-        var data_lamp_index = batch.lamp_uuid_indexes[lamp_uuid];
+    if (lamp.uuid in batch.lamp_uuid_indexes) {
+        var data_lamp_index = batch.lamp_uuid_indexes[lamp.uuid];
         batch.lamp_light_positions.set(lamp.render.trans, data_lamp_index * 3);
         batch.lamp_light_directions.set(lamp.light.direction, data_lamp_index * 3);
         batch.lamp_light_color_intensities.set(lamp.light.color_intensity, data_lamp_index * 3);
@@ -2699,7 +2743,6 @@ function update_batch_geometry(batch, submesh) {
 
     var bufs_data = m_geometry.submesh_to_bufs_data(submesh, zsort_type,
             draw_mode, batch.vertex_colors_usage);
-
     batch.bufs_data = bufs_data;
 
     // remove unneeded arrays to save memory, keep them only for z-sorted
@@ -2775,10 +2818,11 @@ function update_batch_particles_emitter(batch, psystem) {
 /**
  * Create all possible batch slots for object and clone it by ptrans array
  */
-function make_hair_particles_metabatches(em_obj, render, emitter_vc, em_submesh, objs,
-        batch_types_arr, objs_ptrans, pset, psys, use_grass_map, seed,
-        reset_seed) {
+function make_hair_particles_metabatches(bpy_em_obj, render, emitter_vc, 
+        em_submesh, bpy_part_objs, batch_types_arr, objs_ptrans, pset, psys, 
+        use_grass_map, seed, reset_seed) {
 
+    var em_obj = bpy_em_obj._object;
     var metabatches = [];
 
     // do not render dynamic grass if grass map was not requested
@@ -2796,8 +2840,8 @@ function make_hair_particles_metabatches(em_obj, render, emitter_vc, em_submesh,
     var objs_hair_render = [];
     var objs_tsr_array = [];
 
-    for (var i = 0; i < objs.length; i++) {
-        var obj = objs[i];
+    for (var i = 0; i < bpy_part_objs.length; i++) {
+        var part_render = bpy_part_objs[i]._object.render;
 
         // NOTE: partially override emitter's render
         var hair_render = m_util.clone_object_nr(render);
@@ -2812,22 +2856,22 @@ function make_hair_particles_metabatches(em_obj, render, emitter_vc, em_submesh,
         hair_render.dynamic_grass = dyn_grass;
         hair_render.is_hair_particles = true;
 
-        hair_render.mats_values = obj.render.mats_values;
-        hair_render.mats_value_inds = obj.render.mats_value_inds;
-        hair_render.mats_rgbs = obj.render.mats_rgbs;
-        hair_render.mats_rgb_inds = obj.render.mats_rgb_inds;
+        hair_render.mats_values = part_render.mats_values;
+        hair_render.mats_value_inds = part_render.mats_value_inds;
+        hair_render.mats_rgbs = part_render.mats_rgbs;
+        hair_render.mats_rgb_inds = part_render.mats_rgb_inds;
 
         if (inst_inherit_bend) {
-            hair_render.wind_bending = obj.render.wind_bending;
-            hair_render.wind_bending_angle = obj.render.wind_bending_angle;
-            hair_render.wind_bending_freq = obj.render.wind_bending_freq;
-            hair_render.detail_bending_freq = obj.render.detail_bending_freq;
-            hair_render.main_bend_col = obj.render.main_bend_col;
-            hair_render.detail_bending_amp = obj.render.detail_bending_amp;
-            hair_render.branch_bending_amp = obj.render.branch_bending_amp;
-            hair_render.wind_bending_amp = obj.render.wind_bending_amp;
+            hair_render.wind_bending = part_render.wind_bending;
+            hair_render.wind_bending_angle = part_render.wind_bending_angle;
+            hair_render.wind_bending_freq = part_render.wind_bending_freq;
+            hair_render.detail_bending_freq = part_render.detail_bending_freq;
+            hair_render.main_bend_col = part_render.main_bend_col;
+            hair_render.detail_bending_amp = part_render.detail_bending_amp;
+            hair_render.branch_bending_amp = part_render.branch_bending_amp;
+            hair_render.wind_bending_amp = part_render.wind_bending_amp;
             // by link, doesn't matter
-            hair_render.detail_bend_col = obj.render.detail_bend_col;
+            hair_render.detail_bend_col = part_render.detail_bend_col;
             hair_render.bend_center_only = false;
         } else {
             hair_render.wind_bending = em_obj.render.wind_bending;
@@ -2844,9 +2888,9 @@ function make_hair_particles_metabatches(em_obj, render, emitter_vc, em_submesh,
         }
 
         if (inst_inherit_shadow) {
-            hair_render.shadow_cast = obj.render.shadow_cast;
-            hair_render.shadow_cast_only = obj.render.shadow_cast_only;
-            hair_render.shadow_receive = obj.render.shadow_receive;
+            hair_render.shadow_cast = part_render.shadow_cast;
+            hair_render.shadow_cast_only = part_render.shadow_cast_only;
+            hair_render.shadow_receive = part_render.shadow_receive;
         } else {
             hair_render.shadow_cast = em_obj.render.shadow_cast;
             hair_render.shadow_cast_only = em_obj.render.shadow_cast_only;
@@ -2854,12 +2898,12 @@ function make_hair_particles_metabatches(em_obj, render, emitter_vc, em_submesh,
         }
 
         if (inst_inherit_reflection) {
-            hair_render.reflexible = obj.render.reflexible;
-            hair_render.reflexible_only = obj.render.reflexible_only;
-            hair_render.reflective = obj.render.reflective;
-            hair_render.cube_reflection_id = obj.render.cube_reflection_id;
-            hair_render.plane_reflection_id = obj.render.plane_reflection_id;
-            hair_render.reflection_type = obj.render.reflection_type;
+            hair_render.reflexible = part_render.reflexible;
+            hair_render.reflexible_only = part_render.reflexible_only;
+            hair_render.reflective = part_render.reflective;
+            hair_render.cube_reflection_id = part_render.cube_reflection_id;
+            hair_render.plane_reflection_id = part_render.plane_reflection_id;
+            hair_render.reflection_type = part_render.reflection_type;
         } else {
             hair_render.reflexible = em_obj.render.reflexible;
             hair_render.reflexible_only = em_obj.render.reflexible_only;
@@ -2894,7 +2938,7 @@ function make_hair_particles_metabatches(em_obj, render, emitter_vc, em_submesh,
             trans[2] = ptrans[j+2];
 
             // NOTE: apply particle scale
-            var scale = ptrans[j+3] * obj.render.scale;
+            var scale = ptrans[j+3] * part_render.scale;
 
             if (pset["b4w_initial_rand_rotation"]) {
                 switch (pset["b4w_rotation_type"]) {
@@ -2920,7 +2964,7 @@ function make_hair_particles_metabatches(em_obj, render, emitter_vc, em_submesh,
 
                 if (!pset["use_whole_group"])
                     if (pset["use_rotation_dupli"])
-                        m_quat.multiply(quat, obj.render.quat, quat);
+                        m_quat.multiply(quat, part_render.quat, quat);
                     else
                         m_quat.multiply(quat, DEFAULT_PART_SYS_QUAT, quat);
             }
@@ -2935,9 +2979,8 @@ function make_hair_particles_metabatches(em_obj, render, emitter_vc, em_submesh,
     // spatial tree object for searching nearest emitter vertices
     // will be calculated only once
     var spatial_tree = {};
-    for (var i = 0; i < objs.length; i++) {
-        var obj = objs[i];
-        var bpy_obj = obj.temp_bpy_obj;
+    for (var i = 0; i < bpy_part_objs.length; i++) {
+        var bpy_obj = bpy_part_objs[i];
 
         var btypes = batch_types_arr[i];
         var hair_render = objs_hair_render[i];
@@ -2959,7 +3002,7 @@ function make_hair_particles_metabatches(em_obj, render, emitter_vc, em_submesh,
             hair_render.branch_bending_amp = 0;
         }
 
-        var hair_render_id = m_util.calc_variable_id(hair_render, 0);
+        var hair_render_id = calculate_render_id(hair_render);
         var tsr_array = objs_tsr_array[i];
 
         if (!tsr_array.length)
@@ -2978,6 +3021,9 @@ function make_hair_particles_metabatches(em_obj, render, emitter_vc, em_submesh,
                 var type = btypes[k];
                 var batch = init_batch(type);
                 var material = materials[j];
+
+                if (type == "COLOR_ID")
+                    batch.can_fork_outline = !(bpy_obj["b4w_do_not_render"] || material["b4w_do_not_render"]);
 
                 if (type == "MAIN")
                     batches_main[j] = batch;
@@ -3011,7 +3057,7 @@ function make_hair_particles_metabatches(em_obj, render, emitter_vc, em_submesh,
                 update_batch_id(batch, hair_render_id);
 
                 var src_submesh = m_geometry.extract_submesh(mesh, j,
-                        batch.common_attributes, batch.bone_pointers,
+                        batch.common_attributes, render.bone_skinning_info,
                         batch.vertex_colors_usage, batch.uv_maps_usage);
 
                 var submesh = m_geometry.make_clone_submesh(src_submesh, submesh_params,
@@ -3033,7 +3079,7 @@ function make_hair_particles_metabatches(em_obj, render, emitter_vc, em_submesh,
                     submesh: submesh,
                     mat_names: [material["name"]],
                     render: hair_render,
-                    rel_objects: [em_obj]
+                    rel_bpy_objects: [bpy_em_obj]
                 })
             }
         }
@@ -3452,18 +3498,18 @@ function distribute_ptrans_by_dupli_weights(ptrans, dupli_objects,
 
         //var weight_name = dupli_weights[weight_index]["name"];
         return weight_index;
-        //return weight_name.split(": ")[0];
+        //return weight_name;
     }
 
     var dupli_weights_sorted = [];
 
     for (var i = 0; i < dupli_objects.length; i++) {
         var dg_obj = dupli_objects[i];
-        var name = dg_obj.origin_name || dg_obj["name"];
+        var name = dg_obj.origin_name || dg_obj.name;
 
         for (var j = 0; j < dupli_weights.length; j++) {
             var weight = dupli_weights[j];
-            if (name == weight["name"].split(": ")[0])
+            if (name == weight["name"])
                 dupli_weights_sorted.push(weight);
         }
     }
@@ -3492,110 +3538,110 @@ function distribute_ptrans_by_dupli_weights(ptrans, dupli_objects,
  * some params will separate batches
  * some params go to vertex attributes
  */
-function create_object_clusters(batch_objects, grid_size) {
+function create_object_clusters(bpy_static_objs, grid_size) {
 
     var clusters = [];
 
     var cluster_ids = {};
 
-    for (var i = 0; i < batch_objects.length; i++) {
-        var bobj = batch_objects[i];
-        var bpy_bobj = bobj.temp_bpy_obj;
-        var bobj_render = bobj.render;
+    for (var i = 0; i < bpy_static_objs.length; i++) {
+        var bpy_obj = bpy_static_objs[i];
+        var obj_render = bpy_obj._object.render;
 
         // bounding box
-
         var bb_local = m_bounds.zero_bounding_box();
-        m_bounds.copy_bb(bobj_render.bb_original, bb_local);
+        m_bounds.copy_bb(obj_render.bb_original, bb_local);
 
         var bb_world = m_bounds.bounding_box_transform(bb_local,
-                bobj_render.world_matrix);
+                obj_render.world_matrix);
 
         // bounding sphere
         var bs_local = m_bounds.create_bounding_sphere(
-                bpy_bobj["data"]["b4w_bounding_sphere_radius"],
-                bpy_bobj["data"]["b4w_bounding_sphere_center"]);
+                bpy_obj["data"]["b4w_bounding_sphere_radius"],
+                bpy_obj["data"]["b4w_bounding_sphere_center"]);
         var bs_world = m_bounds.bounding_sphere_transform(bs_local,
-                bobj_render.world_matrix);
+                obj_render.world_matrix);
 
         // bounding ellipsoid
-        var be_axes = bpy_bobj["data"]["b4w_bounding_ellipsoid_axes"];
+        var be_axes = bpy_obj["data"]["b4w_bounding_ellipsoid_axes"];
         var be_local = m_bounds.create_bounding_ellipsoid(
                 [be_axes[0], 0, 0], [0, be_axes[1], 0], [0, 0, be_axes[2]],
-                bpy_bobj["data"]["b4w_bounding_ellipsoid_center"]);
+                bpy_obj["data"]["b4w_bounding_ellipsoid_center"]);
 
         var be_world = m_bounds.bounding_ellipsoid_transform(be_local,
-                bobj_render.tsr);
+                obj_render.tsr);
 
-        bobj_render.bb_local = bb_local;
-        bobj_render.bb_world = bb_world;
-        bobj_render.bs_local = bs_local;
-        bobj_render.bs_world = bs_world;
-        bobj_render.be_local = be_local;
-        bobj_render.be_world = be_world;
+        obj_render.bb_local = bb_local;
+        obj_render.bb_world = bb_world;
+        obj_render.bs_local = bs_local;
+        obj_render.bs_world = bs_world;
+        obj_render.be_local = be_local;
+        obj_render.be_world = be_world;
 
         // this params will divide batches
         var render_props = {};
-        render_props.shadow_cast = bobj_render.shadow_cast;
-        render_props.shadow_cast_only = bobj_render.shadow_cast_only;
-        render_props.shadow_receive = bobj_render.shadow_receive;
+        render_props.shadow_cast = obj_render.shadow_cast;
+        render_props.shadow_cast_only = obj_render.shadow_cast_only;
+        render_props.shadow_receive = obj_render.shadow_receive;
 
-        render_props.selectable = bobj_render.selectable;
-        render_props.origin_selectable = bobj_render.origin_selectable;
+        render_props.selectable = obj_render.selectable;
+        render_props.origin_selectable = obj_render.origin_selectable;
 
-        render_props.outlining = bobj_render.outlining;
-        render_props.origin_outlining = bobj_render.origin_outlining;
+        render_props.outlining = obj_render.outlining;
+        render_props.origin_outlining = obj_render.origin_outlining;
 
-        render_props.outline_anim_settings = bobj_render.outline_anim_settings;
+        render_props.outline_anim_settings_default = obj_render.outline_anim_settings_default;
 
-        render_props.reflexible = bobj_render.reflexible;
-        render_props.reflexible_only = bobj_render.reflexible_only;
-        render_props.reflective = bobj_render.reflective;
-        render_props.cube_reflection_id = bobj_render.cube_reflection_id;
-        render_props.plane_reflection_id = bobj_render.plane_reflection_id;
-        render_props.reflection_type = bobj_render.reflection_type;
-        render_props.caustics = bobj_render.caustics;
+        render_props.reflexible = obj_render.reflexible;
+        render_props.reflexible_only = obj_render.reflexible_only;
+        render_props.reflective = obj_render.reflective;
+        render_props.cube_reflection_id = obj_render.cube_reflection_id;
+        render_props.plane_reflection_id = obj_render.plane_reflection_id;
+        render_props.reflection_type = obj_render.reflection_type;
+        render_props.caustics = obj_render.caustics;
 
-        render_props.wind_bending = bobj_render.wind_bending;
-        render_props.main_bend_col = bobj_render.main_bend_col;
+        render_props.wind_bending = obj_render.wind_bending;
+        render_props.main_bend_col = obj_render.main_bend_col;
         // by link, doesn't matter
-        render_props.detail_bend_col = bobj_render.detail_bend_col;
+        render_props.detail_bend_col = obj_render.detail_bend_col;
 
-        render_props.billboard = bobj_render.billboard;
-        render_props.billboard_type = bobj_render.billboard_type;
-        render_props.billboard_spherical = bobj_render.billboard_spherical;
+        render_props.billboard = obj_render.billboard;
+        render_props.billboard_type = obj_render.billboard_type;
+        render_props.billboard_spherical = obj_render.billboard_spherical;
         // NOTE: billboard_pres_glob_orientation doesn't have influence on batching,
         // because it directly modifies batch submesh
 
-        render_props.dynamic_grass = bobj_render.dynamic_grass;
-        render_props.do_not_cull = bobj_render.do_not_cull;
-        render_props.disable_fogging = bobj_render.disable_fogging;
+        render_props.dynamic_grass = obj_render.dynamic_grass;
+        render_props.do_not_cull = obj_render.do_not_cull;
+        render_props.disable_fogging = obj_render.disable_fogging;
 
-        render_props.mats_values = bobj_render.mats_values;
-        render_props.mats_value_inds = bobj_render.mats_value_inds;
-        render_props.mats_anim_inds = bobj_render.mats_anim_inds;
-        render_props.mats_rgbs = bobj_render.mats_rgbs;
-        render_props.mats_rgb_inds = bobj_render.mats_rgb_inds;
-        render_props.mats_rgb_anim_inds = bobj_render.mats_rgb_anim_inds;
+        render_props.mats_values = obj_render.mats_values;
+        render_props.mats_value_inds = obj_render.mats_value_inds;
+        render_props.mats_anim_inds = obj_render.mats_anim_inds;
+        render_props.mats_rgbs = obj_render.mats_rgbs;
+        render_props.mats_rgb_inds = obj_render.mats_rgb_inds;
+        render_props.mats_rgb_anim_inds = obj_render.mats_rgb_anim_inds;
 
         // always false for static batches
-        render_props.dynamic_geometry = bobj_render.dynamic_geometry;
+        render_props.dynamic_geometry = obj_render.dynamic_geometry;
 
-        render_props.grid_id = calc_grid_id(grid_size, bobj_render.bs_world.center);
+        render_props.grid_id = calc_grid_id(grid_size, obj_render.bs_world.center);
 
-        render_props.lod_dist_max = bobj_render.lod_dist_max;
-        render_props.lod_dist_min = bobj_render.lod_dist_min;
-        render_props.lod_transition_ratio = bobj_render.lod_transition_ratio;
+        render_props.lod_dist_max = obj_render.lod_dist_max;
+        render_props.lod_dist_min = obj_render.lod_dist_min;
+        render_props.lod_transition_ratio = obj_render.lod_transition_ratio;
+
+        render_props.do_not_render = obj_render.do_not_render;
 
         var id = JSON.stringify(render_props);
         cluster_ids[id] = cluster_ids[id] || [];
-        cluster_ids[id].push(bobj);
+        cluster_ids[id].push(bpy_obj);
     }
 
     for (var key in cluster_ids) {
 
         var render_props = JSON.parse(key);
-        var objects = cluster_ids[key];
+        var bpy_objects = cluster_ids[key];
 
         var render = m_obj_util.create_render("STATIC");
         for (var prop in render_props)
@@ -3603,7 +3649,7 @@ function create_object_clusters(batch_objects, grid_size) {
 
         // NOTE: assign data_id property to differ batches while adding same
         // objects to subscenes (secondary loading case)
-        render.data_id = batch_objects[0].render.data_id;
+        render.data_id = bpy_static_objs[0]._object.render.data_id;
 
         render.wind_bending_amp = 0;
         render.wind_bending_freq = 0;
@@ -3613,8 +3659,8 @@ function create_object_clusters(batch_objects, grid_size) {
         render.hide = false;
 
         // calculate bounding box/sphere
-        for (var i = 0; i < objects.length; i++) {
-            var obj = objects[i];
+        for (var i = 0; i < bpy_objects.length; i++) {
+            var obj = bpy_objects[i]._object;
 
             // do not expand for first object
             if (i == 0) {
@@ -3633,7 +3679,7 @@ function create_object_clusters(batch_objects, grid_size) {
         render.bb_local = m_util.clone_object_r(render.bb_world);
         render.bs_local = m_util.clone_object_r(render.bs_world);
 
-        var cluster = {render: render, objects: objects};
+        var cluster = {render: render, bpy_objects: bpy_objects};
         clusters.push(cluster);
     }
 
@@ -3692,6 +3738,20 @@ function update_batch_id(batch, render_id) {
             batch.textures[j].video_file = video_elements[j];
 }
 
+exports.calculate_render_id = calculate_render_id;
+function calculate_render_id(render) {
+    // NOTE: remove some properties
+    var bone_pointers = render.bone_pointers;
+    render.bone_pointers = null;
+
+    var id = m_util.calc_variable_id(render, 0);
+
+    // return removed properties
+    render.bone_pointers = bone_pointers;
+
+    return id;
+}
+
 exports.create_bounding_ellipsoid_batch = create_bounding_ellipsoid_batch;
 /**
  * Create special batch for bounding ellipsoid debug rendering
@@ -3713,7 +3773,8 @@ function create_bounding_ellipsoid_batch(bv, render, obj_name, ellipsoid,
         batch.debug_sphere_dynamic = true;
 
     update_batch_render(batch, render);
-    update_batch_id(batch, m_util.calc_variable_id(render, 0));
+    var render_id = calculate_render_id(render);
+    update_batch_id(batch, render_id);
 
     if (ellipsoid) {
         var submesh = m_primitives.generate_uv_sphere(16, 8, 1, bv.center,
@@ -3869,6 +3930,9 @@ exports.create_postprocessing_batch = function(post_effect) {
         break;
     case "Y_EXTEND":
         set_batch_directive(batch, "POST_EFFECT", "POST_EFFECT_Y_EXTEND");
+        break;
+    case "FLIP_CUBEMAP_COORDS":
+        set_batch_directive(batch, "POST_EFFECT", "FLIP_CUBEMAP_COORDS");
         break;
     default:
         throw "Wrong postprocessing effect: " + post_effect;
@@ -4039,6 +4103,7 @@ exports.create_god_rays_combine_batch = function(tex_main, tex_god_rays) {
 
     apply_shader(batch, "postprocessing/postprocessing.glslv",
             "postprocessing/god_rays_combine.glslf");
+    set_batch_directive(batch, "SAFARI_CANVAS_ALPHA_HACK", cfg_def.safari_canvas_alpha_hack ? 1: 0);
     update_shader(batch);
 
     return batch;
@@ -4062,7 +4127,7 @@ exports.create_procedural_sky_batch = function() {
     return batch;
 }
 
-exports.create_antialiasing_batch = function() {
+exports.create_antialiasing_batch = function(subs) {
     var batch = init_batch("ANTIALIASING");
 
     batch.depth_mask = false;
@@ -4074,7 +4139,11 @@ exports.create_antialiasing_batch = function() {
     apply_shader(batch, "postprocessing/postprocessing.glslv",
             "postprocessing/antialiasing.glslf");
 
-    set_batch_directive(batch, "AA_METHOD", "AA_METHOD_FXAA_QUALITY");
+    if (cfg_def.quality_aa_method) {
+        set_batch_directive(batch, "AA_METHOD", "AA_METHOD_FXAA_QUALITY");
+        set_batch_directive(batch, "AA_QUALITY", subs.fxaa_quality);
+    } else
+        set_batch_directive(batch, "AA_METHOD", "AA_METHOD_FXAA_LIGHT");
 
     update_shader(batch);
 
@@ -4094,7 +4163,7 @@ exports.create_smaa_batch = function(type) {
     set_batch_directive(batch, "SMAA_PASS", type);
     set_batch_directive(batch, "SMAA_PREDICATION", 0);
 
-    // NOTE: temoporary disabled T2X mode due to artifacts with blend objects
+    // NOTE: temporary disabled T2X mode due to artifacts with blend objects
     set_batch_directive(batch, "SMAA_REPROJECTION", 0);
     //if (m_cfg.context.alpha)
     //    set_batch_directive(batch, "SMAA_REPROJECTION", 0);
@@ -4303,7 +4372,8 @@ exports.update_anchor_visibility_batch = function(batch, positions) {
  * Find batch by object ID, material name and
  * batch type
  */
-exports.find_batch_material = function(obj, mat_name, type) {
+exports.find_batch_material = find_batch_material
+function find_batch_material(obj, mat_name, type) {
     //NOTE: Searches for batches only on the first scene
     var scene_data = obj.scenes_data[0];
     var batches = scene_data.batches;
@@ -4314,7 +4384,8 @@ exports.find_batch_material = function(obj, mat_name, type) {
     return null;
 }
 
-exports.find_batch_material_forked = function(obj, mat_name, type) {
+exports.find_batch_material_forked = find_batch_material_forked
+function find_batch_material_forked(obj, mat_name, type) {
     //NOTE: Searches for batches only on the first scene
     var scene_data = obj.scenes_data[0];
     var batches = scene_data.batches;
@@ -4325,11 +4396,13 @@ exports.find_batch_material_forked = function(obj, mat_name, type) {
     return null;
 }
 
-exports.set_material_props = function(batch_to, batch_from) {
+exports.set_material_props = set_material_props
+function set_material_props (batch_to, batch_from) {
     batch_to.diffuse_color.set(batch_from.diffuse_color);
 
     batch_to.diffuse_intensity = batch_from.diffuse_intensity;
     batch_to.specular_color.set(batch_from.specular_color);
+    batch_to.specular_color_factor = batch_from.specular_color_factor;
     batch_to.specular_params.set(batch_from.specular_params);
 
     batch_to.emit = batch_from.emit;
@@ -4373,6 +4446,55 @@ exports.clear_batch = function(batch) {
     }
 
     m_geometry.cleanup_bufs_data(batch.bufs_data);
+}
+
+exports.inherit_material = function(obj_from, mat_from_name, obj_to,
+                                    mat_to_name) {
+
+    var types = ["MAIN", "DEPTH", "COLOR_ID"];
+    var batches_found = false;
+    for (var i = 0; i < types.length; i++) {
+        var type = types[i];
+
+        var batch_from = find_batch_material(obj_from,
+            mat_from_name, type);
+        var batch_to = find_batch_material(obj_to, mat_to_name,
+            type);
+
+        if (batch_from && batch_to) {
+            batches_found = true;
+            var child_batch = find_batch_material_forked(obj_to, mat_to_name,
+                type);
+            if (type == "MAIN") {
+                set_material_props(batch_to, batch_from);
+                if (child_batch)
+                    set_material_props(child_batch, batch_from);
+            }
+
+            // inherit textures
+            for (var j = 0; j < batch_to.texture_names.length; j++) {
+                var to_name = batch_to.texture_names[j];
+                if (BATCH_INHERITED_TEXTURES.indexOf(to_name) !== -1) {
+                    var from_index = batch_from.texture_names.indexOf(to_name);
+                    if (from_index !== -1) {
+                        batch_to.textures[j] = batch_from.textures[from_index];
+
+                        //inherit textures for child batches
+                        if (child_batch) {
+                            var child_index
+                                = child_batch.texture_names.indexOf(to_name);
+                            if (child_index !== -1)
+                                child_batch.textures[child_index]
+                                    = batch_from.textures[from_index];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (!batches_found)
+        m_print.error("Wrong objects for inheriting material!")
 }
 
 }

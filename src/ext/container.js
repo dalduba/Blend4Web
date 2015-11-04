@@ -1,3 +1,20 @@
+/**
+ * Copyright (C) 2014-2015 Triumph LLC
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 "use strict";
 
 /**
@@ -17,6 +34,13 @@ var m_print  = require("__print");
 exports.get_canvas = m_cont.get_canvas;
 
 /**
+ * Returns the HUD element.
+ * @method module:container.get_canvas_hud
+ * @returns {HTMLElement} Canvas hud element
+ */
+exports.get_canvas_hud = m_cont.get_canvas_hud;
+
+/**
  * Returns the HTML element which contains the 3D canvas.
  * @method module:container.get_container
  * @returns {HTMLElement} Canvas container element
@@ -26,7 +50,7 @@ exports.get_container = m_cont.get_container;
 /**
  * Inserts the DOM element to the container.
  * @method module:container.insert_to_container
- * @param {HTMLElement} obj Inserted DOM element.
+ * @param {HTMLElement} elem Inserted DOM element.
  * @param {String} stack_order Inserted DOM element stack order (one of "FIRST",
  * "JUST_BEFORE_CANVAS", "JUST_AFTER_CANVAS", "LAST").
  */
@@ -77,5 +101,22 @@ exports.client_to_canvas_coords = m_cont.client_to_canvas_coords;
  * @method module:container.force_offsets_updating
  */
 exports.force_offsets_updating = m_cont.force_offsets_updating;
+
+/**
+ * Resize the rendering canvas.
+ * @method module:container.resize
+ * @param {Number} width New canvas width
+ * @param {Number} height New canvas height
+ * @param {Boolean} [update_canvas_css=true] Change canvas CSS width/height
+ */
+exports.resize = function(width, height, update_canvas_css) {
+
+    if (!width || !height)
+        m_print.warn("Wrong canvas container dimensions: " + width + "x" + height 
+                + ". Zero dimensions aren't allowed. Resized to: " 
+                + m_cont.DEFAULT_CANVAS_W + "x" + m_cont.DEFAULT_CANVAS_H + ".");
+
+    m_cont.resize(width, height, update_canvas_css);
+}
 
 }

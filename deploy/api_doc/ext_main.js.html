@@ -65,6 +65,7 @@ var m_ext      = require("__extensions");
 var m_geom     = require("__geometry");
 var m_hud      = require("__hud");
 var m_nla      = require("__nla");
+var m_lnodes   = require("__logic_nodes")
 var m_obj      = require("__objects");
 var m_phy      = require("__physics");
 var m_print    = require("__print");
@@ -75,6 +76,7 @@ var m_shaders  = require("__shaders");
 var m_textures = require("__textures");
 var m_time     = require("__time");
 var m_trans    = require("__transform");
+var m_armat    = require("__armature");
 var m_util     = require("__util");
 var m_version  = require("__version");
 
@@ -148,6 +150,15 @@ exports.init = function(elem_canvas_webgl, elem_canvas_hud) {
     setup_clock();
 
     _elem_canvas_webgl = elem_canvas_webgl;
+    if (elem_canvas_hud) {
+        m_hud.init(elem_canvas_hud);
+        _elem_canvas_hud = elem_canvas_hud;
+    } else {
+        // disable features which depend on HUD
+        m_cfg.defaults.show_hud_debug_info = false;
+        m_cfg.sfx.mix_mode = false;
+    }
+
     m_compat.apply_context_alpha_hack(gl);
 
     var gl = get_context(elem_canvas_webgl);
@@ -156,7 +167,7 @@ exports.init = function(elem_canvas_webgl, elem_canvas_hud) {
 
     _gl = gl;
 
-    init_context(_elem_canvas_webgl, gl);
+    init_context(_elem_canvas_webgl, _elem_canvas_hud, gl);
     m_cfg.apply_quality();
     m_compat.set_hardware_defaults(gl);
 
@@ -166,15 +177,6 @@ exports.init = function(elem_canvas_webgl, elem_canvas_hud) {
         elem_canvas_webgl.style["touch-action"] = "none";
 
     m_print.log("%cSET PRECISION:", "color: #00a", cfg_def.precision);
-
-    if (elem_canvas_hud) {
-        m_hud.init(elem_canvas_hud);
-        _elem_canvas_hud = elem_canvas_hud;
-    } else {
-        // disable features which depend on HUD
-        m_cfg.defaults.show_hud_debug_info = false;
-        m_cfg.sfx.mix_mode = false;
-    }
 
     return gl;
 }
@@ -200,7 +202,6 @@ function setup_clock() {
     m_time.set_timeline(0);
 }
 
-
 function get_context(canvas) {
 
     var ctx = null;
@@ -224,7 +225,7 @@ function get_context(canvas) {
     return ctx;
 }
 
-function init_context(canvas, gl) {
+function init_context(canvas, canvas_hud, gl) {
     canvas.addEventListener("webglcontextlost",
             function(event) {
                 event.preventDefault();
@@ -249,8 +250,9 @@ function init_context(canvas, gl) {
     m_textures.setup_context(gl);
     m_shaders.setup_context(gl);
     m_debug.setup_context(gl);
+    m_cont.setup_context(gl);
     m_data.setup_canvas(canvas);
-    m_cont.init(canvas);
+    m_cont.init(canvas, canvas_hud);
 
     m_scenes.setup_dim(canvas.width, canvas.height, 1);
 
@@ -277,66 +279,15 @@ exports.set_check_gl_errors = function(val) {
  * @param {Number} width New canvas width
  * @param {Number} height New canvas height
  * @param {Boolean} [update_canvas_css=true] Change canvas CSS width/height
+ * @deprecated Use {@link module:container.resize|container.resize} instead
  */
-exports.resize = function(width, height, update_canvas_css) {
-
-    if (update_canvas_css !== false) {
-        _elem_canvas_webgl.style.width = width + "px";
-        _elem_canvas_webgl.style.height = height + "px";
-
-        if (_elem_canvas_hud) {
-            _elem_canvas_hud.style.width = width + "px";
-            _elem_canvas_hud.style.height = height + "px";
-        }
-    }
-
-    if (_elem_canvas_hud) {
-        // no HIDPI/resolution factor for HUD canvas
-        _elem_canvas_hud.width  = width;
-        _elem_canvas_hud.height = height;
-        m_hud.update_dim();
-    }
-
-
-    if (navigator.userAgent.match(/iPhone/i) ||
-        navigator.userAgent.match(/iPad/i) ||
-        navigator.userAgent.match(/iPod/i))
-            cfg_def.canvas_resolution_factor = 1;
-
-    var cw = Math.floor(width * cfg_def.canvas_resolution_factor);
-    var ch = Math.floor(height * cfg_def.canvas_resolution_factor);
-
-    if (cfg_def.allow_hidpi &amp;&amp; window.devicePixelRatio > 1) {
-        cw *= window.devicePixelRatio;
-        ch *= window.devicePixelRatio;
-    }
-
-    _elem_canvas_webgl.width  = cw;
-    _elem_canvas_webgl.height = ch;
-
-    if (cw > _gl.drawingBufferWidth || ch > _gl.drawingBufferHeight) {
-        m_print.warn("Canvas size exceeds platform limits, downscaling");
-
-        var downscale = Math.min(_gl.drawingBufferWidth/cw,
-                _gl.drawingBufferHeight/ch);
-
-        cw *= downscale;
-        ch *= downscale;
-
-        _elem_canvas_webgl.width  = cw;
-        _elem_canvas_webgl.height = ch;
-    }
-
-    m_scenes.setup_dim(cw, ch, cw/width);
-
-    // needed for frustum culling/constraints
-    if (m_scenes.check_active())
-        m_trans.update_transform(m_scenes.get_active()._camera);
-
-    frame(m_time.get_timeline(), 0);
-
-    m_data.update_media_controls(_elem_canvas_webgl.width, _elem_canvas_webgl.height);
+exports.resize = resize;
+function resize(width, height, update_canvas_css) {
+    m_print.error("resize() deprecated, use container.resize() instead");
+    
+    m_cont.resize(width, height, update_canvas_css);
 }
+
 
 /**
  * Set the callback for the FPS counter
@@ -386,7 +337,7 @@ function clear_render_callback() {
  * Return the engine's global timeline value
  * @method module:main.global_timeline
  * @returns {Number} Floating-point number of seconds elapsed since the engine start-up
- * @deprecated Use time.get_timeline() instead
+ * @deprecated Use {@link module:time.get_timeline|time.get_timeline} instead
  */
 exports.global_timeline = function() {
     return m_time.get_timeline();
@@ -491,6 +442,8 @@ function frame(timeline, delta) {
     m_hud.reset();
 
     m_trans.update(delta);
+
+    m_lnodes.update(timeline, delta)
 
     m_nla.update(timeline, delta);
 
@@ -599,7 +552,7 @@ exports.reset = function() {
 
 /**
  * Register one-time callback to return DataURL of rendered canvas element.
- * @param callback DataURL callback
+ * @param {DataURLCallback} callback DataURL callback
  */
 exports.canvas_data_url = function(callback) {
     _canvas_data_url_callback = callback;
@@ -609,7 +562,7 @@ exports.canvas_data_url = function(callback) {
  * Return the main canvas element.
  * @method module:main.get_canvas_elem
  * @returns {HTMLCanvasElement} Canvas element
- * @deprecated Use container.get_canvas() instead
+ * @deprecated Use {@link module:container.get_canvas|container.get_canvas} instead
  */
 exports.get_canvas_elem = function() {
     return _elem_canvas_webgl;
@@ -617,6 +570,7 @@ exports.get_canvas_elem = function() {
 /**
  * Check using device.
  * @method module:main.detect_mobile
+ * @returns {Boolean} Checking result.
  */
 exports.detect_mobile = function() {
     return m_compat.detect_mobile();
@@ -658,13 +612,13 @@ exports.remove_loop_cb = function(callback) {
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-anchors.html">anchors</a></li><li><a href="module-animation.html">animation</a></li><li><a href="module-app.html">app</a></li><li><a href="module-assets.html">assets</a></li><li><a href="module-camera.html">camera</a></li><li><a href="module-camera_anim.html">camera_anim</a></li><li><a href="module-config.html">config</a></li><li><a href="module-constraints.html">constraints</a></li><li><a href="module-container.html">container</a></li><li><a href="module-controls.html">controls</a></li><li><a href="module-data.html">data</a></li><li><a href="module-debug.html">debug</a></li><li><a href="module-geometry.html">geometry</a></li><li><a href="module-gyroscope.html">gyroscope</a></li><li><a href="module-hud.html">hud</a></li><li><a href="module-lights.html">lights</a></li><li><a href="module-main.html">main</a></li><li><a href="module-mat3.html">mat3</a></li><li><a href="module-mat4.html">mat4</a></li><li><a href="module-material.html">material</a></li><li><a href="module-mixer.html">mixer</a></li><li><a href="module-mouse.html">mouse</a></li><li><a href="module-nla.html">nla</a></li><li><a href="module-npc_ai.html">npc_ai</a></li><li><a href="module-ns_compat.html">ns_compat</a></li><li><a href="module-objects.html">objects</a></li><li><a href="module-particles.html">particles</a></li><li><a href="module-physics.html">physics</a></li><li><a href="module-preloader.html">preloader</a></li><li><a href="module-quat.html">quat</a></li><li><a href="module-rgb.html">rgb</a></li><li><a href="module-rgba.html">rgba</a></li><li><a href="module-scenes.html">scenes</a></li><li><a href="module-screenshooter.html">screenshooter</a></li><li><a href="module-sfx.html">sfx</a></li><li><a href="module-storage.html">storage</a></li><li><a href="module-textures.html">textures</a></li><li><a href="module-time.html">time</a></li><li><a href="module-transform.html">transform</a></li><li><a href="module-tsr.html">tsr</a></li><li><a href="module-util.html">util</a></li><li><a href="module-vec3.html">vec3</a></li><li><a href="module-vec4.html">vec4</a></li><li><a href="module-version.html">version</a></li></ul><h3>Namespaces</h3><ul><li><a href="b4w.html">b4w</a></li></ul><h3><a href="global.html">Global</a></h3>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-anchors.html">anchors</a></li><li><a href="module-animation.html">animation</a></li><li><a href="module-app.html">app</a></li><li><a href="module-armature.html">armature</a></li><li><a href="module-assets.html">assets</a></li><li><a href="module-camera.html">camera</a></li><li><a href="module-camera_anim.html">camera_anim</a></li><li><a href="module-config.html">config</a></li><li><a href="module-constraints.html">constraints</a></li><li><a href="module-container.html">container</a></li><li><a href="module-controls.html">controls</a></li><li><a href="module-data.html">data</a></li><li><a href="module-debug.html">debug</a></li><li><a href="module-geometry.html">geometry</a></li><li><a href="module-gyroscope.html">gyroscope</a></li><li><a href="module-hud.html">hud</a></li><li><a href="module-lights.html">lights</a></li><li><a href="module-main.html">main</a></li><li><a href="module-mat3.html">mat3</a></li><li><a href="module-mat4.html">mat4</a></li><li><a href="module-material.html">material</a></li><li><a href="module-mixer.html">mixer</a></li><li><a href="module-mouse.html">mouse</a></li><li><a href="module-nla.html">nla</a></li><li><a href="module-npc_ai.html">npc_ai</a></li><li><a href="module-ns_compat.html">ns_compat</a></li><li><a href="module-objects.html">objects</a></li><li><a href="module-particles.html">particles</a></li><li><a href="module-physics.html">physics</a></li><li><a href="module-preloader.html">preloader</a></li><li><a href="module-quat.html">quat</a></li><li><a href="module-rgb.html">rgb</a></li><li><a href="module-rgba.html">rgba</a></li><li><a href="module-scenes.html">scenes</a></li><li><a href="module-screenshooter.html">screenshooter</a></li><li><a href="module-sfx.html">sfx</a></li><li><a href="module-storage.html">storage</a></li><li><a href="module-textures.html">textures</a></li><li><a href="module-time.html">time</a></li><li><a href="module-transform.html">transform</a></li><li><a href="module-tsr.html">tsr</a></li><li><a href="module-util.html">util</a></li><li><a href="module-vec3.html">vec3</a></li><li><a href="module-vec4.html">vec4</a></li><li><a href="module-version.html">version</a></li></ul><h3>Namespaces</h3><ul><li><a href="b4w.html">b4w</a></li></ul><h3><a href="global.html">Global</a></h3>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0-dev</a> on Mon Aug 31 2015 12:43:57 GMT+0300 (MSK)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0-dev</a> on Thu Oct 29 2015 15:58:55 GMT+0300 (MSK)
 </footer>
 
 <script> prettyPrint(); </script>

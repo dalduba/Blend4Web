@@ -39,7 +39,7 @@
 #include <caustics.glslf>
 # endif
 
-#include <gamma.glslf>
+#include <color_util.glslf>
 #include <math.glslv>
 #endif // NODES && ALPHA
 
@@ -78,7 +78,9 @@ uniform sampler2D u_sampler;
 # endif
 #endif // NODES && ALPHA
 
+#if !USE_OUTLINE
 uniform vec3 u_color_id;
+#endif
 
 /*============================================================================
                                    UNIFORMS

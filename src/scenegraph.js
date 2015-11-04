@@ -1,3 +1,20 @@
+/**
+ * Copyright (C) 2014-2015 Triumph LLC
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 "use strict";
 
 /**
@@ -24,6 +41,7 @@ var m_util     = require("__util");
 
 var cfg_dbg = m_cfg.debug_subs;
 var cfg_def = m_cfg.defaults;
+var cfg_out = m_cfg.outlining;
 var cfg_scs = m_cfg.scenes;
 
 var DEBUG_DISABLE_TEX_REUSE = false;
@@ -308,17 +326,6 @@ function process_subscene_links(graph) {
     });
 }
 
-function apply_resolution_factor(graph) {
-    traverse_slinks(graph, function(slink, internal, subs1, subs2) {
-        if (slink.update_dim
-                && ((has_lower_subs(graph, subs1, "SMAA_NEIGHBORHOOD_BLENDING")
-                && subs1.type != "SMAA_NEIGHBORHOOD_BLENDING") || 
-                has_lower_subs(graph, subs1, "ANTIALIASING") ||
-                subs1.type == "ANCHOR_VISIBILITY"))
-            slink.size_mult *= cfg_def.render_resolution_factor;
-    });
-}
-
 function calc_slink_id(slink) {
     var id_obj = m_util.clone_object_json(slink);
     delete id_obj.to;
@@ -590,7 +597,7 @@ exports.create_rendering_graph = function(sc_render, cam_render, render_to_textu
 
         var csm_num = shadow_params.csm_num;
         for (var i = 0; i < csm_num; i++) {
-            var subs_shadow = create_subs_shadow_cast(i, shadow_params);
+            var subs_shadow = create_subs_shadow_cast(i, shadow_params, num_lights);
             m_graph.append_node_attr(graph, subs_shadow);
             shadow_subscenes.push(subs_shadow);
 
@@ -734,8 +741,7 @@ exports.create_rendering_graph = function(sc_render, cam_render, render_to_textu
             var cam_depth = cam_copy(cam);
             cam_render.cameras.push(cam_depth);
 
-            subs_depth = create_subs_depth_shadow(graph, cam_depth,
-                                                  shadow_params);
+            subs_depth = create_subs_depth_shadow(graph, cam_depth, num_lights);
             depth_subscenes.push(subs_depth);
 
             m_graph.append_node_attr(graph, subs_depth);
@@ -848,13 +854,13 @@ exports.create_rendering_graph = function(sc_render, cam_render, render_to_textu
         // camera depends on bpy camera
         cam_render.cameras.push(cam);
 
-        var subs_color_picking = create_subs_color_picking(cam, false);
+        var subs_color_picking = create_subs_color_picking(cam, false, num_lights);
         m_graph.append_node_attr(graph, subs_color_picking);
 
         if (sc_render.xray) {
             var cam = cam_copy(prev_level[0].camera);
             cam_render.cameras.push(cam);
-            var subs_color_picking_xray = create_subs_color_picking(cam, true);
+            var subs_color_picking_xray = create_subs_color_picking(cam, true, num_lights);
             m_graph.append_node_attr(graph, subs_color_picking_xray);
             var cp_slink_c = create_slink("COLOR", "COLOR", 1, 1, true);
             m_graph.append_edge_attr(graph, subs_color_picking,
@@ -979,7 +985,6 @@ exports.create_rendering_graph = function(sc_render, cam_render, render_to_textu
 
             m_graph.append_edge_attr(graph, opaque_subscenes[i], subs_main_glow,
                     slinks_main_depth_o[i]);
-
             var blur_x = create_subs_postprocessing("X_GLOW_BLUR");
             blur_x.subtype = "GLOW_MASK_SMALL";
             set_texel_size_mult(blur_x, sc_render.glow_params.small_glow_mask_width);
@@ -1314,7 +1319,7 @@ exports.create_rendering_graph = function(sc_render, cam_render, render_to_textu
             var cam_outline = cam_copy(main_cams[i]);
             cam_render.cameras.push(cam_outline);
 
-            var subs_outline_mask = create_subs_outline_mask(cam_outline);
+            var subs_outline_mask = create_subs_outline_mask(cam_outline, num_lights);
             m_graph.append_node_attr(graph, subs_outline_mask);
 
             var pp_x_ext = create_subs_postprocessing("X_EXTEND");
@@ -1432,14 +1437,14 @@ exports.create_rendering_graph = function(sc_render, cam_render, render_to_textu
                 //}
 
                 // 1-st pass - edge detection
-                var subs_smaa_1 = create_subs_smaa("SMAA_EDGE_DETECTION");
+                var subs_smaa_1 = create_subs_smaa("SMAA_EDGE_DETECTION", sc_render);
                 m_graph.append_node_attr(graph, subs_smaa_1);
 
                 m_graph.append_edge_attr(graph, subs_prev, subs_smaa_1,
                                          slink_smaa_in);
 
                 // 2-nd pass - blending weight calculation
-                var subs_smaa_2 = create_subs_smaa("SMAA_BLENDING_WEIGHT_CALCULATION");
+                var subs_smaa_2 = create_subs_smaa("SMAA_BLENDING_WEIGHT_CALCULATION", sc_render);
                 m_graph.append_node_attr(graph, subs_smaa_2);
                 m_graph.append_edge_attr(graph, subs_smaa_1, subs_smaa_2,
                                          slink_smaa_in);
@@ -1457,7 +1462,7 @@ exports.create_rendering_graph = function(sc_render, cam_render, render_to_textu
                 subs_smaa_2.slinks_internal.push(slink_area_tex);
 
                 // 3-rd pass - neighborhood blending
-                var subs_smaa_3 = create_subs_smaa("SMAA_NEIGHBORHOOD_BLENDING");
+                var subs_smaa_3 = create_subs_smaa("SMAA_NEIGHBORHOOD_BLENDING", sc_render);
                 m_graph.append_node_attr(graph, subs_smaa_3);
 
                 m_graph.append_edge_attr(graph, subs_prev,
@@ -1476,7 +1481,7 @@ exports.create_rendering_graph = function(sc_render, cam_render, render_to_textu
                 //if (!m_cfg.context.alpha) {
                 //    m_graph.append_edge_attr(graph, subs_velocity, subs_smaa_3,
                 //                             slink_velocity_smaa);
-                //    var subs_smaa_r = create_subs_smaa("SMAA_RESOLVE");
+                //    var subs_smaa_r = create_subs_smaa("SMAA_RESOLVE", sc_render);
                 //    m_graph.append_node_attr(graph, subs_smaa_r);
 
                 //    m_graph.append_edge_attr(graph, subs_smaa_3, subs_smaa_r,
@@ -1496,7 +1501,7 @@ exports.create_rendering_graph = function(sc_render, cam_render, render_to_textu
                     curr_level.push(subs_smaa_3);
 
             } else {
-                var subs_aa = create_subs_aa();
+                var subs_aa = create_subs_aa(sc_render);
                 m_graph.append_node_attr(graph, subs_aa);
 
                 var slink_aa_in = create_slink("COLOR", "u_color", 1, 1, true);
@@ -1504,13 +1509,7 @@ exports.create_rendering_graph = function(sc_render, cam_render, render_to_textu
                 slink_aa_in.mag_filter = m_tex.TF_LINEAR;
                 m_graph.append_edge_attr(graph, subs_prev, subs_aa, slink_aa_in);
 
-                if (cfg_def.render_resolution_factor > 1) {
-                    var subs_rescale = create_subs_postprocessing("NONE");
-                    m_graph.append_node_attr(graph, subs_rescale);
-                    m_graph.append_edge_attr(graph, subs_aa, subs_rescale, slink_aa_in);
-                    curr_level.push(subs_rescale);
-                } else
-                    curr_level.push(subs_aa);
+                curr_level.push(subs_aa);
             }
         }
 
@@ -1647,9 +1646,6 @@ exports.create_rendering_graph = function(sc_render, cam_render, render_to_textu
 
     enforce_graph_consistency(graph, depth_tex);
 
-    if (cfg_def.render_resolution_factor > 1)
-        apply_resolution_factor(graph);
-
     process_subscene_links(graph);
     assign_render_targets(graph);
 
@@ -1711,8 +1707,18 @@ function assign_debug_subscene(graph, subs_to_debug) {
             create_slink("SCREEN", "NONE", 0.5, 0.5, true));
 }
 
+function add_light_attributes(subs, num_lights) {
+    subs.num_lights = num_lights;
+    subs.light_directions        = new Float32Array(num_lights * 3); // vec3's
+    subs.light_positions         = new Float32Array(num_lights * 3); // vec3's
+    subs.light_color_intensities = new Float32Array(num_lights * 3); // vec3's
 
-function create_subs_shadow_cast(csm_index, shadow_params) {
+    // packed vec2's into vec4's
+    var num_lfac = num_lights % 2 == 0 ? num_lights * 2: num_lights * 2 + 2;
+    subs.light_factors           = new Float32Array(num_lfac);
+}
+
+function create_subs_shadow_cast(csm_index, shadow_params, num_lights) {
     var subs = init_subs("SHADOW_CAST");
     subs.csm_index = csm_index;
     subs.self_shadow_polygon_offset = shadow_params.self_shadow_polygon_offset;
@@ -1730,6 +1736,8 @@ function create_subs_shadow_cast(csm_index, shadow_params) {
     default:
         subs.camera = m_cam.create_camera(m_cam.TYPE_ORTHO_ASYMMETRIC);
     }
+
+    add_light_attributes(subs, num_lights);
 
     return subs;
 }
@@ -2131,14 +2139,7 @@ function create_subs_main(main_type, cam, opaque_do_clear_depth,
     if (water_params)
         assign_water_params(subs, water_params, sun_exist)
 
-    subs.num_lights = num_lights;
-    subs.light_directions        = new Float32Array(num_lights * 3); // vec3's
-    subs.light_positions         = new Float32Array(num_lights * 3); // vec3's
-    subs.light_color_intensities = new Float32Array(num_lights * 3); // vec3's
-
-    // packed vec2's into vec4's
-    var num_lfac = num_lights % 2 == 0 ? num_lights * 2: num_lights * 2 + 2;
-    subs.light_factors           = new Float32Array(num_lfac);
+    add_light_attributes(subs, num_lights);
 
     return subs;
 }
@@ -2193,7 +2194,7 @@ function assign_inputs(graph, subs, inputs) {
     }
 }
 
-function create_subs_color_picking(cam, xray) {
+function create_subs_color_picking(cam, xray, num_lights) {
 
     var subs = init_subs("COLOR_PICKING");
     if (xray) {
@@ -2205,6 +2206,8 @@ function create_subs_color_picking(cam, xray) {
     subs.enqueue = false;
 
     subs.camera = cam;
+
+    add_light_attributes(subs, num_lights);
 
     return subs;
 }
@@ -2235,9 +2238,12 @@ function create_subs_anchor_visibility(cam) {
 /**
  * Used for depth and (optionally) shadow receive rendering
  */
-function create_subs_depth_shadow(graph, cam) {
+function create_subs_depth_shadow(graph, cam, num_lights) {
     var subs = init_subs("DEPTH");
     subs.camera = cam;
+
+    add_light_attributes(subs, num_lights);
+
     return subs;
 }
 
@@ -2291,20 +2297,22 @@ function create_subs_ssao_blur(cam, ssao_params) {
     return subs;
 }
 
-function create_subs_aa() {
+function create_subs_aa(sc_render) {
     var subs = init_subs("ANTIALIASING");
     subs.clear_color = false;
     subs.clear_depth = false;
     subs.depth_test = false;
 
-    subs.texel_size_multiplier = 1 / cfg_def.render_resolution_factor;
+
+    subs.texel_size_multiplier = 1 / sc_render.resolution_factor;
+    subs.fxaa_quality = sc_render.aa_quality;
 
     subs.camera = m_cam.create_camera(m_cam.TYPE_NONE);
 
     return subs;
 }
 
-function create_subs_smaa(pass) {
+function create_subs_smaa(pass, sc_render) {
     var subs = init_subs(pass);
 
     if (pass == "SMAA_BLENDING_WEIGHT_CALCULATION" ||
@@ -2315,7 +2323,7 @@ function create_subs_smaa(pass) {
 
     subs.clear_depth = false;
     subs.depth_test = false;
-    subs.texel_size_multiplier = 1 / cfg_def.render_resolution_factor;
+    subs.texel_size_multiplier = 1 / sc_render.resolution_factor;
 
     subs.camera = m_cam.create_camera(m_cam.TYPE_NONE);
 
@@ -2371,10 +2379,12 @@ function create_subs_dof(cam) {
 }
 
 
-function create_subs_outline_mask(cam) {
+function create_subs_outline_mask(cam, num_lights) {
     var subs = init_subs("OUTLINE_MASK");
     subs.depth_test = false;
     subs.camera = cam;
+
+    add_light_attributes(subs, num_lights);
 
     return subs;
 }
@@ -2382,7 +2392,10 @@ function create_subs_outline_mask(cam) {
 function create_subs_outline(outline_params) {
     var subs = init_subs("OUTLINE");
 
-    subs.outline_color.set(outline_params.outline_color);
+    if (cfg_out.outlining_overview_mode)
+        subs.outline_color.set(cfg_out.outline_color);
+    else
+        subs.outline_color.set(outline_params.outline_color);
     subs.outline_factor = outline_params.outline_factor;
     subs.ext_texel_size_mult = 5;
     subs.blur_texel_size_mult = 3;
@@ -2425,14 +2438,7 @@ function create_subs_god_rays(cam, water, ray_length, pack, step,
     subs.steps_per_pass = steps_per_pass;
     subs.camera = cam;
 
-    subs.num_lights = num_lights;
-    subs.light_directions        = new Float32Array(num_lights * 3); // vec3's
-    subs.light_positions         = new Float32Array(num_lights * 3); // vec3's
-    subs.light_color_intensities = new Float32Array(num_lights * 3); // vec3's
-
-    // packed vec2's into vec4's
-    var num_lfac = num_lights % 2 == 0 ? num_lights * 2: num_lights * 2 + 2;
-    subs.light_factors           = new Float32Array(num_lfac);
+    add_light_attributes(subs, num_lights);
 
     return subs;
 }
@@ -2448,14 +2454,7 @@ function create_subs_god_rays_comb(intensity, num_lights) {
 
     subs.god_rays_intensity = intensity;
 
-    subs.num_lights = num_lights;
-    subs.light_directions        = new Float32Array(num_lights * 3); // vec3's
-    subs.light_positions         = new Float32Array(num_lights * 3); // vec3's
-    subs.light_color_intensities = new Float32Array(num_lights * 3); // vec3's
-
-    // packed vec2's into vec4's
-    var num_lfac = num_lights % 2 == 0 ? num_lights * 2: num_lights * 2 + 2;
-    subs.light_factors           = new Float32Array(num_lfac);
+    add_light_attributes(subs, num_lights);
 
     return subs;
 }
@@ -2482,14 +2481,7 @@ function create_subs_sky(num_lights, sky_params) {
 
     subs.cube_view_matrices = m_util.generate_cubemap_matrices();
 
-    subs.num_lights = num_lights;
-    subs.light_directions        = new Float32Array(num_lights * 3); // vec3's
-    subs.light_positions         = new Float32Array(num_lights * 3); // vec3's
-    subs.light_color_intensities = new Float32Array(num_lights * 3); // vec3's
-
-    // packed vec2's into vec4's
-    var num_lfac = num_lights % 2 == 0 ? num_lights * 2: num_lights * 2 + 2;
-    subs.light_factors           = new Float32Array(num_lfac);
+    add_light_attributes(subs, num_lights);
 
     subs.horizon_color = new Float32Array([1, 1, 1]);
     subs.zenith_color = new Float32Array([1, 1, 1]);
@@ -2572,14 +2564,7 @@ function create_subs_luminance_trunced(bloom_key, edge_lum, num_lights, cam) {
     //var cam = m_cam.create_camera(m_cam.TYPE_NONE);
     subs.camera = cam;
 
-    subs.num_lights = num_lights;
-    subs.light_directions        = new Float32Array(num_lights * 3); // vec3's
-    subs.light_positions         = new Float32Array(num_lights * 3); // vec3's
-    subs.light_color_intensities = new Float32Array(num_lights * 3); // vec3's
-
-    // packed vec2's into vec4's
-    var num_lfac = num_lights % 2 == 0 ? num_lights * 2: num_lights * 2 + 2;
-    subs.light_factors           = new Float32Array(num_lfac);
+    add_light_attributes(subs, num_lights);
 
     return subs;
 }

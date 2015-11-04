@@ -1,3 +1,20 @@
+/**
+ * Copyright (C) 2014-2015 Triumph LLC
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 "use strict";
 
 /**
@@ -76,11 +93,12 @@ var SHADERS = ["anchors.glslf",
 
     "include/blending.glslf",
     "include/caustics.glslf",
+    "include/color_util.glslf",
     "include/depth_fetch.glslf",
     "include/dynamic_grass.glslv",
     "include/environment.glslf",
     "include/fog.glslf",
-    "include/gamma.glslf",
+    "include/fxaa.glslf",
     "include/lighting_nodes.glslf",
     "include/math.glslv",
     "include/mirror.glslf",
@@ -542,7 +560,7 @@ exports.load_shaders = function() {
         for (var i = 0; i < SHADERS.length; i++) {
             var shader_path = m_util.normpath_preserve_protocol(cfg_pth.shaders_dir
                     + SHADERS[i]);
-            shader_assets.push([SHADERS[i], asset_type, shader_path]);
+            shader_assets.push({id:SHADERS[i], type:asset_type, url:shader_path});
         }
 
         var asset_cb = function(shader_text, shader_name, type, path) {

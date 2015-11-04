@@ -1,3 +1,20 @@
+/**
+ * Copyright (C) 2014-2015 Triumph LLC
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 "use strict";
 
 /**
@@ -743,7 +760,6 @@ function init_ghost_mesh_physics(obj, batch, worker) {
 
 
 function init_bounding_physics(obj, compound_children, worker) {
-    var bpy_obj = obj.temp_bpy_obj;
     var render = obj.render;
     var phy_set = obj.physics_settings;
 
@@ -788,14 +804,14 @@ function init_bounding_physics(obj, compound_children, worker) {
     var velocity_max = phy_set.velocity_max;
     var damping = phy_set.damping;
     var rotation_damping = phy_set.rotation_damping;
-    var collision_id = bpy_obj["b4w_collision_id"];
+    var collision_id = obj.collision_id;
     var collision_id_num = col_id_num(collision_id);
     var collision_margin = phy_set.collision_margin;
     var collision_group = phy_set.collision_group;
     var collision_mask = phy_set.collision_mask;
     var size = render.bs_local.radius;
     var worker_bounding = create_worker_bounding(bounding_object);
-    var correct_bound_offset = bpy_obj["b4w_correct_bounding_offset"];
+    var correct_bound_offset = obj.correct_bounding_offset;
 
     var comp_children_params = get_children_params(render,
                     compound_children, bounding_type, worker_bounding);

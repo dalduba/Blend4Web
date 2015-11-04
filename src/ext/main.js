@@ -1,3 +1,20 @@
+/**
+ * Copyright (C) 2014-2015 Triumph LLC
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 "use strict";
 
 /**
@@ -37,6 +54,7 @@ var m_ext      = require("__extensions");
 var m_geom     = require("__geometry");
 var m_hud      = require("__hud");
 var m_nla      = require("__nla");
+var m_lnodes   = require("__logic_nodes")
 var m_obj      = require("__objects");
 var m_phy      = require("__physics");
 var m_print    = require("__print");
@@ -47,6 +65,7 @@ var m_shaders  = require("__shaders");
 var m_textures = require("__textures");
 var m_time     = require("__time");
 var m_trans    = require("__transform");
+var m_armat    = require("__armature");
 var m_util     = require("__util");
 var m_version  = require("__version");
 
@@ -120,6 +139,15 @@ exports.init = function(elem_canvas_webgl, elem_canvas_hud) {
     setup_clock();
 
     _elem_canvas_webgl = elem_canvas_webgl;
+    if (elem_canvas_hud) {
+        m_hud.init(elem_canvas_hud);
+        _elem_canvas_hud = elem_canvas_hud;
+    } else {
+        // disable features which depend on HUD
+        m_cfg.defaults.show_hud_debug_info = false;
+        m_cfg.sfx.mix_mode = false;
+    }
+
     m_compat.apply_context_alpha_hack(gl);
 
     var gl = get_context(elem_canvas_webgl);
@@ -128,7 +156,7 @@ exports.init = function(elem_canvas_webgl, elem_canvas_hud) {
 
     _gl = gl;
 
-    init_context(_elem_canvas_webgl, gl);
+    init_context(_elem_canvas_webgl, _elem_canvas_hud, gl);
     m_cfg.apply_quality();
     m_compat.set_hardware_defaults(gl);
 
@@ -138,15 +166,6 @@ exports.init = function(elem_canvas_webgl, elem_canvas_hud) {
         elem_canvas_webgl.style["touch-action"] = "none";
 
     m_print.log("%cSET PRECISION:", "color: #00a", cfg_def.precision);
-
-    if (elem_canvas_hud) {
-        m_hud.init(elem_canvas_hud);
-        _elem_canvas_hud = elem_canvas_hud;
-    } else {
-        // disable features which depend on HUD
-        m_cfg.defaults.show_hud_debug_info = false;
-        m_cfg.sfx.mix_mode = false;
-    }
 
     return gl;
 }
@@ -172,7 +191,6 @@ function setup_clock() {
     m_time.set_timeline(0);
 }
 
-
 function get_context(canvas) {
 
     var ctx = null;
@@ -196,7 +214,7 @@ function get_context(canvas) {
     return ctx;
 }
 
-function init_context(canvas, gl) {
+function init_context(canvas, canvas_hud, gl) {
     canvas.addEventListener("webglcontextlost",
             function(event) {
                 event.preventDefault();
@@ -221,8 +239,9 @@ function init_context(canvas, gl) {
     m_textures.setup_context(gl);
     m_shaders.setup_context(gl);
     m_debug.setup_context(gl);
+    m_cont.setup_context(gl);
     m_data.setup_canvas(canvas);
-    m_cont.init(canvas);
+    m_cont.init(canvas, canvas_hud);
 
     m_scenes.setup_dim(canvas.width, canvas.height, 1);
 
@@ -249,66 +268,15 @@ exports.set_check_gl_errors = function(val) {
  * @param {Number} width New canvas width
  * @param {Number} height New canvas height
  * @param {Boolean} [update_canvas_css=true] Change canvas CSS width/height
+ * @deprecated Use {@link module:container.resize|container.resize} instead
  */
-exports.resize = function(width, height, update_canvas_css) {
-
-    if (update_canvas_css !== false) {
-        _elem_canvas_webgl.style.width = width + "px";
-        _elem_canvas_webgl.style.height = height + "px";
-
-        if (_elem_canvas_hud) {
-            _elem_canvas_hud.style.width = width + "px";
-            _elem_canvas_hud.style.height = height + "px";
-        }
-    }
-
-    if (_elem_canvas_hud) {
-        // no HIDPI/resolution factor for HUD canvas
-        _elem_canvas_hud.width  = width;
-        _elem_canvas_hud.height = height;
-        m_hud.update_dim();
-    }
-
-
-    if (navigator.userAgent.match(/iPhone/i) ||
-        navigator.userAgent.match(/iPad/i) ||
-        navigator.userAgent.match(/iPod/i))
-            cfg_def.canvas_resolution_factor = 1;
-
-    var cw = Math.floor(width * cfg_def.canvas_resolution_factor);
-    var ch = Math.floor(height * cfg_def.canvas_resolution_factor);
-
-    if (cfg_def.allow_hidpi && window.devicePixelRatio > 1) {
-        cw *= window.devicePixelRatio;
-        ch *= window.devicePixelRatio;
-    }
-
-    _elem_canvas_webgl.width  = cw;
-    _elem_canvas_webgl.height = ch;
-
-    if (cw > _gl.drawingBufferWidth || ch > _gl.drawingBufferHeight) {
-        m_print.warn("Canvas size exceeds platform limits, downscaling");
-
-        var downscale = Math.min(_gl.drawingBufferWidth/cw,
-                _gl.drawingBufferHeight/ch);
-
-        cw *= downscale;
-        ch *= downscale;
-
-        _elem_canvas_webgl.width  = cw;
-        _elem_canvas_webgl.height = ch;
-    }
-
-    m_scenes.setup_dim(cw, ch, cw/width);
-
-    // needed for frustum culling/constraints
-    if (m_scenes.check_active())
-        m_trans.update_transform(m_scenes.get_active()._camera);
-
-    frame(m_time.get_timeline(), 0);
-
-    m_data.update_media_controls(_elem_canvas_webgl.width, _elem_canvas_webgl.height);
+exports.resize = resize;
+function resize(width, height, update_canvas_css) {
+    m_print.error("resize() deprecated, use container.resize() instead");
+    
+    m_cont.resize(width, height, update_canvas_css);
 }
+
 
 /**
  * Set the callback for the FPS counter
@@ -358,7 +326,7 @@ function clear_render_callback() {
  * Return the engine's global timeline value
  * @method module:main.global_timeline
  * @returns {Number} Floating-point number of seconds elapsed since the engine start-up
- * @deprecated Use time.get_timeline() instead
+ * @deprecated Use {@link module:time.get_timeline|time.get_timeline} instead
  */
 exports.global_timeline = function() {
     return m_time.get_timeline();
@@ -463,6 +431,8 @@ function frame(timeline, delta) {
     m_hud.reset();
 
     m_trans.update(delta);
+
+    m_lnodes.update(timeline, delta)
 
     m_nla.update(timeline, delta);
 
@@ -571,7 +541,7 @@ exports.reset = function() {
 
 /**
  * Register one-time callback to return DataURL of rendered canvas element.
- * @param callback DataURL callback
+ * @param {DataURLCallback} callback DataURL callback
  */
 exports.canvas_data_url = function(callback) {
     _canvas_data_url_callback = callback;
@@ -581,7 +551,7 @@ exports.canvas_data_url = function(callback) {
  * Return the main canvas element.
  * @method module:main.get_canvas_elem
  * @returns {HTMLCanvasElement} Canvas element
- * @deprecated Use container.get_canvas() instead
+ * @deprecated Use {@link module:container.get_canvas|container.get_canvas} instead
  */
 exports.get_canvas_elem = function() {
     return _elem_canvas_webgl;
@@ -589,6 +559,7 @@ exports.get_canvas_elem = function() {
 /**
  * Check using device.
  * @method module:main.detect_mobile
+ * @returns {Boolean} Checking result.
  */
 exports.detect_mobile = function() {
     return m_compat.detect_mobile();

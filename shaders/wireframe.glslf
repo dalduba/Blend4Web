@@ -1,13 +1,15 @@
-#define WM_OPAQUE_WIREFRAME 0
-#define WM_TRANSPARENT_WIREFRAME 1
-#define WM_FRONT_BACK_VIEW 2
+#define WM_NONE 0
+#define WM_OPAQUE_WIREFRAME 1
+#define WM_TRANSPARENT_WIREFRAME 2
+#define WM_FRONT_BACK_VIEW 3
+#define WM_DEBUG_SPHERES 4
 
 /*============================================================================
                                    INCLUDES
 ============================================================================*/
 
 #include <precision_statement.glslf>
-#include <gamma.glslf>
+#include <color_util.glslf>
 
 /*============================================================================
                                    UNIFORMS

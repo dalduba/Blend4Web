@@ -34,7 +34,7 @@
 # endif
 #endif
 
-#include <gamma.glslf>
+#include <color_util.glslf>
 #include <math.glslv>
 
 /*============================================================================
@@ -290,7 +290,7 @@ void main(void) {
     vec2 texcoord = v_texcoord;
 #endif
 
-    vec3 sided_normal = v_normal;
+    vec3 sided_normal = normalize(v_normal);
 #if DOUBLE_SIDED_LIGHTING
     // NOTE: workaround for some bug with gl_FrontFacing on Intel graphics
     // or open-source drivers
@@ -521,7 +521,7 @@ void main(void) {
 
 #if ALPHA
 # if ALPHA_CLIP
-    if (alpha <= 0.5)
+    if (alpha < 0.5)
         discard;
     alpha = 1.0; // prevent blending with html content
 # else  // ALPHA_CLIP

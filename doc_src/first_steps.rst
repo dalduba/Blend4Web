@@ -46,16 +46,29 @@
 
 
 
+.. index:: профиль Blend4Web
+
+.. _quick_install_engine_select:
+
+Профиль Blend4Web
+=================
+
+Выберите профиль настроек Blend4Web в выпадающем меню верхней панели:
+
+.. image:: src_images/first_steps/selecting_engine.jpg
+   :align: center
+   :width: 100%
+
+
+
 .. index:: экспорт
 
 .. _quick_install_export_viewer:
-
 
 Экспорт и просмотр сцены
 ========================
 
 Созданную сцену можно экспортировать в формате HTML. Для этого нужно выбрать опцию :file:`File > Export > Blend4Web (.html)` и указать путь экспорта. Полученный HTML файл можно открыть любым браузером, поддерживающим технологию WebGL.
-
 
 .. seealso:: :ref:`browser_webgl_support`
 
