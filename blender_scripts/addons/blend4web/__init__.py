@@ -68,7 +68,7 @@ b4w_modules = [
     "custom_nodeitems_builtins",
     "logic_node_tree",
     "server",
-    "node_script"
+    "node_script",
     "addon_prefs",
     "ui_scene",
 ]
