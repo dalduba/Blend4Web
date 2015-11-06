@@ -3,6 +3,7 @@ import bpy
 from bpy.types import NodeTree, Node, NodeSocket
 from bpy.props import StringProperty
 from bpy.types import Panel
+from slimit import ast
 import copy
 # Implementation of custom nodes from Python
 SensorSocketColor = (0.0, 1.0, 0.216, 0.5)
@@ -673,7 +674,19 @@ def process_node_script(node_tree):
         data["links"].append(link_data)
 
     import pprint
-    pprint.pprint(data)
+    # pprint.pprint(data)
+
+    #     --------------
+    root = ast.Program()
+    identifier = ast.Identifier("f1")
+    params = [ast.Identifier("p1"),ast.Identifier("p2")]
+    elements = [ast.ExprStatement(ast.Assign("=", ast.Identifier("a"),
+                ast.BinOp("+", ast.Identifier("p1"), ast.Identifier("p2")))),
+                ast.Return(ast.Identifier("a"))]
+    funcdecl = ast.FuncDecl(identifier, params, elements)
+    root._children_list.append(funcdecl)
+
+    print((root.to_ecma()))
 
 class NODE_ExportNodeScriptPanel(Panel):
     bl_space_type = 'NODE_EDITOR'
