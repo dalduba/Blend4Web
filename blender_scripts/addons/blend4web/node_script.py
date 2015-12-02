@@ -676,15 +676,45 @@ def process_node_script(node_tree):
     import pprint
     # pprint.pprint(data)
 
+    # road map:
+    # 1) independent script
+    #   - firstly node script should work with not html apps
+    #   - just generate here valid javascript and then manually include it into the app
+    # 2) dependant script:
+    #   - logic editor is main
+    #   - node script is main
+
     #     --------------
+    print("---------")
+
+    module_identifier = '"module_name"'
+
+    use_strict = ast.ExprStatement(ast.String('"use_strict"'))
     root = ast.Program()
+    main_block = []
+    exports = ast.Identifier("exports")
+    require = ast.Identifier("require")
+    main_func_decl = ast.FuncExpr(None, [exports, require], main_block)
+    b4w_register = ast.ExprStatement(
+        ast.FunctionCall(ast.DotAccessor(ast.Identifier("b4w"),ast.Identifier("register")),
+                         [ast.String(module_identifier),main_func_decl]))
+
+
+#--------------------
     identifier = ast.Identifier("f1")
     params = [ast.Identifier("p1"),ast.Identifier("p2")]
-    elements = [ast.ExprStatement(ast.Assign("=", ast.Identifier("a"),
+    elements = [
+                ast.ExprStatement(ast.Assign("=", ast.Identifier("a"),
                 ast.BinOp("+", ast.Identifier("p1"), ast.Identifier("p2")))),
                 ast.Return(ast.Identifier("a"))]
     funcdecl = ast.FuncDecl(identifier, params, elements)
-    root._children_list.append(funcdecl)
+#--------------------
+    root._children_list.append(use_strict)
+    # b4w.register("module_name", function(exports, require) {})
+    root._children_list.append(b4w_register)
+    # var m_app   = require("app");
+
+    # root._children_list.append(funcdecl)
 
     print((root.to_ecma()))
 
