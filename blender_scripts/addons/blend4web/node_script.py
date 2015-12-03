@@ -587,6 +587,49 @@ class AnyAPINode(B4WLogicNode):
         else:
             return self.api_type
 #-------------------------------
+module_name_to_m_ident = {
+    "anchors" : "m_anchors",
+    "animation" : "m_anim",
+    "camera" : "m_cam",
+    "config" : "m_cfg",
+    "constrains" : "m_constraints",
+    "container" : "m_container",
+    "controls" : "m_ctrls",
+    "data" : "m_data",
+    "debug" : "m_dbg",
+    "geometry" : "m_geom",
+    "assets" : "m_assets",
+    "app" : "m_app",
+
+}
+
+def get_module_name(node):
+    all = False
+    if "module_name" in node:
+        if node["module_name"] != "all":
+            return node["module_name"]
+        else:
+            all = True
+    else:
+        all = True
+
+    if all:
+        if "method_name" in node:
+            return node["method_name"].split(".")[0]
+        else:
+            return None
+    return None
+
+def get_module_ident(node):
+    name = get_module_name(node)
+    if name in module_name_to_m_ident:
+        return name, module_name_to_m_ident[name]
+    else:
+        if name:
+            return name, "m_%s" % name
+        else:
+            return None
+
 def process_node_script(node_tree):
     print (node_tree)
     data = {}
@@ -686,19 +729,34 @@ def process_node_script(node_tree):
 
     #     --------------
     print("---------")
+    exports = ast.Identifier("exports")
+    require = ast.Identifier("require")
+
+    modules = {}
+    for node in data["nodes"]:
+        if node["api_type"] == "B4W":
+            ret = get_module_ident(node)
+            if ret:
+                modules[ret[1]] = ret[0]
+
+    import_modules = []
+    for m in modules:
+        init = ast.FunctionCall(require, [ast.Identifier('"%s"' % modules[m])])
+        decl = ast.VarDecl(ast.Identifier(m), init)
+        import_modules.append(ast.VarStatement([decl]))
+
 
     module_identifier = '"module_name"'
 
     use_strict = ast.ExprStatement(ast.String('"use_strict"'))
     root = ast.Program()
     main_block = []
-    exports = ast.Identifier("exports")
-    require = ast.Identifier("require")
+    for s in import_modules:
+        main_block.append(s)
     main_func_decl = ast.FuncExpr(None, [exports, require], main_block)
     b4w_register = ast.ExprStatement(
         ast.FunctionCall(ast.DotAccessor(ast.Identifier("b4w"),ast.Identifier("register")),
                          [ast.String(module_identifier),main_func_decl]))
-
 
 #--------------------
     identifier = ast.Identifier("f1")
