@@ -630,6 +630,14 @@ def get_module_ident(node):
         else:
             return None
 
+def decl_global_vars(vars):
+    # TODO make declarations corresponding to type
+    items = []
+    for v in vars:
+        s = ast.VarDecl(ast.Identifier(v))
+        items.append(ast.VarStatement([s]))
+    return items
+
 def process_node_script(node_tree):
     print (node_tree)
     data = {}
@@ -717,7 +725,7 @@ def process_node_script(node_tree):
         data["links"].append(link_data)
 
     import pprint
-    # pprint.pprint(data)
+    pprint.pprint(data)
 
     # road map:
     # 1) independent script
@@ -733,18 +741,22 @@ def process_node_script(node_tree):
     require = ast.Identifier("require")
 
     modules = {}
+    variables = {}
     for node in data["nodes"]:
         if node["api_type"] == "B4W":
             ret = get_module_ident(node)
             if ret:
                 modules[ret[1]] = ret[0]
+        if node["api_type"] == "Variable":
+            if node["method_name"] == "define_global":
+                variables[node["props"]["var_name"]["value"]] = node["props"]["var_type"]["value"]
 
+    decl_vars = decl_global_vars(variables)
     import_modules = []
     for m in modules:
         init = ast.FunctionCall(require, [ast.Identifier('"%s"' % modules[m])])
         decl = ast.VarDecl(ast.Identifier(m), init)
         import_modules.append(ast.VarStatement([decl]))
-
 
     module_identifier = '"module_name"'
 
@@ -753,6 +765,9 @@ def process_node_script(node_tree):
     main_block = []
     for s in import_modules:
         main_block.append(s)
+
+    main_block.extend(decl_vars)
+
     main_func_decl = ast.FuncExpr(None, [exports, require], main_block)
     b4w_register = ast.ExprStatement(
         ast.FunctionCall(ast.DotAccessor(ast.Identifier("b4w"),ast.Identifier("register")),
