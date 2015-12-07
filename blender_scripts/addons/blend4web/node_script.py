@@ -671,6 +671,11 @@ def get_sock_index(container, sock_name):
         i += 1
     return -1
 
+def get_sock_by_name(container, sock_name):
+    for s in container:
+        if s["identifier"] == sock_name:
+            return s
+    return None
 
 def gen_block(node, socket_name, data, main_block):
     ret = get_target_node_and_socket(node["name"], socket_name, data)
@@ -693,8 +698,22 @@ def gen_block(node, socket_name, data, main_block):
                 s = ast.VarDecl(ast.Identifier(v))
 
                 main_block.append(ast.VarStatement([s]))
-            ret = get_target_node_and_socket(cur_node["name"], "Order>", data)
-            processed = True
+                ret = get_target_node_and_socket(cur_node["name"], "Order>", data)
+                processed = True
+
+            if cur_node["method_name"] == "set_var":
+                ret = get_source_node_and_socket(cur_node["name"], "value", data)
+                if ret:
+                    nd, sk = ret
+                    # TODO implement
+                    r = ast.Identifier("not_implemented_yet")
+                else:
+                    sock = get_sock_by_name(cur_node["inputs"], "var")
+                    r = ast.Number(sock["value"])
+                set = ast.Assign("=", ast.Identifier(cur_node["props"]["var_name"]["value"]), r)
+                main_block.append(ast.ExprStatement(set))
+                ret = get_target_node_and_socket(cur_node["name"], "Order>", data)
+                processed = True
 
         elif cur_node["api_type"] == "OtherStuff":
             if cur_node["module_name"] == "algorithmic":
@@ -714,9 +733,11 @@ def gen_block(node, socket_name, data, main_block):
                         if not predicate:
                             predicate = ast.Identifier("false")
                         consequent = []
-                        gen_block(nd, "True>", data, consequent)
+                        gen_block(cur_node, "True>", data, consequent)
+                        print("====================")
+                        print(consequent)
                         alternative = []
-                        gen_block(nd, "False>", data, alternative)
+                        gen_block(cur_node, "False>", data, alternative)
 
                         ifelse = ast.If(predicate, ast.Block(consequent), ast.Block(alternative))
                         main_block.append(ifelse)
@@ -725,6 +746,26 @@ def gen_block(node, socket_name, data, main_block):
                     # print(ret)
                     ret = get_target_node_and_socket(cur_node["name"], "Order>", data)
                     processed = True
+                if cur_node["method_name"] == "return":
+                    ret = get_source_node_and_socket(cur_node["name"], "value", data)
+                    r = None
+                    if ret:
+                        nd_name, sk_name = ret
+                        nd = get_node(nd_name, data)
+                        t = get_sock_type(nd, sk_name)
+                        if not t or t == "Order":
+                            raise "bad input socket type: %s" % t
+
+                        if nd["api_type"] == "Variable":
+                            if nd["method_name"] == "get_var":
+                                # TODO make renaming for reserved words
+                                r = ast.Identifier(nd["props"]["var_name"]["value"])
+                    if r:
+                        ret = ast.Return(r)
+                    else:
+                        ret = ast.Return()
+                    main_block.append(ret)
+                    return
         if not processed:
             print("-----return-----")
             return
@@ -785,7 +826,7 @@ def process_node_script(node_tree):
                 if node_data["method_name"] in ["define_global", "define_local"]:
                     props["var_name"] = {"type": "String", "value": node.var_name}
                     props["var_type"] = {"type": "String", "value": node.var_type}
-                if node_data["method_name"] in ["get_var", "func_decl"]:
+                if node_data["method_name"] in ["set_var", "get_var", "func_decl"]:
                     props["var_name"] = {"type": "String", "value": node.var_name}
 
             if "module_name" in node:
