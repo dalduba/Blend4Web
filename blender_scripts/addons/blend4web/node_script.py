@@ -645,8 +645,9 @@ def get_target_node_and_socket(from_node, from_sock, node_data):
     return None
 
 def get_source_node_and_socket(to_node, to_sock, node_data):
+    print(to_node, to_sock)
     for l in node_data["links"]:
-        if l["from_node"] == to_node and l["from_socket"] == to_sock:
+        if l["to_node"] == to_node and l["to_socket"] == to_sock:
             return l["from_node"], l["from_socket"]
     return None
 
@@ -662,28 +663,72 @@ def get_sock_type(node, socket_name, container = "outputs"):
             return s["type"]
     return None
 
+def get_sock_index(container, sock_name):
+    i = 0
+    for s in container:
+        if s["identifier"] == sock_name:
+            return i
+        i += 1
+    return -1
+
+
 def gen_block(node, socket_name, data, main_block):
     ret = get_target_node_and_socket(node["name"], socket_name, data)
     while True:
         if not ret:
             return
+        processed = False
         to_node, to_socket = ret
         cur_node = get_node(to_node, data)
+        print(cur_node)
         type = get_sock_type(cur_node, to_socket, "inputs")
         if not type == "Order":
             raise "socket type must be 'Order', but %s" % type
 
         if cur_node["api_type"] == "Variable":
             if cur_node["method_name"] == "define_local":
-                s = ast.VarDecl(ast.Identifier(cur_node["props"]["var_name"]["value"]))
+                v = cur_node["props"]["var_name"]["value"]
+                if v == "var":
+                    v = "_var"
+                s = ast.VarDecl(ast.Identifier(v))
+
                 main_block.append(ast.VarStatement([s]))
             ret = get_target_node_and_socket(cur_node["name"], "Order>", data)
+            processed = True
 
         elif cur_node["api_type"] == "OtherStuff":
-            if cur_node["module_name"] == "algogithmic":
+            if cur_node["module_name"] == "algorithmic":
                 if cur_node["method_name"] == "ifelse":
-                    pass
-        return
+                    # gen condition
+                    ret = get_source_node_and_socket(cur_node["name"], "condition", data)
+                    if ret:
+                        nd_name, sk_name = ret
+                        nd = get_node(nd_name, data)
+                        t = get_sock_type(nd, sk_name)
+                        if not t or t == "Order":
+                            raise "bad input socket type: %s" % t
+                        predicate = None
+                        if nd["api_type"] == "Function":
+                            ind = get_sock_index(nd["outputs"], sk_name)
+                            predicate = ast.Identifier(nd["props"]["param_name"][ind-1]["value"])
+                        if not predicate:
+                            predicate = ast.Identifier("false")
+                        consequent = []
+                        gen_block(nd, "True>", data, consequent)
+                        alternative = []
+                        gen_block(nd, "False>", data, alternative)
+
+                        ifelse = ast.If(predicate, ast.Block(consequent), ast.Block(alternative))
+                        main_block.append(ifelse)
+                    else:
+                        raise "no condition"
+                    # print(ret)
+                    ret = get_target_node_and_socket(cur_node["name"], "Order>", data)
+                    processed = True
+        if not processed:
+            print("-----return-----")
+            return
+
 
 def gen_func_decl(node, data):
     params = []
@@ -975,22 +1020,22 @@ node_categories = [
     MyNodeCategory("Algorithmic", "Algorithmic", items=[
         # our basic node
         NodeItem("AnyAPINode", label="If Else",  settings={
-            "api_type": repr("OtherStuff"), "module_name": repr("algorythmic"), "method_name": repr("ifelse")
+            "api_type": repr("OtherStuff"), "module_name": repr("algorithmic"), "method_name": repr("ifelse")
             }),
         NodeItem("AnyAPINode", label="For",  settings={
-            "api_type": repr("OtherStuff"), "module_name": repr("algorythmic"), "method_name": repr("for")
+            "api_type": repr("OtherStuff"), "module_name": repr("algorithmic"), "method_name": repr("for")
             }),
         NodeItem("AnyAPINode", label="For in",  settings={
-            "api_type": repr("OtherStuff"), "module_name": repr("algorythmic"), "method_name": repr("forin")
+            "api_type": repr("OtherStuff"), "module_name": repr("algorithmic"), "method_name": repr("forin")
             }),
         NodeItem("AnyAPINode", label="Break",  settings={
-            "api_type": repr("OtherStuff"), "module_name": repr("algorythmic"), "method_name": repr("break")
+            "api_type": repr("OtherStuff"), "module_name": repr("algorithmic"), "method_name": repr("break")
             }),
         NodeItem("AnyAPINode", label="Continue",  settings={
-            "api_type": repr("OtherStuff"), "module_name": repr("algorythmic"), "method_name": repr("continue")
+            "api_type": repr("OtherStuff"), "module_name": repr("algorithmic"), "method_name": repr("continue")
             }),
         NodeItem("AnyAPINode", label="Return",  settings={
-            "api_type": repr("OtherStuff"), "module_name": repr("algorythmic"), "method_name": repr("return")
+            "api_type": repr("OtherStuff"), "module_name": repr("algorithmic"), "method_name": repr("return")
             }),
         ]),
     MyNodeCategory("Operators", "Operators", items=[

@@ -186,7 +186,7 @@ other_stuff = [
     },
     ]
 },
-{"name":"algorythmic", "methods":[
+{"name":"algorithmic", "methods":[
     {"name": "ifelse",
      "inputs":[Order_sock_desc(">Order"),
                Expression_sock_desc("condition"),
@@ -1264,7 +1264,7 @@ def get_b4w_api():
                 if comment_data["description"]:
                     module["desc"] = comment_data["description"]
 
-            if "typedef" in comment_data:
+            if "typedef" in comment_data and "type" in comment_data:
                 typedefs[comment_data["typedef"]] = comment_data["type"]
 
             if "callback" in comment_data:
