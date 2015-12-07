@@ -638,6 +638,21 @@ def decl_global_vars(vars):
         items.append(ast.VarStatement([s]))
     return items
 
+def gen_block(node, link_id, node_data):
+    while True:
+        # TODO ast generation for block
+        return
+
+def gen_func_decl(node, node_data):
+    params = []
+    if "param_name" in node["props"]:
+        for p in node["props"]["param_name"]:
+            params.append(ast.Identifier(p["value"]))
+    main_block = []
+    gen_block(node, "Declaration>", node_data)
+    print(node["props"]["var_name"])
+    s = ast.VarDecl(ast.Identifier(node["props"]["var_name"]["value"]), ast.FuncExpr(None, params, main_block))
+    return ast.VarStatement([s])
 def process_node_script(node_tree):
     print (node_tree)
     data = {}
@@ -669,15 +684,21 @@ def process_node_script(node_tree):
             node_data["api_type"] = node.api_type
 
             props = {}
+            pnames = []
             for p in node.dyn_props:
-                props[p.name] = {"type": p.type, "value":getattr(p, get_prop_name_by_type(p.type))}
+                if p.name == "param_name":
+                    pname = {"type": p.type, "value":getattr(p, get_prop_name_by_type(p.type))}
+                    pnames.append(pname)
+                    props[p.name] = pnames
+                else:
+                    props[p.name] = {"type": p.type, "value":getattr(p, get_prop_name_by_type(p.type))}
 
             if "method_name" in node:
                 node_data["method_name"] = node["method_name"]
                 if node_data["method_name"] in ["define_global", "define_local"]:
                     props["var_name"] = {"type": "String", "value": node.var_name}
                     props["var_type"] = {"type": "String", "value": node.var_type}
-                if node_data["method_name"] == "get_var":
+                if node_data["method_name"] in ["get_var", "func_decl"]:
                     props["var_name"] = {"type": "String", "value": node.var_name}
 
             if "module_name" in node:
@@ -742,14 +763,23 @@ def process_node_script(node_tree):
 
     modules = {}
     variables = {}
+    func_decls = []
     for node in data["nodes"]:
         if node["api_type"] == "B4W":
             ret = get_module_ident(node)
             if ret:
                 modules[ret[1]] = ret[0]
-        if node["api_type"] == "Variable":
+        elif node["api_type"] == "Variable":
             if node["method_name"] == "define_global":
                 variables[node["props"]["var_name"]["value"]] = node["props"]["var_type"]["value"]
+        elif node["api_type"] == "Function":
+            if node["method_name"] == "func_decl":
+                # gen function declaration
+                # and then recursive invokation of body generation
+                decl = gen_func_decl(node, node_data)
+                if decl:
+                    func_decls.append(decl)
+                pass
 
     decl_vars = decl_global_vars(variables)
     import_modules = []
@@ -767,6 +797,7 @@ def process_node_script(node_tree):
         main_block.append(s)
 
     main_block.extend(decl_vars)
+    main_block.extend(func_decls)
 
     main_func_decl = ast.FuncExpr(None, [exports, require], main_block)
     b4w_register = ast.ExprStatement(
