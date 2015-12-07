@@ -638,18 +638,60 @@ def decl_global_vars(vars):
         items.append(ast.VarStatement([s]))
     return items
 
-def gen_block(node, link_id, node_data):
+def get_target_node_and_socket(from_node, from_sock, node_data):
+    for l in node_data["links"]:
+        if l["from_node"] == from_node and l["from_socket"] == from_sock:
+            return l["to_node"], l["to_socket"]
+    return None
+
+def get_source_node_and_socket(to_node, to_sock, node_data):
+    for l in node_data["links"]:
+        if l["from_node"] == to_node and l["from_socket"] == to_sock:
+            return l["from_node"], l["from_socket"]
+    return None
+
+def get_node(name, node_data):
+    for n in node_data["nodes"]:
+        if n["name"] == name:
+            return n
+    return None
+
+def get_sock_type(node, socket_name, container = "outputs"):
+    for s in node[container]:
+        if s["identifier"] == socket_name:
+            return s["type"]
+    return None
+
+def gen_block(node, socket_name, data, main_block):
+    ret = get_target_node_and_socket(node["name"], socket_name, data)
     while True:
-        # TODO ast generation for block
+        if not ret:
+            return
+        to_node, to_socket = ret
+        cur_node = get_node(to_node, data)
+        type = get_sock_type(cur_node, to_socket, "inputs")
+        if not type == "Order":
+            raise "socket type must be 'Order', but %s" % type
+
+        if cur_node["api_type"] == "Variable":
+            if cur_node["method_name"] == "define_local":
+                s = ast.VarDecl(ast.Identifier(cur_node["props"]["var_name"]["value"]))
+                main_block.append(ast.VarStatement([s]))
+            ret = get_target_node_and_socket(cur_node["name"], "Order>", data)
+
+        elif cur_node["api_type"] == "OtherStuff":
+            if cur_node["module_name"] == "algogithmic":
+                if cur_node["method_name"] == "ifelse":
+                    pass
         return
 
-def gen_func_decl(node, node_data):
+def gen_func_decl(node, data):
     params = []
     if "param_name" in node["props"]:
         for p in node["props"]["param_name"]:
             params.append(ast.Identifier(p["value"]))
     main_block = []
-    gen_block(node, "Declaration>", node_data)
+    gen_block(node, "Declaration>", data, main_block)
     print(node["props"]["var_name"])
     s = ast.VarDecl(ast.Identifier(node["props"]["var_name"]["value"]), ast.FuncExpr(None, params, main_block))
     return ast.VarStatement([s])
@@ -776,7 +818,7 @@ def process_node_script(node_tree):
             if node["method_name"] == "func_decl":
                 # gen function declaration
                 # and then recursive invokation of body generation
-                decl = gen_func_decl(node, node_data)
+                decl = gen_func_decl(node, data)
                 if decl:
                     func_decls.append(decl)
                 pass
