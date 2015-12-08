@@ -746,7 +746,7 @@ def gen_block(node, socket_name, data, main_block):
                     # print(ret)
                     ret = get_target_node_and_socket(cur_node["name"], "Order>", data)
                     processed = True
-                if cur_node["method_name"] == "return":
+                elif cur_node["method_name"] == "return":
                     ret = get_source_node_and_socket(cur_node["name"], "value", data)
                     r = None
                     if ret:
@@ -766,6 +766,15 @@ def gen_block(node, socket_name, data, main_block):
                         ret = ast.Return()
                     main_block.append(ret)
                     return
+
+                elif cur_node["method_name"] == "continue":
+                    main_block.append(ast.ExprStatement(ast.Continue()))
+                    return
+
+                elif cur_node["method_name"] == "break":
+                    main_block.append(ast.ExprStatement(ast.Break()))
+                    return
+
         if not processed:
             print("-----return-----")
             return
@@ -1088,6 +1097,9 @@ node_categories = [
             }),
         NodeItem("AnyAPINode", label="Logic",  settings={
             "api_type": repr("Operators"), "module_name": repr("logic")
+            }),
+        NodeItem("AnyAPINode", label="Relational",  settings={
+            "api_type": repr("Operators"), "module_name": repr("relational")
             }),
         ]),
     MyNodeCategory("Call methods", "Call Methods", items=[

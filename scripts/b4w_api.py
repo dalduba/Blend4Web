@@ -1343,6 +1343,8 @@ def dump(data):
     file = open(path_to_b4w_api_json, "w")
 
     file.write(json.dumps(data))
+    import pprint
+    pprint.pprint(data)
 
 if __name__ == '__main__':
     data = get_b4w_api()
