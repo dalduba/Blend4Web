@@ -320,9 +320,52 @@ def update_types(tree):
             tree.types_names[-1].name = t
         data_reloaded_at_startup = True
 
+class B4W_NodeScriptErrTextWrap(bpy.types.PropertyGroup):
+    message = bpy.props.StringProperty(name="name")
+
+class B4W_NodeScriptErrors(bpy.types.PropertyGroup):
+    prop_err = bpy.props.CollectionProperty(name = "prop_err", type = B4W_NodeScriptErrTextWrap)
+    link_err = bpy.props.CollectionProperty(name = "link_err", type = B4W_NodeScriptErrTextWrap)
+    proc_err = bpy.props.CollectionProperty(name = "proc_err", type = B4W_NodeScriptErrTextWrap)
+
+def clear_err(ntree):
+    for n in ntree.nodes:
+        if n.bl_idname == "B4WLogicNode":
+            n.error_messages.link_err.clear()
+            n.error_messages.prop_err.clear()
+            n.error_messages.proc_err.clear()
+
+def check_nodes(tree):
+    clear_err(tree)
+
+    # simple method to check errors
+    # TODO replace by each node checking; and make checking for each property.
+    process_node_script(tree)
+
+
 class AnyAPINode(B4WLogicNode):
     bl_idname = 'AnyAPINode'
     bl_label = 'AnyAPINode'
+    error_messages = bpy.props.PointerProperty(
+        name = "Error messages",
+        description = "Error messages",
+        type = B4W_NodeScriptErrors
+    )
+
+    def has_errors(self):
+        return len(self.error_messages.prop_err) + \
+               len(self.error_messages.link_err) + \
+               len(self.error_messages.proc_err)
+
+    def add_error_message(self, list, message):
+        found = False
+        for m in list:
+            if m.message == message:
+                found = True
+        if not found:
+            list.add()
+            list[-1].message = message
+
     def true_init(self, context):
         self.update_node(context)
 
@@ -416,9 +459,8 @@ class AnyAPINode(B4WLogicNode):
         name = "Variable type",
         description = "Variable type",
     )
-
     def update(self):
-        pass
+        check_nodes(self.id_data)
 
     def add_Order(self):
         s = self.inputs.new('B4WLogicSocket', '>Order')
@@ -529,7 +571,23 @@ class AnyAPINode(B4WLogicNode):
         row = layout.row()
         row.prop(container, prop_name, text=container['socket_name'])
 
+    def draw_buttons_ext(self, context, layout):
+        b = layout
+        for m in self.error_messages.link_err:
+            c = b.column()
+            c.label(m.message, icon = 'ERROR')
+        for m in self.error_messages.prop_err:
+            c = b.column()
+            c.label(m.message, icon = 'ERROR')
+        for m in self.error_messages.proc_err:
+            c = b.column()
+            c.label(m.message, icon = 'ERROR')
+
     def draw_buttons(self, context, layout):
+        row = layout.row()
+
+        if self.has_errors():
+            row.label("", icon = 'ERROR')
 
         stage1_name = "module"
         stage2_name = "method"
@@ -645,7 +703,6 @@ def get_target_node_and_socket(from_node, from_sock, node_data):
     return None
 
 def get_source_node_and_socket(to_node, to_sock, node_data):
-    print(to_node, to_sock)
     for l in node_data["links"]:
         if l["to_node"] == to_node and l["to_socket"] == to_sock:
             return l["from_node"], l["from_socket"]
@@ -685,10 +742,9 @@ def gen_block(node, socket_name, data, main_block):
         processed = False
         to_node, to_socket = ret
         cur_node = get_node(to_node, data)
-        print(cur_node)
         type = get_sock_type(cur_node, to_socket, "inputs")
         if not type == "Order":
-            raise "socket type must be 'Order', but %s" % type
+            raise ProcessNodeScriptError(cur_node["name"], "socket type must be 'Order', but %s" % type)
 
         if cur_node["api_type"] == "Variable":
             if cur_node["method_name"] == "define_local":
@@ -725,7 +781,7 @@ def gen_block(node, socket_name, data, main_block):
                         nd = get_node(nd_name, data)
                         t = get_sock_type(nd, sk_name)
                         if not t or t == "Order":
-                            raise "bad input socket type: %s" % t
+                            raise ProcessNodeScriptError(nd["name"], "bad input socket type: %s" % t)
                         predicate = None
                         if nd["api_type"] == "Function":
                             ind = get_sock_index(nd["outputs"], sk_name)
@@ -734,15 +790,13 @@ def gen_block(node, socket_name, data, main_block):
                             predicate = ast.Identifier("false")
                         consequent = []
                         gen_block(cur_node, "True>", data, consequent)
-                        print("====================")
-                        print(consequent)
                         alternative = []
                         gen_block(cur_node, "False>", data, alternative)
 
                         ifelse = ast.If(predicate, ast.Block(consequent), ast.Block(alternative))
                         main_block.append(ifelse)
                     else:
-                        raise "no condition"
+                        raise ProcessNodeScriptError(cur_node["name"], "no condition")
                     # print(ret)
                     ret = get_target_node_and_socket(cur_node["name"], "Order>", data)
                     processed = True
@@ -754,7 +808,7 @@ def gen_block(node, socket_name, data, main_block):
                         nd = get_node(nd_name, data)
                         t = get_sock_type(nd, sk_name)
                         if not t or t == "Order":
-                            raise "bad input socket type: %s" % t
+                            raise ProcessNodeScriptError(nd["name"], "bad input socket type: %s" % t)
 
                         if nd["api_type"] == "Variable":
                             if nd["method_name"] == "get_var":
@@ -776,9 +830,8 @@ def gen_block(node, socket_name, data, main_block):
                     return
 
         if not processed:
-            print("-----return-----")
             return
-
+            # raise ProcessNodeScriptError(cur_node["name"], "Unknown node")
 
 def gen_func_decl(node, data):
     params = []
@@ -787,11 +840,17 @@ def gen_func_decl(node, data):
             params.append(ast.Identifier(p["value"]))
     main_block = []
     gen_block(node, "Declaration>", data, main_block)
-    print(node["props"]["var_name"])
     s = ast.VarDecl(ast.Identifier(node["props"]["var_name"]["value"]), ast.FuncExpr(None, params, main_block))
     return ast.VarStatement([s])
+
+class ProcessNodeScriptError(Exception):
+     node = ""
+     message = ""
+     def __init__(self, node, message):
+         self.node = copy.copy(node)
+         self.message = copy.copy(message)
+
 def process_node_script(node_tree):
-    print (node_tree)
     data = {}
 
     # data["nodes"] = [{}, {},..., {}]
@@ -811,7 +870,6 @@ def process_node_script(node_tree):
     data["global_function_decl_nodes"] = []
     data["usage_modules"] = set()
     # may be another data
-
     for node in node_tree.nodes:
         if node.bl_idname in ["AnyAPINode"]:
 
@@ -882,8 +940,8 @@ def process_node_script(node_tree):
         link_data["to_socket"] = link.to_socket.identifier
         data["links"].append(link_data)
 
-    import pprint
-    pprint.pprint(data)
+    # import pprint
+    # pprint.pprint(data)
 
     # road map:
     # 1) independent script
@@ -894,69 +952,72 @@ def process_node_script(node_tree):
     #   - node script is main
 
     #     --------------
-    print("---------")
-    exports = ast.Identifier("exports")
-    require = ast.Identifier("require")
-
-    modules = {}
-    variables = {}
-    func_decls = []
-    for node in data["nodes"]:
-        if node["api_type"] == "B4W":
-            ret = get_module_ident(node)
-            if ret:
-                modules[ret[1]] = ret[0]
-        elif node["api_type"] == "Variable":
-            if node["method_name"] == "define_global":
-                variables[node["props"]["var_name"]["value"]] = node["props"]["var_type"]["value"]
-        elif node["api_type"] == "Function":
-            if node["method_name"] == "func_decl":
-                # gen function declaration
-                # and then recursive invokation of body generation
-                decl = gen_func_decl(node, data)
-                if decl:
-                    func_decls.append(decl)
-                pass
-
-    decl_vars = decl_global_vars(variables)
-    import_modules = []
-    for m in modules:
-        init = ast.FunctionCall(require, [ast.Identifier('"%s"' % modules[m])])
-        decl = ast.VarDecl(ast.Identifier(m), init)
-        import_modules.append(ast.VarStatement([decl]))
-
-    module_identifier = '"module_name"'
-
-    use_strict = ast.ExprStatement(ast.String('"use_strict"'))
     root = ast.Program()
-    main_block = []
-    for s in import_modules:
-        main_block.append(s)
+    try:
+        exports = ast.Identifier("exports")
+        require = ast.Identifier("require")
 
-    main_block.extend(decl_vars)
-    main_block.extend(func_decls)
+        modules = {}
+        variables = {}
+        func_decls = []
+        for node in data["nodes"]:
+            if node["api_type"] == "B4W":
+                ret = get_module_ident(node)
+                if ret:
+                    modules[ret[1]] = ret[0]
+            elif node["api_type"] == "Variable":
+                if node["method_name"] == "define_global":
+                    variables[node["props"]["var_name"]["value"]] = node["props"]["var_type"]["value"]
+            elif node["api_type"] == "Function":
+                if node["method_name"] == "func_decl":
+                    # gen function declaration
+                    # and then recursive invokation of body generation
+                    decl = gen_func_decl(node, data)
+                    if decl:
+                        func_decls.append(decl)
+                    pass
 
-    main_func_decl = ast.FuncExpr(None, [exports, require], main_block)
-    b4w_register = ast.ExprStatement(
-        ast.FunctionCall(ast.DotAccessor(ast.Identifier("b4w"),ast.Identifier("register")),
-                         [ast.String(module_identifier),main_func_decl]))
+        decl_vars = decl_global_vars(variables)
+        import_modules = []
+        for m in modules:
+            init = ast.FunctionCall(require, [ast.Identifier('"%s"' % modules[m])])
+            decl = ast.VarDecl(ast.Identifier(m), init)
+            import_modules.append(ast.VarStatement([decl]))
 
-#--------------------
-    identifier = ast.Identifier("f1")
-    params = [ast.Identifier("p1"),ast.Identifier("p2")]
-    elements = [
-                ast.ExprStatement(ast.Assign("=", ast.Identifier("a"),
-                ast.BinOp("+", ast.Identifier("p1"), ast.Identifier("p2")))),
-                ast.Return(ast.Identifier("a"))]
-    funcdecl = ast.FuncDecl(identifier, params, elements)
-#--------------------
-    root._children_list.append(use_strict)
-    # b4w.register("module_name", function(exports, require) {})
-    root._children_list.append(b4w_register)
-    # var m_app   = require("app");
+        module_identifier = '"module_name"'
 
-    # root._children_list.append(funcdecl)
+        use_strict = ast.ExprStatement(ast.String('"use_strict"'))
+        main_block = []
+        for s in import_modules:
+            main_block.append(s)
 
+        main_block.extend(decl_vars)
+        main_block.extend(func_decls)
+
+        main_func_decl = ast.FuncExpr(None, [exports, require], main_block)
+        b4w_register = ast.ExprStatement(
+            ast.FunctionCall(ast.DotAccessor(ast.Identifier("b4w"),ast.Identifier("register")),
+                             [ast.String(module_identifier),main_func_decl]))
+
+    #--------------------
+        identifier = ast.Identifier("f1")
+        params = [ast.Identifier("p1"),ast.Identifier("p2")]
+        elements = [
+                    ast.ExprStatement(ast.Assign("=", ast.Identifier("a"),
+                    ast.BinOp("+", ast.Identifier("p1"), ast.Identifier("p2")))),
+                    ast.Return(ast.Identifier("a"))]
+        funcdecl = ast.FuncDecl(identifier, params, elements)
+    #--------------------
+        root._children_list.append(use_strict)
+        # b4w.register("module_name", function(exports, require) {})
+        root._children_list.append(b4w_register)
+        # var m_app   = require("app");
+
+        # root._children_list.append(funcdecl)
+    except ProcessNodeScriptError as e:
+        # print ("ERROR", e.node, e.message)
+        nd = node_tree.nodes[e.node]
+        nd.add_error_message(nd.error_messages.proc_err, e.message)
     print((root.to_ecma()))
 
 class NODE_ExportNodeScriptPanel(Panel):
@@ -1127,6 +1188,8 @@ def register():
     bpy.utils.register_class(AddOutSockets)
     bpy.utils.register_class(OrderSocket)
     bpy.utils.register_class(DataSocket)
+    bpy.utils.register_class(B4W_NodeScriptErrTextWrap)
+    bpy.utils.register_class(B4W_NodeScriptErrors)
 
     # nodes
     bpy.utils.register_class(B4WLogicNode)
@@ -1149,6 +1212,8 @@ def unregister():
     bpy.utils.unregister_class(AddOutSockets)
     bpy.utils.unregister_class(OrderSocket)
     bpy.utils.unregister_class(DataSocket)
+    bpy.utils.unregister_class(B4W_NodeScriptErrTextWrap)
+    bpy.utils.unregister_class(B4W_NodeScriptErrors)
 
     # nodes
     bpy.utils.unregister_class(AnyAPINode)
