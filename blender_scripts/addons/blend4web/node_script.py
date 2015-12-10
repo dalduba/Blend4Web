@@ -249,6 +249,51 @@ class AddOutSockets(bpy.types.Operator):
 
         return {'FINISHED'}
 
+def get_link_by_FROM_socket(ntree, socket):
+    for l in ntree.links:
+        if socket == l.from_socket:
+            return l
+    return None
+
+def link_get_forward_target(ntree, link):
+    if not link:
+        return None
+    n = link.to_node
+    if n.bl_idname == "NodeReroute":
+        s = n.outputs[0]
+        l = get_link_by_FROM_socket(ntree,s)
+        if l:
+            return link_get_forward_target(ntree, l)
+        else:
+            return None
+    elif n.bl_idname in ["AnyAPINode"]:
+        # TODO right working only for order sockets
+        return n, link.to_socket
+    else:
+        return None
+
+def get_link_by_TO_socket(ntree, socket):
+    for l in ntree.links:
+        if socket == l.to_socket:
+            return l
+    return None
+
+def link_get_backward_target(ntree, link):
+    if not link:
+        return None
+    n = link.from_node
+    if n.bl_idname == "NodeReroute":
+        s = n.inputs[0]
+        l = get_link_by_TO_socket(ntree,s)
+        if l:
+            return link_get_backward_target(ntree, l)
+        else:
+            return None
+    elif n.bl_idname in ["AnyAPINode"]:
+        return n, link.from_socket
+    else:
+        return None
+
 #  ----------read B4W API--
 import json
 import os
@@ -697,6 +742,7 @@ def decl_global_vars(vars):
     return items
 
 def get_target_node_and_socket(from_node, from_sock, node_data):
+    print(from_node, from_sock)
     for l in node_data["links"]:
         if l["from_node"] == from_node and l["from_socket"] == from_sock:
             return l["to_node"], l["to_socket"]
@@ -743,6 +789,7 @@ def gen_block(node, socket_name, data, main_block):
         to_node, to_socket = ret
         cur_node = get_node(to_node, data)
         type = get_sock_type(cur_node, to_socket, "inputs")
+        print(cur_node)
         if not type == "Order":
             raise ProcessNodeScriptError(cur_node["name"], "socket type must be 'Order', but %s" % type)
 
@@ -934,13 +981,29 @@ def process_node_script(node_tree):
     for link in node_tree.links:
         link_data = {}
 
-        link_data["from_node"] = link.from_node.name
-        link_data["to_node"] = link.to_node.name
-        link_data["from_socket"] = link.from_socket.identifier
-        link_data["to_socket"] = link.to_socket.identifier
+        ret = link_get_backward_target(node_tree,link)
+        if ret:
+            from_node, from_socket = ret
+        else:
+            print("Cant get source node and socket")
+            continue
+        print(link.from_node.name, link.from_socket.identifier, link.to_node.name, link.to_socket.identifier)
+        ret = link_get_forward_target(node_tree, link)
+        if ret:
+            to_node, to_socket = ret
+            print(from_node.name, from_socket.identifier, to_node.name, to_socket.identifier)
+        else:
+            print("Cant get target node and socket")
+        print("-----------")
+        link_data["from_node"] = from_node.name
+        link_data["to_node"] = to_node.name
+        link_data["from_socket"] = from_socket.identifier
+        link_data["to_socket"] = to_socket.identifier
+        # TODO remove repetitions
         data["links"].append(link_data)
 
-    # import pprint
+    import pprint
+    pprint.pprint(data["links"])
     # pprint.pprint(data)
 
     # road map:
