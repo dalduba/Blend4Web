@@ -254,15 +254,16 @@ exports.update_scheduler = function(bpy_data_array) {
         scheduler.make_idle_iteration = false;
         return;
     }
-
+    var i = 0;
     var time_start = 0;//performance.now();
     do {
+        i++
         // console.log("update_scheduler")
         var thread = scheduler.threads[scheduler.current_thread_index];
         var bpy_data = bpy_data_array[thread.id];
-        console.log("=====11")
+        // console.log("=====11")
         if (!thread_is_finished(thread)) {
-            console.log("=====12")
+            // console.log("=====12")
             // start new thread
             if (thread.status == THREAD_IDLE) {
                 thread.status = THREAD_LOADING;
@@ -281,6 +282,7 @@ exports.update_scheduler = function(bpy_data_array) {
 
         // process secondary threads after main is loaded
         if (scheduler.start_secondary_threads)
+            console.log("=====13")
             scheduler.current_thread_index = (scheduler.current_thread_index + 1) 
                     % scheduler.threads.length;
 
@@ -290,7 +292,7 @@ exports.update_scheduler = function(bpy_data_array) {
             return;
         }
 
-    } while(true);
+    } while(i < 100);
 }
 
 exports.abort_thread = function(thread) {

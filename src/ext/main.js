@@ -335,8 +335,11 @@ function init_headless_context(headless_canvas, canvas_hud, gl) {
     // m_sfx.init();
 
     _fps_counter = init_fps_counter();
-
-    loop();
+    var i = 0
+    while(i<1000) {
+        i++
+        loop();
+    }
 }
 
 
@@ -458,7 +461,7 @@ function loop() {
     // if (vr_display)
     //     vr_display.requestAnimationFrame(loop);
     // else
-    console.log("===-1")
+    // console.log("===-1")
     // _requestAnimFrame(loop);
 
     // float sec
@@ -472,7 +475,7 @@ function loop() {
     // do not render short frames
     // if (delta < 1/cfg_def.max_fps)
     //     return;
-    console.log("===0")
+    // console.log("===0")
     var timeline = m_time.get_timeline();
 
     for (var i = 0; i < _loop_cb.length; i++)
@@ -500,7 +503,7 @@ function loop() {
 
     // if (vr_display && vr_display.isPresenting)
     //     vr_display.submitFrame();
-    loop()
+    // loop()
 }
 
 function frame(timeline, delta) {
