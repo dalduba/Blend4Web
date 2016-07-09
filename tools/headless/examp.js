@@ -58,12 +58,11 @@ var b4w_include = [
     "./../../src/shaders.js",
     "./../../src/loader.js",
     "./../../src/libs/md5.js",
-    // "./../../src/ext/data.js"
 ];
 for (var i in b4w_include) {
     includeInThisContext(__dirname + "/" + b4w_include[i]);
 }
-// var b4w = require("./../../src/b4w");
+
 b4w.register("examp", function(exports, require) {
 
     var m_data = require("__data");
@@ -74,7 +73,6 @@ b4w.register("examp", function(exports, require) {
     var path = require_orig('path')
     var log = new utils_log.Log(path.basename(__filename), 'DEBUG')
 
-// var m_b4w       = require("./../../src/b4w");
     var loaded = false;
     function load_json() {
         function loaded_callback(data_id) {
@@ -85,6 +83,7 @@ b4w.register("examp", function(exports, require) {
         m_data.load(__dirname + "../../deploy/assets/flight_over_island/flight_over_island.json",
             loaded_callback, null, true);
         var sleep = require_orig('sleep');
+        // loading is not working yet => infinite loop
         while (!loaded) {
             sleep.sleep(1)
             log.info(__line, 'waiting')
@@ -94,7 +93,6 @@ b4w.register("examp", function(exports, require) {
     exports.main = function main() {
 
         load_json()
-
 
         // Create context
         var width = 64
