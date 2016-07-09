@@ -183,6 +183,7 @@ function load_main(bpy_data, thread, stage, cb_param, cb_finish,
             m_loader.abort_thread(thread);
             return;
         }
+        console.log("loaded_bpy_data")
 
         m_print.log("%cLOAD METADATA", "color: #616", path);
 
@@ -264,7 +265,7 @@ function load_binaries(bpy_data, thread, stage, cb_param, cb_finish,
             m_loader.abort_thread(thread);
             return;
         }
-
+        console.log("bin_data")
         m_print.log("%cLOAD BINARY", "color: #616", path);
 
         bpy_data["bin_data"] = bin_data;
@@ -282,7 +283,7 @@ function load_binaries(bpy_data, thread, stage, cb_param, cb_finish,
 
 function wait_for_shaders(bpy_data, thread, stage, cb_param, cb_finish,
         cb_set_rate) {
-
+    console.log("wait_for_shaders")
     if (m_shaders.check_shaders_loaded())
         cb_finish(thread, stage);
 }
@@ -326,7 +327,7 @@ function check_format_version(loaded_bpy_data) {
  */
 function prepare_bindata(bpy_data, thread, stage, cb_param, cb_finish,
         cb_set_rate) {
-
+    console.log("prepare_bindata")
     var bin_data = bpy_data["bin_data"];
     var bin_offsets = bpy_data["binaries"][0];
     var objects = bpy_data["objects"];
@@ -536,7 +537,6 @@ function extract_bindata_uint(bin_data, offset, length, is_le) {
 function extract_bindata_short(bin_data, offset, length) {
 
     var arr = new Float32Array(length);
-    console.log(typeof(bin_data))
     var dataview = new DataView(bin_data);
     for (var i = 0; i < length; i++)
         arr[i] = dataview.getInt16(offset + i * BINARY_SHORT_SIZE, true) / 32767;
@@ -607,7 +607,7 @@ function report_odd_uvs(meshes) {
 
 function prepare_bpy_data(bpy_data, thread, stage, cb_param, cb_finish,
         cb_set_rate) {
-
+    console.log("prepare_bpy_data")
     make_bpy_links(bpy_data);
 
     m_reformer.check_bpy_data(bpy_data);
@@ -935,7 +935,7 @@ function get_bpy_cache_scene(data_id, bpy_scene, obj_type) {
  */
 function process_objects(bpy_data, thread, stage, cb_param, cb_finish,
         cb_set_rate) {
-
+    console.log("process_objects")
     var bpy_objects = get_bpy_cache(thread.id);
     var bpy_worlds = bpy_data["worlds"];
     create_objects_from_bpy(bpy_data, bpy_objects, thread.id);
@@ -1043,7 +1043,7 @@ function calc_light_index(bpy_data, data_id) {
  */
 function process_scenes(bpy_data, thread, stage, cb_param, cb_finish,
         cb_set_rate) {
-    
+    console.log("process_scenes")
     create_scene_props(bpy_data);
 
     for (var i = 0; i < bpy_data["scenes"].length; i++) {
@@ -1293,7 +1293,7 @@ function get_global_anisotropic_filtering(bpy_data, thread) {
  */
 function duplicate_objects(bpy_data, thread, stage, cb_param, cb_finish,
         cb_set_rate) {
-
+    console.log("duplicate_objects")
     var groups = bpy_data["groups"];
     var bpy_objects = bpy_data["objects"];
 
@@ -1972,6 +1972,7 @@ function copy_link(from, to) {
 }
 
 function load_textures(bpy_data, thread, stage, cb_param, cb_finish, cb_set_rate) {
+    console.log("load_textures")
     var dir_path = dirname(thread.filepath);
 
     var images = bpy_data["images"];
@@ -2089,6 +2090,7 @@ function load_textures(bpy_data, thread, stage, cb_param, cb_finish, cb_set_rate
 }
 
 function update_scenes_nla(bpy_data, thread, stage, cb_param, cb_finish, cb_set_rate) {
+    console.log("update_scene_nla")
     var scenes = m_scenes.get_rendered_scenes();
     for (var i = 0; i < scenes.length; i++) {
         var scene = scenes[i];
@@ -2119,6 +2121,7 @@ function find_image_users(image, textures) {
 }
 
 function load_speakers(bpy_data, thread, stage, cb_param, cb_finish, cb_set_rate) {
+    console.log("load_speakers")
     var dir_path = dirname(thread.filepath);
 
     var sound_assets = [];
@@ -2237,6 +2240,7 @@ function video_play(scene, data_id) {
 }
 
 function start_nla(bpy_data, thread, stage, cb_param, cb_finish, cb_set_rate) {
+    console.log("start_nla")
     m_nla.start();
     m_print.log("%cSTART NLA", "color: #0a0");
     cb_finish(thread, stage);
@@ -2744,7 +2748,7 @@ function remove_bpy_object(remobj, bpy_scenes) {
 
 function wait_physics_workers(bpy_data, thread, stage, cb_param, cb_finish,
         cb_set_rate) {
-
+    console.log("wait_physics_workers")
     var loaded = true;
 
     for (var i = 0; i < bpy_data["scenes"].length; i++) {
@@ -2764,7 +2768,7 @@ function wait_physics_workers(bpy_data, thread, stage, cb_param, cb_finish,
 
 function add_physics_objects(bpy_data, thread, stage, cb_param, cb_finish,
         cb_set_rate) {
-
+    console.log("add_physics_objects")
     for (var i = 0; i < bpy_data["scenes"].length; i++) {
         var scene = bpy_data["scenes"][i];
 
@@ -2804,7 +2808,7 @@ function add_physics_objects(bpy_data, thread, stage, cb_param, cb_finish,
  */
 function load_shoremap(bpy_data, thread, stage, cb_param, cb_finish,
         cb_set_rate) {
-
+    console.log("load_shoremap")
     var img_by_uri = {};
     var image_assets = [];
     var bpy_scenes = bpy_data["scenes"];
@@ -2913,7 +2917,7 @@ function update_scene_shore_distance(html_image, shoremap, scene) {
 // SMAA - Enhanced Subpixel Morphological Antialiasing
 function load_smaa_textures(bpy_data, thread, stage, cb_param, cb_finish,
         cb_set_rate) {
-
+    console.log("load_ssmaa_textures")
     var scene = bpy_data["scenes"][0];
 
     var subs_smaa_arr = []
@@ -2995,7 +2999,7 @@ function load_smaa_textures(bpy_data, thread, stage, cb_param, cb_finish,
  */
 function prepare_objects_adding(bpy_data, thread, stage, cb_param, cb_finish,
         cb_set_rate) {
-
+    console.log("prepare_objects_adding")
     for (var i = 0; i < bpy_data["scenes"].length; i++) {
         var scene = bpy_data["scenes"][i];
 
@@ -3039,7 +3043,7 @@ function prepare_objects_adding(bpy_data, thread, stage, cb_param, cb_finish,
 
 function add_objects(bpy_data, thread, stage, cb_param, cb_finish,
         cb_set_rate) {
-
+    console.log("add_objects")
     var obj_data = cb_param.added_objects;
     var obj_counter = cb_param.obj_counter;
 
@@ -3080,6 +3084,7 @@ function add_objects(bpy_data, thread, stage, cb_param, cb_finish,
 
 function end_objects_adding(bpy_data, thread, stage, cb_param, cb_finish,
         cb_set_rate) {
+    console.log("end_objects_adding")
     if (thread.is_primary) {
         var scene_main = m_scenes.get_main();
         var scenes = m_scenes.get_rendered_scenes();
@@ -3112,7 +3117,7 @@ function end_objects_adding(bpy_data, thread, stage, cb_param, cb_finish,
 
 function synchronize_media(bpy_data, thread, stage, cb_param, cb_finish,
         cb_set_rate) {
-
+    console.log("synchronize_media")
     if (thread.is_primary)
         for (var i = 0; i < bpy_data["scenes"].length; i++) {
             video_play(bpy_data["scenes"][i], thread.id);
@@ -3132,7 +3137,7 @@ exports.setup_canvas = function(canvas) {
 
 function mobile_media_start(bpy_data, thread, stage, cb_param, cb_finish,
         cb_set_rate) {
-
+    console.log("mobile_media_start")
     // NOTE: not all bpy data can be dropped on this stage at the moment
     drop_bpy_data(bpy_data, thread);
     if (cfg_def.media_auto_activation && (thread.has_video_textures || 
@@ -3475,6 +3480,7 @@ exports.load = function(path, loaded_cb, stageload_cb, wait_complete_loading,
     var data_id = m_loader.create_thread(stages, path, loaded_cb, stageload_cb,
             free_load_data, wait_complete_loading || cfg_sfx.audio_loading_hack,
             cfg_def.do_not_load_resources, load_hidden);
+    console.log(m_loader.graph_to_dot(data_id))
     return data_id;
 }
 

@@ -480,7 +480,7 @@ function loop() {
 
     for (var i = 0; i < _loop_cb.length; i++)
         _loop_cb[i](timeline, delta);
-    console.log("===1")
+    // console.log("===1")
     if (!is_paused()) {
         // correct delta if resume occured since last frame
         if (_resume_time > _last_abs_time)
@@ -496,7 +496,7 @@ function loop() {
         frame(timeline, delta);
 
         _fps_counter(delta);
-        console.log("===2")
+        // console.log("===2")
     }
 
     _last_abs_time = abstime;

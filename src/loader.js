@@ -34,7 +34,7 @@ var THREAD_STAGE_LOOP = 1;
 var THREAD_STAGE_AFTER = 2;
 var THREAD_STAGE_IDLE = 3;
 
-var DEBUG_MODE = false;
+var DEBUG_MODE = true;
 var DEBUG_COLOR = "color: #f0f;";
 
 var MAX_LOAD_TIME_MS = 16;
@@ -134,7 +134,6 @@ exports.create_thread = function(stages, path, loaded_callback,
             if (stage_need_calc(thread, attr))
                 thread.stages_size_total += attr.relative_size;
     });
-
     scheduler.threads.push(thread);
     scheduler.active_threads++;
 
@@ -168,8 +167,9 @@ function create_loading_graph(is_primary, stages, wait_complete_loading,
     // if "do_not_load_resources" is true)
     var loaded_cb_wrapper = function(bpy_data, thread, stage, cb_param,
             cb_finish, cb_set_rate) {
-        
+        console.log("loaded_cb_wrapper")
         // primary thread loaded, allow to load secondary threads
+        console.log(thread.is_primary)
         if (thread.is_primary)
             scheduler.start_secondary_threads = true;
 
@@ -213,6 +213,7 @@ function create_loading_graph(is_primary, stages, wait_complete_loading,
         } while (bkg_sink_ids.length);
     }
 
+    console.log("m_graph.append_node_attr(graph, finish_node);")
     m_graph.append_node_attr(graph, finish_node);
 
     for (var i = 0; i < sink_ids.length; i++) {
@@ -425,7 +426,7 @@ function process_stage(thread, stage, bpy_data) {
     if (DEBUG_MODE && stage.status == THREAD_STAGE_BEFORE) {
         var percents = get_load_percents(thread);
         var message = "LOADING START " +  stage.name;
-        var ms = Math.round(performance.now() - thread.time_load_start);
+        var ms = 0// Math.round(performance.now() - thread.time_load_start);
         m_print.log("%cTHREAD " + thread.id + ": " + percents + "% " + message 
                 + " " + ms + "ms ", DEBUG_COLOR);
     }
@@ -492,7 +493,7 @@ function stage_finish_cb(thread, stage) {
     if (DEBUG_MODE) {
         var percents = get_load_percents(thread);
         var message = "LOADING END " +  stage.name;
-        var ms = Math.round(performance.now() - thread.time_load_start);
+        var ms = 0// Math.round(performance.now() - thread.time_load_start);
         m_print.log("%cTHREAD " + thread.id + ": " + percents + "% " + message 
                 + " " + ms + "ms ", DEBUG_COLOR);
     }
@@ -628,8 +629,10 @@ exports.graph_to_dot = function(data_id) {
                         return node_label + props.join(" | ");
                     }
                 }, null);
-    else
+    else {
+        console.log("111")
         return null;
+    }
 }
 
 exports.cleanup = function() {

@@ -1,16 +1,16 @@
 /**
  * Copyright (C) 2014-2016 Triumph LLC
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -106,7 +106,6 @@ function FakeHttpRequest() {
         addEventListener: function() {},
         open: function(method, url, async) {
             req._source_url = url;
-            console.log(url)
             req.readyState = 1;
         },
         send: function() {
@@ -138,15 +137,7 @@ function FSFakeHttpRequest() {
                 return decoder.write(source)
             case "arraybuffer":
                 var bin_str = source;
-                console.log(typeof(source))
                 return new Uint8Array(source).buffer
-                // return source
-                var len = bin_str.length;
-
-                var arr_buffer = new Int8Array(len);
-                for (var i = 0; i < len; i++)
-                    arr_buffer[i] = bin_str.charCodeAt(i);
-                return arr_buffer.buffer;
             default:
                 return source;
             }
@@ -514,7 +505,7 @@ function request_audio(asset) {
     var audio = document.createElement("audio");
     if (cfg_def.allow_cors)
         audio.crossOrigin = "Anonymous";
-    
+
     audio.addEventListener("loadeddata", function() {
         if (asset.state != ASTATE_HALTED) {
             asset.asset_cb(audio, asset.id, asset.type, asset.url, asset.param);
@@ -620,12 +611,12 @@ function request_video(asset) {
         if (cfg_def.is_mobile_device)
             video.load();
     }
-    
+
     if (cfg_def.mobile_firefox_media_hack) {
         video.autoplay = true;
         video.pause();
     }
-    
+
     // HACK: workaround for some garbage collector bug
     setTimeout(function() {video.some_prop_to_prevent_gc = 1}, 10000);
 }
@@ -654,7 +645,7 @@ function request_seq_video(asset) {
     }
     req.responseType = "arraybuffer";
 
-    function load_cb(images) { 
+    function load_cb(images) {
         asset.asset_cb(images, asset.id, asset.type, asset.url, asset.param);
         asset.state = ASTATE_RECEIVED;
     }
@@ -665,7 +656,7 @@ function request_seq_video(asset) {
             if (req.status == 200 || req.status == 0) {
                 var response = req.response;
                 if (response)
-                    parse_seq_video_file(response, load_cb);                    
+                    parse_seq_video_file(response, load_cb);
                 else {
                     asset.asset_cb(null, asset.id, asset.type, asset.url, asset.param);
                     m_print.error("empty responce when trying to get " + asset.url);
@@ -744,7 +735,7 @@ function get_sound_mime_type(file_path) {
     case "mp3":
         mime_type += "/mpeg";
         break;
-    case "m4v":    
+    case "m4v":
     case "mp4":
         mime_type += "/mp4";
         break;

@@ -59,6 +59,7 @@ var b4w_include = [
     "./../../src/loader.js",
     "./../../src/libs/md5.js",
     "./../../src/ext/main.js",
+    "./../../src/debug.js",
 ];
 for (var i in b4w_include) {
     includeInThisContext(__dirname + "/" + b4w_include[i]);
@@ -76,6 +77,7 @@ b4w.register("examp", function(exports, require) {
     var m_data = require("__data");
     var m_main  = require("main");
     var m_assets  = require("__assets");
+    var m_debug = require("__debug");
 
     var createContext = require_orig('gl/index')
     var utils = require_orig('./common/utils')
@@ -89,9 +91,12 @@ b4w.register("examp", function(exports, require) {
             log.info(__line, "file loaded")
             loaded = true
         }
+        function stage_load_callback(a,b) {
+            log.info("stage_load_callback", a + " " + b)
+        }
         log.info(__line, "start loading")
         m_data.load("../deploy/assets/tutorials/cartoon_room/cartoon_interior_all.json",
-            loaded_callback, null, true);
+            loaded_callback, stage_load_callback, true);
     }
 
     exports.main = function main() {
