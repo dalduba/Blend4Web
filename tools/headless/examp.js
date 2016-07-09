@@ -84,12 +84,6 @@ b4w.register("examp", function(exports, require) {
         log.info(__line, "start loading")
         m_data.load(__dirname + "/../../deploy/assets/flight_over_island/flight_over_island.json",
             loaded_callback, null, true);
-        var sleep = require_orig('sleep');
-        // loading is not working yet => infinite loop
-        // while (!loaded) {
-        //     sleep.sleep(1)
-        //     log.info(__line, 'waiting')
-        // }
     }
 
     exports.main = function main() {
@@ -104,50 +98,57 @@ b4w.register("examp", function(exports, require) {
         canvas.width = width
         canvas.height = height
         m_main.init_headless(canvas, gl)
-
-        var vertex_src = [
-            'attribute vec2 a_position;',
-            'void main() {',
-            'gl_Position = vec4(a_position, 0, 1);',
-            '}'
-        ].join('\n')
-
-        var fragment_src = [
-            'void main() {',
-            'gl_FragColor = vec4(1, 0, 0, 1);  // green',
-            '}'
-        ].join('\n')
-
-        // setup a GLSL program
-        var program = utils.createProgramFromSources(gl, [vertex_src, fragment_src])
-
-        if (!program) {
-            return
-        }
-        gl.useProgram(program)
-
-        // look up where the vertex data needs to go.
-        var positionLocation = gl.getAttribLocation(program, 'a_position')
-
-        // Create a buffer and put a single clipspace rectangle in
-        // it (2 triangles)
-        var buffer = gl.createBuffer()
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
-        gl.bufferData(
-            gl.ARRAY_BUFFER,
-            new Float32Array([
-                -1.0, -1.0,
-                1.0, -1.0,
-                -1.0, 1.0,
-                -1.0, 1.0,
-                1.0, -1.0,
-                1.0, 1.0]),
-            gl.STATIC_DRAW)
-        gl.enableVertexAttribArray(positionLocation)
-        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0)
+        //
+        // var vertex_src = [
+        //     'attribute vec2 a_position;',
+        //     'void main() {',
+        //     'gl_Position = vec4(a_position, 0, 1);',
+        //     '}'
+        // ].join('\n')
+        //
+        // var fragment_src = [
+        //     'void main() {',
+        //     'gl_FragColor = vec4(1, 0, 0, 1);  // green',
+        //     '}'
+        // ].join('\n')
+        //
+        // // setup a GLSL program
+        // var program = utils.createProgramFromSources(gl, [vertex_src, fragment_src])
+        //
+        // if (!program) {
+        //     return
+        // }
+        // gl.useProgram(program)
+        //
+        // // look up where the vertex data needs to go.
+        // var positionLocation = gl.getAttribLocation(program, 'a_position')
+        //
+        // // Create a buffer and put a single clipspace rectangle in
+        // // it (2 triangles)
+        // var buffer = gl.createBuffer()
+        // gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+        // gl.bufferData(
+        //     gl.ARRAY_BUFFER,
+        //     new Float32Array([
+        //         -1.0, -1.0,
+        //         1.0, -1.0,
+        //         -1.0, 1.0,
+        //         -1.0, 1.0,
+        //         1.0, -1.0,
+        //         1.0, 1.0]),
+        //     gl.STATIC_DRAW)
+        // gl.enableVertexAttribArray(positionLocation)
+        // gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0)
 
         // draw
-        gl.drawArrays(gl.TRIANGLES, 0, 6)
+        // gl.drawArrays(gl.TRIANGLES, 0, 6)
+
+        //loading is not working yet => infinite loop
+        var sleep = require_orig('sleep');
+        while (!loaded) {
+            sleep.sleep(1)
+            log.info(__line, 'waiting')
+        }
 
         var filename = __filename + '.ppm' // eslint-disable-line
         log.info(__line, 'rendering ' + filename)

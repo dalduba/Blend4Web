@@ -283,10 +283,10 @@ function request_arraybuffer(asset, response_type) {
     var bd = get_built_in_data();
     console.log("----------------------")
     console.log(bd && asset.url in bd)
-    if (bd && asset.url in bd)
-        var req = new FakeHttpRequest();
-    else
-        var req = new XMLHttpRequest();
+    // if (bd && asset.url in bd)
+    var req = new FakeHttpRequest();
+    // else
+    //     var req = new XMLHttpRequest();
 
     var content_type = null;
     if (asset.request == "GET") {
