@@ -775,33 +775,34 @@ function js_src_dir() {
 
     var src_path = null;
 
-    var scripts = document.getElementsByTagName('script');
-    for (var i = 0; i < scripts.length; i++) {
-        var src = scripts[i].src;
+    // var scripts = document.getElementsByTagName('script');
+    // for (var i = 0; i < scripts.length; i++) {
+    //     var src = scripts[i].src;
+    //
+    //     for (var j = 0; j < cfg_pth.js_src_search_paths.length; j++) {
+    //         var script_path = cfg_pth.js_src_search_paths[j];
+    //         if (src.indexOf(script_path) >= 0) {
+    //             src_path = src;
+    //             break;
+    //         }
+    //     }
+    //
+    //     if (src_path !== null)
+    //         break;
+    // }
 
-        for (var j = 0; j < cfg_pth.js_src_search_paths.length; j++) {
-            var script_path = cfg_pth.js_src_search_paths[j];
-            if (src.indexOf(script_path) >= 0) {
-                src_path = src;
-                break;
-            }
-        }
+    // if (!src_path) {
+    //     m_print.warn("Couldn't determine path to ancillary resources, " +
+    //             "fallback to the current page directory");
+    //     src_path = document.location.href;
+    // }
 
-        if (src_path !== null)
-            break;
-    }
-
-    if (!src_path) {
-        m_print.warn("Couldn't determine path to ancillary resources, " +
-                "fallback to the current page directory");
-        src_path = document.location.href;
-    }
-
-    var index = src_path.indexOf("?");
-    if (index >= 0)
-        src_path = src_path.substring(0, index);
-
-    return src_path.substring(0, src_path.lastIndexOf("/") + 1);
+    // var index = src_path.indexOf("?");
+    // if (index >= 0)
+    //     src_path = src_path.substring(0, index);
+    //
+    // return src_path.substring(0, src_path.lastIndexOf("/") + 1);
+    return ""
 }
 
 exports.get_std_assets_path = function() {

@@ -255,18 +255,18 @@ exports.update_scheduler = function(bpy_data_array) {
         return;
     }
 
-    var time_start = performance.now();
+    var time_start = 0;//performance.now();
     do {
-        console.log("update_scheduler")
+        // console.log("update_scheduler")
         var thread = scheduler.threads[scheduler.current_thread_index];
         var bpy_data = bpy_data_array[thread.id];
-
+        console.log("=====11")
         if (!thread_is_finished(thread)) {
-
+            console.log("=====12")
             // start new thread
             if (thread.status == THREAD_IDLE) {
                 thread.status = THREAD_LOADING;
-                thread.time_load_start = performance.now();
+                thread.time_load_start = 0 //performance.now();
                 thread.stageload_cb(0, 0);
                 if (DEBUG_MODE)
                     m_print.log("%cTHREAD " + thread.id 
@@ -290,7 +290,7 @@ exports.update_scheduler = function(bpy_data_array) {
             return;
         }
 
-    } while(performance.now() - time_start < MAX_LOAD_TIME_MS);
+    } while(true);
 }
 
 exports.abort_thread = function(thread) {
@@ -518,7 +518,7 @@ function stage_loading_action(thread, stage, rate) {
         var percents = get_load_percents(thread);
 
         if (thread.curr_percents != percents || rate == 1) {
-            thread.stageload_cb(percents, performance.now() - thread.time_load_start);
+            thread.stageload_cb(percents, 1);
             thread.curr_percents = percents;
 
             // NOTE: skip next thread iteration to liquidate loading bar 

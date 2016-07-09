@@ -63,11 +63,19 @@ var b4w_include = [
 for (var i in b4w_include) {
     includeInThisContext(__dirname + "/" + b4w_include[i]);
 }
+b4w.register("__fs",  function(exports, require) {
+    var m_fs = require_orig("fs")
+    var m_process = require_orig("process")
+    exports.readFileSync = m_fs.readFileSync
+    exports.cwd = m_process.cwd
+    exports.StringDecoder = require_orig('string_decoder').StringDecoder
 
+});
 b4w.register("examp", function(exports, require) {
 
     var m_data = require("__data");
     var m_main  = require("main");
+    var m_assets  = require("__assets");
 
     var createContext = require_orig('gl/index')
     var utils = require_orig('./common/utils')
@@ -82,7 +90,7 @@ b4w.register("examp", function(exports, require) {
             loaded = true
         }
         log.info(__line, "start loading")
-        m_data.load(__dirname + "/../../deploy/assets/flight_over_island/flight_over_island.json",
+        m_data.load("../deploy/assets/tutorials/cartoon_room/cartoon_interior_all.json",
             loaded_callback, null, true);
     }
 

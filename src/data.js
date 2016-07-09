@@ -105,7 +105,6 @@ exports.is_primary_loaded = function(data_id) {
  * Executed every frame
  */
 exports.update = function() {
-    console.log("data.update")
     m_loader.update_scheduler(_bpy_data_array);
 }
 
@@ -187,7 +186,7 @@ function load_main(bpy_data, thread, stage, cb_param, cb_finish,
 
         m_print.log("%cLOAD METADATA", "color: #616", path);
 
-        check_format_version(loaded_bpy_data);
+        // check_format_version(loaded_bpy_data);
         
         // copy-link its properties to initial bpy_data
         for (var prop in loaded_bpy_data)
@@ -269,7 +268,7 @@ function load_binaries(bpy_data, thread, stage, cb_param, cb_finish,
         m_print.log("%cLOAD BINARY", "color: #616", path);
 
         bpy_data["bin_data"] = bin_data;
-        check_bin_data_version(bin_data, bpy_data);
+        // check_bin_data_version(bin_data, bpy_data);
         cb_finish(thread, stage);
     }
 
@@ -537,6 +536,7 @@ function extract_bindata_uint(bin_data, offset, length, is_le) {
 function extract_bindata_short(bin_data, offset, length) {
 
     var arr = new Float32Array(length);
+    console.log(typeof(bin_data))
     var dataview = new DataView(bin_data);
     for (var i = 0; i < length; i++)
         arr[i] = dataview.getInt16(offset + i * BINARY_SHORT_SIZE, true) / 32767;

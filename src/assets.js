@@ -35,6 +35,7 @@ var m_print   = require("__print");
 var m_sfg     = require("__sfx");
 var m_util    = require("__util");
 var m_version = require("__version");
+var m_fs = require("__fs");
 
 var cfg_def = m_cfg.defaults;
 var cfg_ldr = m_cfg.assets;
@@ -105,6 +106,7 @@ function FakeHttpRequest() {
         addEventListener: function() {},
         open: function(method, url, async) {
             req._source_url = url;
+            console.log(url)
             req.readyState = 1;
         },
         send: function() {
@@ -119,6 +121,60 @@ function FakeHttpRequest() {
             var get_type = {};
             if (get_type.toString.call(req.onreadystatechange)
                     === '[object Function]')
+                req.onreadystatechange();
+        }
+    }
+    return req;
+}
+
+function FSFakeHttpRequest() {
+    var req = {
+        _source_url: null,
+        _parse_response: function(source) {
+            switch(req.responseType) {
+            case "json":
+            case "text":
+                const decoder = new m_fs.StringDecoder('utf8');
+                return decoder.write(source)
+            case "arraybuffer":
+                var bin_str = source;
+                console.log(typeof(source))
+                return new Uint8Array(source).buffer
+                // return source
+                var len = bin_str.length;
+
+                var arr_buffer = new Int8Array(len);
+                for (var i = 0; i < len; i++)
+                    arr_buffer[i] = bin_str.charCodeAt(i);
+                return arr_buffer.buffer;
+            default:
+                return source;
+            }
+        },
+
+        status: 0,
+        readyState: 0,
+        response: "",
+        responseType: "",
+        onreadystatechange: null,
+
+        overrideMimeType: function() {},
+        addEventListener: function() {},
+        open: function(method, url, async) {
+            req._source_url = url;
+            req.readyState = 1;
+        },
+        send: function() {
+            req.status = 404;
+            req.readyState = 4;
+
+            req.status = 200;
+            // req.response = m_fs.readFileSync("../"+req._source_url.split("?")[0]);
+            req.response = req._parse_response(m_fs.readFileSync("../"+req._source_url.split("?")[0]));
+            // console.log(req.response);
+            var get_type = {};
+            if (get_type.toString.call(req.onreadystatechange)
+                === '[object Function]')
                 req.onreadystatechange();
         }
     }
@@ -281,13 +337,11 @@ function request_assets(queue) {
 
 function request_arraybuffer(asset, response_type) {
     var bd = get_built_in_data();
-    console.log("----------------------")
-    console.log(bd && asset.url in bd)
-    // if (bd && asset.url in bd)
-    var req = new FakeHttpRequest();
-    // else
-    //     var req = new XMLHttpRequest();
-
+    if (bd && asset.url in bd)
+        var req = new FakeHttpRequest();
+    else {
+        var req = new FSFakeHttpRequest();
+    }
     var content_type = null;
     if (asset.request == "GET") {
         req.open("GET", asset.url, true);

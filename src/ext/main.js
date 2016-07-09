@@ -105,7 +105,7 @@ var _gl = null;
  * NOTE: According to the spec, this function takes only one param
  */
 var _requestAnimFrame = (function() {
-        return 0;
+        return 25;
 });
 
 // public enums
@@ -190,7 +190,7 @@ exports.init = function(elem_canvas_webgl, elem_canvas_hud) {
  */
 exports.init_headless = function(headless_canvas, gl) {
     _headless = true;
-    // m_cfg.set_paths();
+    m_cfg.set_paths();
 
     // NOTE: for debug purposes
     // works in chrome with --enable-memory-info --js-flags="--expose-gc"
@@ -453,12 +453,13 @@ function is_paused() {
 }
 
 function loop() {
-    console.log("loop")
+    // console.log("loop")
     // var vr_display = cfg_def.stereo === "HMD" && m_input.get_webvr_display();
     // if (vr_display)
     //     vr_display.requestAnimationFrame(loop);
     // else
-    _requestAnimFrame(loop);
+    console.log("===-1")
+    // _requestAnimFrame(loop);
 
     // float sec
     var abstime = 0; //performance.now() / 1000;
@@ -469,21 +470,21 @@ function loop() {
     var delta = abstime - _last_abs_time;
 
     // do not render short frames
-    if (delta < 1/cfg_def.max_fps)
-        return;
-
+    // if (delta < 1/cfg_def.max_fps)
+    //     return;
+    console.log("===0")
     var timeline = m_time.get_timeline();
 
     for (var i = 0; i < _loop_cb.length; i++)
         _loop_cb[i](timeline, delta);
-
+    console.log("===1")
     if (!is_paused()) {
         // correct delta if resume occured since last frame
         if (_resume_time > _last_abs_time)
             delta -= (_resume_time - Math.max(_pause_time, _last_abs_time));
 
         timeline += delta;
-        m_time.set_timeline(timeline);
+        // m_time.set_timeline(timeline);
 
         m_debug.update();
 
@@ -492,12 +493,14 @@ function loop() {
         frame(timeline, delta);
 
         _fps_counter(delta);
+        console.log("===2")
     }
 
     _last_abs_time = abstime;
 
-    if (vr_display && vr_display.isPresenting)
-        vr_display.submitFrame();
+    // if (vr_display && vr_display.isPresenting)
+    //     vr_display.submitFrame();
+    loop()
 }
 
 function frame(timeline, delta) {
