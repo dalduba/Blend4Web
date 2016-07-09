@@ -105,6 +105,7 @@ exports.is_primary_loaded = function(data_id) {
  * Executed every frame
  */
 exports.update = function() {
+    console.log("data.update")
     m_loader.update_scheduler(_bpy_data_array);
 }
 
@@ -171,6 +172,7 @@ function print_video_info(video, image_path, show_path_warning, type) {
 function load_main(bpy_data, thread, stage, cb_param, cb_finish,
         cb_set_rate) {
 
+    console.log("load_main")
     var main_path = thread.filepath;
     if (!main_path)
         m_util.panic("Nothing requested");
@@ -3278,7 +3280,7 @@ function dirname(path) {
  */
 exports.load = function(path, loaded_cb, stageload_cb, wait_complete_loading,
         load_hidden) {
-
+    
     var stages = {
         "load_main": {
             priority: m_loader.ASYNC_PRIORITY,
@@ -3469,6 +3471,7 @@ exports.load = function(path, loaded_cb, stageload_cb, wait_complete_loading,
     }
 
     _bpy_data_array[scheduler.threads.length] = {};
+    console.log(path)
     var data_id = m_loader.create_thread(stages, path, loaded_cb, stageload_cb,
             free_load_data, wait_complete_loading || cfg_sfx.audio_loading_hack,
             cfg_def.do_not_load_resources, load_hidden);

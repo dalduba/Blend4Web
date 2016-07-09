@@ -104,6 +104,7 @@ exports.AT_AUDIO_ELEMENT = m_assets.AT_AUDIO_ELEMENT;
  * @param {ProgressCallback} [progress_cb] Callback for the progress of loading
  */
 exports.enqueue = function(assets_pack, asset_cb, pack_cb, progress_cb) {
+    console.log("enqueue")
     if (assets_pack.length)
         if (assets_pack["id"])
             m_assets.enqueue(assets_pack, asset_cb, pack_cb, progress_cb);
@@ -120,6 +121,7 @@ exports.enqueue = function(assets_pack, asset_cb, pack_cb, progress_cb) {
                     post_data: null,
                     param: pack_elem[3]
                 });
+                console.log(pack_elem[2])
             }
             m_assets.enqueue(new_asset_pack, asset_cb, pack_cb, progress_cb);
         }

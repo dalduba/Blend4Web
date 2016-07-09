@@ -69,6 +69,7 @@ var m_trans     = require("__transform");
 var m_util      = require("__util");
 var m_version   = require("__version");
 var m_particles = require("__particles");
+// var performance_now = require("performance-now")
 
 var cfg_ctx = m_cfg.context;
 var cfg_def = m_cfg.defaults;
@@ -80,6 +81,7 @@ var _last_abs_time = 0;
 var _pause_time = 0;
 var _resume_time = 0;
 var _loop_cb = [];
+var _headless = false;
 
 /**
  * FPS callback
@@ -103,14 +105,8 @@ var _gl = null;
  * NOTE: According to the spec, this function takes only one param
  */
 var _requestAnimFrame = (function() {
-  return window.requestAnimationFrame ||
-         window.webkitRequestAnimationFrame ||
-         window.mozRequestAnimationFrame ||
-         window.oRequestAnimationFrame ||
-         window.msRequestAnimationFrame ||
-         function(callback) {return window.setTimeout(callback,
-             1000/cfg_def.max_fps);};
-})();
+        return 0;
+});
 
 // public enums
 
@@ -180,6 +176,51 @@ exports.init = function(elem_canvas_webgl, elem_canvas_hud) {
 
     if (cfg_def.ie11_edge_touchscreen_hack)
         elem_canvas_webgl.style["touch-action"] = "none";
+
+    m_print.log("%cSET PRECISION:", "color: #00a", cfg_def.precision);
+
+    return gl;
+}
+/**
+ * Create the WebGL context and initialize the engine.
+ * @method module:main.init
+ * @param {HTMLCanvasElement} elem_canvas_webgl Canvas element for WebGL
+ * @param {HTMLCanvasElement} [elem_canvas_hud] Canvas element for HUD
+ * @returns {WebGLRenderingContext|Null} WebGL context or null
+ */
+exports.init_headless = function(headless_canvas, gl) {
+    _headless = true;
+    // m_cfg.set_paths();
+
+    // NOTE: for debug purposes
+    // works in chrome with --enable-memory-info --js-flags="--expose-gc"
+    //window.setInterval(function() {window.gc();}, 1000);
+
+    m_print.set_verbose(cfg_def.console_verbose);
+
+    var ver_str = m_version.version_str() + " " + m_version.type() +
+        " (" + m_version.date_str() + ")";
+    m_print.log("%cINIT ENGINE", "color: #00a", ver_str);
+
+    // setup_clock();
+
+    // m_compat.apply_context_alpha_hack();
+
+    // allow WebGL 2 only in Chrome and Firefox
+    // if (!(m_compat.check_user_agent("Chrome") ||
+    //     m_compat.check_user_agent("Firefox")))
+    //     cfg_def.webgl2 = false;
+
+    if (!gl)
+        return null;
+
+    _gl = gl;
+
+    init_headless_context(headless_canvas, null, gl);
+    m_cfg.apply_quality();
+    m_compat.set_hardware_defaults(gl);
+
+    m_shaders.load_shaders();
 
     m_print.log("%cSET PRECISION:", "color: #00a", cfg_def.precision);
 
@@ -270,7 +311,36 @@ function init_context(canvas, canvas_hud, gl) {
     loop();
 }
 
-/**
+function init_headless_context(headless_canvas, canvas_hud, gl) {
+
+    m_ext.setup_context(gl);
+
+    var rinfo = m_ext.get_renderer_info();
+    if (rinfo)
+        m_print.log("%cRENDERER INFO:", "color: #00a",
+            gl.getParameter(rinfo.UNMASKED_VENDOR_WEBGL) + ", " +
+            gl.getParameter(rinfo.UNMASKED_RENDERER_WEBGL));
+
+    m_render.setup_context(gl);
+    m_geom.setup_context(gl);
+    m_textures.setup_context(gl);
+    m_shaders.setup_context(gl);
+    m_debug.setup_context(gl);
+    m_cont.setup_context(gl);
+    // m_data.setup_canvas(canvas);
+    // m_cont.init(canvas, canvas_hud);
+
+    m_scenes.setup_dim(headless_canvas.width, headless_canvas.height, 1);
+
+    // m_sfx.init();
+
+    _fps_counter = init_fps_counter();
+
+    loop();
+}
+
+
+    /**
  * Resize the rendering canvas.
  * @method module:main.resize
  * @param {Number} width New canvas width
@@ -383,14 +453,15 @@ function is_paused() {
 }
 
 function loop() {
-    var vr_display = cfg_def.stereo === "HMD" && m_input.get_webvr_display();
-    if (vr_display)
-        vr_display.requestAnimationFrame(loop);
-    else
-        _requestAnimFrame(loop);
+    console.log("loop")
+    // var vr_display = cfg_def.stereo === "HMD" && m_input.get_webvr_display();
+    // if (vr_display)
+    //     vr_display.requestAnimationFrame(loop);
+    // else
+    _requestAnimFrame(loop);
 
     // float sec
-    var abstime = performance.now() / 1000;
+    var abstime = 0; //performance.now() / 1000;
 
     if (!_last_abs_time)
         _last_abs_time = abstime;

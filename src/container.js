@@ -148,7 +148,7 @@ function setup_viewport_dim(width, height, scale) {
     _viewport_layout.width = width;
     _viewport_layout.height = height;
     _viewport_layout.scale = scale;
-    update_canvas_offsets();
+    // update_canvas_offsets();
 }
 
 exports.force_offsets_updating = function() {

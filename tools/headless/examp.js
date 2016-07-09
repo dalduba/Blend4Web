@@ -58,6 +58,7 @@ var b4w_include = [
     "./../../src/shaders.js",
     "./../../src/loader.js",
     "./../../src/libs/md5.js",
+    "./../../src/ext/main.js",
 ];
 for (var i in b4w_include) {
     includeInThisContext(__dirname + "/" + b4w_include[i]);
@@ -66,6 +67,7 @@ for (var i in b4w_include) {
 b4w.register("examp", function(exports, require) {
 
     var m_data = require("__data");
+    var m_main  = require("main");
 
     var createContext = require_orig('gl/index')
     var utils = require_orig('./common/utils')
@@ -80,14 +82,14 @@ b4w.register("examp", function(exports, require) {
             loaded = true
         }
         log.info(__line, "start loading")
-        m_data.load(__dirname + "../../deploy/assets/flight_over_island/flight_over_island.json",
+        m_data.load(__dirname + "/../../deploy/assets/flight_over_island/flight_over_island.json",
             loaded_callback, null, true);
         var sleep = require_orig('sleep');
         // loading is not working yet => infinite loop
-        while (!loaded) {
-            sleep.sleep(1)
-            log.info(__line, 'waiting')
-        }
+        // while (!loaded) {
+        //     sleep.sleep(1)
+        //     log.info(__line, 'waiting')
+        // }
     }
 
     exports.main = function main() {
@@ -98,6 +100,10 @@ b4w.register("examp", function(exports, require) {
         var width = 64
         var height = 64
         var gl = createContext(width, height)
+        var canvas = {}
+        canvas.width = width
+        canvas.height = height
+        m_main.init_headless(canvas, gl)
 
         var vertex_src = [
             'attribute vec2 a_position;',

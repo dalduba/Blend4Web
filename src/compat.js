@@ -76,8 +76,8 @@ exports.set_hardware_defaults = function(gl) {
         cfg_def.firefox_tex_reuse_hack = true;
     }
 
-    if (cfg_def.webgl2 && m_debug.check_multisample_issue())
-        cfg_def.msaa_samples = 1;
+    // if (cfg_def.webgl2 && m_debug.check_multisample_issue())
+    //     cfg_def.msaa_samples = 1;
 
     var depth_tex_available = Boolean(m_ext.get_depth_texture());
     // HACK: fix depth issue in Firefox 28
@@ -327,7 +327,7 @@ exports.check_user_agent = check_user_agent;
  * for user agent hacks
  */
 function check_user_agent(str) {
-    var user_agent = navigator.userAgent;
+    var user_agent = "Chrome";
     if (user_agent.indexOf(str) > -1)
         return true;
     else
@@ -335,13 +335,7 @@ function check_user_agent(str) {
 }
 exports.detect_mobile = detect_mobile;
 function detect_mobile() {
-    return navigator.userAgent.match(/Android/i)
-        || navigator.userAgent.match(/webOS/i)
-        || navigator.userAgent.match(/iPhone/i)
-        || navigator.userAgent.match(/iPad/i)
-        || navigator.userAgent.match(/iPod/i)
-        || navigator.userAgent.match(/BlackBerry/i)
-        || navigator.userAgent.match(/Windows Phone/i);
+    return false;
 }
 
 exports.apply_context_alpha_hack = function() {
@@ -356,7 +350,7 @@ exports.apply_context_alpha_hack = function() {
  */
 exports.is_ie11 = is_ie11;
 function is_ie11() {
-    return !(window.ActiveXObject) && "ActiveXObject" in window;
+    return false;
 }
 
 }

@@ -118,7 +118,7 @@ exports.create_thread = function(stages, path, loaded_callback,
         has_background_music: false,
         init_wa_context: false
     }
-
+    console.log("create_loading_graph")
     var graph = create_loading_graph(thread.is_primary, stages, 
             wait_complete_loading, do_not_load_resources);
     thread.stage_graph = graph;
@@ -257,6 +257,7 @@ exports.update_scheduler = function(bpy_data_array) {
 
     var time_start = performance.now();
     do {
+        console.log("update_scheduler")
         var thread = scheduler.threads[scheduler.current_thread_index];
         var bpy_data = bpy_data_array[thread.id];
 

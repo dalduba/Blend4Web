@@ -13,7 +13,8 @@
   "dependencies": {
     "gl": ">=0.0.0",
     "log4js": ">=0.0.0",
-    "sleep": ">=0.0.0"
+    "sleep": ">=0.0.0",
+    "performance-now": ">=0.0.0"
   },
   "devDependencies": {
   },
