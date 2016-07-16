@@ -60,6 +60,7 @@ var b4w_include = [
     "./../../src/libs/md5.js",
     "./../../src/ext/main.js",
     "./../../src/debug.js",
+    "./../../src/libs/gpp_parser.js",
 ];
 for (var i in b4w_include) {
     includeInThisContext(__dirname + "/" + b4w_include[i]);
@@ -72,6 +73,13 @@ b4w.register("__fs",  function(exports, require) {
     exports.StringDecoder = require_orig('string_decoder').StringDecoder
 
 });
+b4w.register("__gl",  function(exports, require) {
+    var m_gl = require_orig("gl")
+    exports = m_gl.exports
+});
+b4w.register("__performance_now",  function(exports, require) {
+    exports.now = require_orig("performance-now")
+});
 b4w.register("examp", function(exports, require) {
 
     var m_data = require("__data");
@@ -79,23 +87,38 @@ b4w.register("examp", function(exports, require) {
     var m_assets  = require("__assets");
     var m_debug = require("__debug");
 
-    var createContext = require_orig('gl/index')
+    var createContext = require_orig('gl')
     var utils = require_orig('./common/utils')
     var utils_log = require_orig('./common/utils_log.js')
     var path = require_orig('path')
     var log = new utils_log.Log(path.basename(__filename), 'DEBUG')
+    var _gl_ctx = null;
+    var _width = 800
+    var _height = 600
 
     var loaded = false;
     function load_json() {
+        function write_to_file() {
+            var filename = __filename + '.ppm' // eslint-disable-line
+            log.info(__line, 'rendering ' + filename)
+
+            utils.bufferToFile(_gl_ctx, _width, _height, filename)
+            // m_main.pause()
+
+            // gl.destroy()
+        }
         function loaded_callback(data_id) {
             log.info(__line, "file loaded")
             loaded = true
+            m_main.resume()
+            setTimeout(m_main.resume, 5000)
+            setTimeout(write_to_file, 10000)
         }
         function stage_load_callback(a,b) {
             log.info("stage_load_callback", a + " " + b)
         }
         log.info(__line, "start loading")
-        m_data.load("../deploy/assets/tutorials/cartoon_room/cartoon_interior_all.json",
+        m_data.load("headless/test.json",
             loaded_callback, stage_load_callback, true);
     }
 
@@ -104,70 +127,16 @@ b4w.register("examp", function(exports, require) {
         load_json()
 
         // Create context
-        var width = 64
-        var height = 64
-        var gl = createContext(width, height)
+        _gl_ctx = createContext(_width, _height)
         var canvas = {}
-        canvas.width = width
-        canvas.height = height
-        m_main.init_headless(canvas, gl)
-        //
-        // var vertex_src = [
-        //     'attribute vec2 a_position;',
-        //     'void main() {',
-        //     'gl_Position = vec4(a_position, 0, 1);',
-        //     '}'
-        // ].join('\n')
-        //
-        // var fragment_src = [
-        //     'void main() {',
-        //     'gl_FragColor = vec4(1, 0, 0, 1);  // green',
-        //     '}'
-        // ].join('\n')
-        //
-        // // setup a GLSL program
-        // var program = utils.createProgramFromSources(gl, [vertex_src, fragment_src])
-        //
-        // if (!program) {
-        //     return
-        // }
-        // gl.useProgram(program)
-        //
-        // // look up where the vertex data needs to go.
-        // var positionLocation = gl.getAttribLocation(program, 'a_position')
-        //
-        // // Create a buffer and put a single clipspace rectangle in
-        // // it (2 triangles)
-        // var buffer = gl.createBuffer()
-        // gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
-        // gl.bufferData(
-        //     gl.ARRAY_BUFFER,
-        //     new Float32Array([
-        //         -1.0, -1.0,
-        //         1.0, -1.0,
-        //         -1.0, 1.0,
-        //         -1.0, 1.0,
-        //         1.0, -1.0,
-        //         1.0, 1.0]),
-        //     gl.STATIC_DRAW)
-        // gl.enableVertexAttribArray(positionLocation)
-        // gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0)
-
-        // draw
-        // gl.drawArrays(gl.TRIANGLES, 0, 6)
-
-        //loading is not working yet => infinite loop
-        var sleep = require_orig('sleep');
-        while (!loaded) {
-            sleep.sleep(1)
-            log.info(__line, 'waiting')
+        canvas.width = _width
+        canvas.height = _height
+        m_main.init_headless(canvas, _gl_ctx)
+        function do_nothing() {
+            console.log("do nothong")
+            setTimeout(do_nothing, 1000)
         }
-
-        var filename = __filename + '.ppm' // eslint-disable-line
-        log.info(__line, 'rendering ' + filename)
-        utils.bufferToFile(gl, width, height, filename)
-
-        gl.destroy()
+        do_nothing()
     }
 })
 b4w.require("examp").main();

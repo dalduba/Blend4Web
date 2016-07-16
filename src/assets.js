@@ -269,14 +269,15 @@ exports.enqueue = function(assets_pack, asset_cb, pack_cb, progress_cb, json_rev
  * Executed every frame
  */
 exports.update = function() {
+    // console.log(__line, "update")
     request_assets(_assets_queue);
     handle_packs(_assets_queue);
 }
 
 function request_assets(queue) {
-
+    // console.log(__line, "request_assets")
     var req_cnt = 0;
-
+    // console.log("queue.length: " + queue.length)
     for (var i = 0; i < queue.length; i++) {
         var asset = queue[i];
 
@@ -293,7 +294,6 @@ function request_assets(queue) {
 
         asset.state = ASTATE_REQUESTED;
         req_cnt++;
-
         switch (asset.type) {
         case exports.AT_ARRAYBUFFER:
             request_arraybuffer(asset, "arraybuffer");
@@ -307,17 +307,23 @@ function request_assets(queue) {
         case exports.AT_AUDIOBUFFER:
             request_audiobuffer(asset);
             break;
+        // case exports.AT_IMAGE_ELEMENT:
+        //     request_image(asset);
+        //     break;
+        // case exports.AT_AUDIO_ELEMENT:
+        //     request_audio(asset);
+        //     break;
+        // case exports.AT_VIDEO_ELEMENT:
+        //     request_video(asset);
+        //     break;
+        // case exports.AT_SEQ_VIDEO_ELEMENT:
+        //     request_seq_video(asset);
+        //     break;
         case exports.AT_IMAGE_ELEMENT:
-            request_image(asset);
-            break;
         case exports.AT_AUDIO_ELEMENT:
-            request_audio(asset);
-            break;
         case exports.AT_VIDEO_ELEMENT:
-            request_video(asset);
-            break;
         case exports.AT_SEQ_VIDEO_ELEMENT:
-            request_seq_video(asset);
+            asset.state = ASTATE_RECEIVED
             break;
         default:
             m_util.panic("Wrong asset type: " + asset.type);
@@ -781,7 +787,6 @@ exports.check_image_extension = function(ext) {
  * Find loaded packs, exec callback and remove from queue
  */
 function handle_packs(queue) {
-
     var pack_first_index = 0;
     var pack_cb_exec = true;
 

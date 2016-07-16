@@ -448,9 +448,9 @@ function append_scene(bpy_scene, scene_objects, lamps, bpy_mesh_objs, bpy_empty_
     for (var i = 0; i < scene_objects.length; i++)
         m_obj_util.scene_data_set_active(scene_objects[i], true, bpy_scene);
 
-    var canvas_container_elem = m_cont.get_container();
-    m_cont.resize(canvas_container_elem.clientWidth,
-            canvas_container_elem.clientHeight, true);
+    // var canvas_container_elem = m_cont.get_container();
+    // m_cont.resize(canvas_container_elem.clientWidth,
+    //         canvas_container_elem.clientHeight, true);
 }
 
 exports.append_scene_vtex = function(scene, textures, data_id) {
@@ -3773,7 +3773,7 @@ exports.get_shore_dist = function(scene, trans, v_dist_mult) {
  * update all scenes
  */
 exports.update = function(timeline, elapsed) {
-
+    
     var active_cam_render = get_active()._camera.render;
 
     // update subscene params (uniforms)
@@ -3802,6 +3802,7 @@ exports.update = function(timeline, elapsed) {
                 continue;
 
             var current_frame = m_tex.video_get_current_frame(vtex);
+
             var start_frame = m_tex.video_get_start_frame(vtex);
             if (video && cfg_def.is_mobile_device)
                 start_frame -= FRAME_EPS;
@@ -3886,7 +3887,6 @@ exports.update = function(timeline, elapsed) {
 
         // find outline mask scene index
         var outline_mask_subs = m_scgraph.find_subs(graph, "OUTLINE_MASK");
-
         for (var j = 0; j < queue.length; j++) {
             var qsubs = queue[j];
             m_prerender.prerender_subs(qsubs);

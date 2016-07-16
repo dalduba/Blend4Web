@@ -30,6 +30,7 @@ var m_util   = require("__util");
 var m_vec3   = require("__vec3");
 var m_vec4   = require("__vec4");
 var m_cfg    = require("__config");
+var m_gl     = require("__gl");
 
 var cfg_def = m_cfg.defaults;
 
@@ -379,14 +380,14 @@ function copy_object_props_by_value(obj) {
         for (var i = 0; i < obj.length; i++)
             obj_clone[i] = copy_object_props_by_value(obj[i]);
         break;
-    case WebGLUniformLocation:
-    case WebGLProgram:
-    case WebGLShader:
+    case m_gl.WebGLUniformLocation:
+    case m_gl.WebGLProgram:
+    case m_gl.WebGLShader:
         obj_clone = obj;
         break;
-    case WebGLFramebuffer:
-    case WebGLTexture:
-    case WebGLBuffer:
+    case m_gl.WebGLFramebuffer:
+    case m_gl.WebGLTexture:
+    case m_gl.WebGLBuffer:
         // NOTE: update geometry will be later
         obj_clone = null;
         break;

@@ -69,7 +69,7 @@ var m_trans     = require("__transform");
 var m_util      = require("__util");
 var m_version   = require("__version");
 var m_particles = require("__particles");
-// var performance_now = require("performance-now")
+var now = require("__performance_now").now;
 
 var cfg_ctx = m_cfg.context;
 var cfg_def = m_cfg.defaults;
@@ -105,8 +105,9 @@ var _gl = null;
  * NOTE: According to the spec, this function takes only one param
  */
 var _requestAnimFrame = (function() {
-        return 25;
-});
+    return function(callback) {
+        return setTimeout(callback, 1000/cfg_def.max_fps);};
+})();
 
 // public enums
 
@@ -202,7 +203,7 @@ exports.init_headless = function(headless_canvas, gl) {
         " (" + m_version.date_str() + ")";
     m_print.log("%cINIT ENGINE", "color: #00a", ver_str);
 
-    // setup_clock();
+    setup_clock();
 
     // m_compat.apply_context_alpha_hack();
 
@@ -215,11 +216,13 @@ exports.init_headless = function(headless_canvas, gl) {
         return null;
 
     _gl = gl;
-
+    console.log("init_headless_context")
     init_headless_context(headless_canvas, null, gl);
+    console.log("m_cfg.apply_quality")
     m_cfg.apply_quality();
+    console.log("m_compat.set_hardware_defaults(gl)")
     m_compat.set_hardware_defaults(gl);
-
+    console.log("load shaders")
     m_shaders.load_shaders();
 
     m_print.log("%cSET PRECISION:", "color: #00a", cfg_def.precision);
@@ -228,22 +231,22 @@ exports.init_headless = function(headless_canvas, gl) {
 }
 
 function setup_clock() {
-    if (!window.performance) {
-        m_print.log("Apply performance workaround");
-        window.performance = {};
-    }
+    // if (!window.performance) {
+    //     m_print.log("Apply performance workaround");
+    //     window.performance = {};
+    // }
 
     var curr_time = Date.now();
 
-    if (!window.performance.now) {
-        m_print.log("Apply performance.now() workaround");
-
-        //cfg_def.no_phy_interp_hack = true;
-
-        window.performance.now = function() {
-            return Date.now() - curr_time;
-        }
-    }
+    // if (!window.performance.now) {
+    //     m_print.log("Apply performance.now() workaround");
+    //
+    //     //cfg_def.no_phy_interp_hack = true;
+    //
+    //     window.performance.now = function() {
+    //         return Date.now() - curr_time;
+    //     }
+    // }
 
     m_time.set_timeline(0);
 }
@@ -335,11 +338,7 @@ function init_headless_context(headless_canvas, canvas_hud, gl) {
     // m_sfx.init();
 
     _fps_counter = init_fps_counter();
-    var i = 0
-    while(i<1000) {
-        i++
-        loop();
-    }
+    loop();
 }
 
 
@@ -438,8 +437,9 @@ exports.resume = function() {
     if (!is_paused())
         return;
 
-    _resume_time = performance.now() / 1000;
-    m_sfx.resume();
+    _resume_time = now();
+    console.log("rresume_time",_resume_time)
+    // m_sfx.resume();
     m_phy.resume();
     m_textures.play(true);
     m_anchors.resume();
@@ -452,6 +452,7 @@ exports.resume = function() {
  */
 exports.is_paused = is_paused;
 function is_paused() {
+    // console.log(_resume_time, _pause_time)
     return (_resume_time < _pause_time);
 }
 
@@ -462,32 +463,30 @@ function loop() {
     //     vr_display.requestAnimationFrame(loop);
     // else
     // console.log("===-1")
-    // _requestAnimFrame(loop);
-
+    _requestAnimFrame(loop);
     // float sec
-    var abstime = 0; //performance.now() / 1000;
-
+    var abstime = now();
+    // console.log("abstime", abstime)
     if (!_last_abs_time)
         _last_abs_time = abstime;
 
     var delta = abstime - _last_abs_time;
 
     // do not render short frames
-    // if (delta < 1/cfg_def.max_fps)
-    //     return;
+    if (delta < 1/cfg_def.max_fps)
+        return;
     // console.log("===0")
     var timeline = m_time.get_timeline();
 
     for (var i = 0; i < _loop_cb.length; i++)
         _loop_cb[i](timeline, delta);
-    // console.log("===1")
     if (!is_paused()) {
         // correct delta if resume occured since last frame
         if (_resume_time > _last_abs_time)
             delta -= (_resume_time - Math.max(_pause_time, _last_abs_time));
 
         timeline += delta;
-        // m_time.set_timeline(timeline);
+        m_time.set_timeline(timeline);
 
         m_debug.update();
 
@@ -500,10 +499,7 @@ function loop() {
     }
 
     _last_abs_time = abstime;
-
-    // if (vr_display && vr_display.isPresenting)
-    //     vr_display.submitFrame();
-    // loop()
+    // console.log("loop end")
 }
 
 function frame(timeline, delta) {

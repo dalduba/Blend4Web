@@ -618,8 +618,8 @@ exports.get_gamepad_axis_value = function(device, btn) {
 }
 
 exports.update = function(timeline) {
-    var gamepads = navigator.getGamepads ? navigator.getGamepads() :
-            (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
+    // var gamepads = navigator.getGamepads ? navigator.getGamepads() :
+    //         (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
     for (var i = 0; i < _devices.length; i++) {
         var device = _devices[i];
         switch(device.type) {

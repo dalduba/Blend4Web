@@ -27,6 +27,7 @@ b4w.module["__time"] = function(exports, require) {
 
 var m_cfg   = require("__config");
 var m_print = require("__print");
+var now = require("__performance_now").now;
 
 // engine's global timeline (time since initialization)
 var _timeline = 0;
@@ -43,7 +44,7 @@ var _framerate = -1;
 
 exports.set_timeline = function(timeline) {
     _timeline = timeline;                   // s
-    _timeline_epoch = performance.now();    // ms
+    _timeline_epoch = now();    // ms
 
     for (var i = 0; i < _timeouts.length; i++) {
         var timeout = _timeouts[i];

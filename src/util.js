@@ -34,6 +34,7 @@ var m_tsr   = require("__tsr");
 var m_quat  = require("__quat");
 var m_vec3  = require("__vec3");
 var m_vec4  = require("__vec4");
+var m_gl    = require("__gl");
 
 var _unique_counter = 0;
 var _unique_name_counters = {};
@@ -1503,12 +1504,12 @@ function hash_code(a, init_val) {
             // NOTE: some additional props could be added to GL-type objs
             // so don't build hash code for them
             switch (a.constructor) {
-            case WebGLUniformLocation:
-            case WebGLProgram:
-            case WebGLShader:
-            case WebGLFramebuffer:
-            case WebGLTexture:
-            case WebGLBuffer:
+            case m_gl.WebGLUniformLocation:
+            case m_gl.WebGLProgram:
+            case m_gl.WebGLShader:
+            case m_gl.WebGLFramebuffer:
+            case m_gl.WebGLTexture:
+            case m_gl.WebGLBuffer:
                 return hash_code_number(0, hash);
             }
 
@@ -1521,9 +1522,12 @@ function hash_code(a, init_val) {
             else if (a instanceof Array)
                 for (var i = 0; i < a.length; i++)
                     hash = hash_code(a[i], hash);
-            else
-                for (var prop in a)
-                    hash = hash_code(a[prop], hash);
+            else {
+                // console.log(">>>>>>>>>>>>>>>>>>>>>>>"+a)
+                // TODO: Maximum call stack size
+                // for (var prop in a)
+                //     hash = hash_code(a[prop], hash);
+            }
         } else
             hash = hash_code_number(0, hash);
     }

@@ -96,7 +96,7 @@ exports.setup_context = function(gl) {
 
     // http://stackoverflow.com/questions/11521035/blending-with-html-background-in-webgl
     //gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-
+    console.log("setup_context")
     _gl = gl;
 }
 
@@ -108,7 +108,8 @@ exports.draw = function(subscene) {
 
     if (!subscene.do_render)
         return;
-
+    // console.log("draw")
+    console.log(subscene.type)
     if (subscene.type == "RESOLVE") {
         m_debug.render_time_start_subs(subscene);
         draw_resolve(subscene);
@@ -232,7 +233,6 @@ exports.clear = function(subscene) {
 function prepare_subscene(subscene) {
 
     var camera = subscene.camera;
-
     _gl.bindFramebuffer(_gl.FRAMEBUFFER, camera.framebuffer);
 
     if (subscene.assign_texture) {

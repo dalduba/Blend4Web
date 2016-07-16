@@ -92,7 +92,7 @@ exports.init_scene_physics = function(scene) {
             "Using Separate Worker Thread," : "Using Same Thread,",
             "Max FPS: " + cfg_phy.max_fps);
     m_print.log("%cPHYSICS PATH", "color: #0a0", path);
-    var worker = m_ipc.create_worker(path, !cfg_phy.use_workers);
+    var worker = m_ipc.create_worker(path, phy.use_workers);
     m_ipc.attach_handler(worker, process_message);
 
     _workers.push(worker);

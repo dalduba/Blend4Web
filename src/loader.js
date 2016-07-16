@@ -22,6 +22,7 @@ b4w.module["__loader"] = function(exports, require) {
 var m_graph  = require("__graph");
 var m_print  = require("__print");
 var m_util   = require("__util");
+var now = require("__performance_now").now;
 
 var THREAD_IDLE = 0;
 var THREAD_LOADING = 1;
@@ -167,9 +168,7 @@ function create_loading_graph(is_primary, stages, wait_complete_loading,
     // if "do_not_load_resources" is true)
     var loaded_cb_wrapper = function(bpy_data, thread, stage, cb_param,
             cb_finish, cb_set_rate) {
-        console.log("loaded_cb_wrapper")
         // primary thread loaded, allow to load secondary threads
-        console.log(thread.is_primary)
         if (thread.is_primary)
             scheduler.start_secondary_threads = true;
 
@@ -213,7 +212,7 @@ function create_loading_graph(is_primary, stages, wait_complete_loading,
         } while (bkg_sink_ids.length);
     }
 
-    console.log("m_graph.append_node_attr(graph, finish_node);")
+    // console.log("m_graph.append_node_attr(graph, finish_node);")
     m_graph.append_node_attr(graph, finish_node);
 
     for (var i = 0; i < sink_ids.length; i++) {
@@ -255,10 +254,8 @@ exports.update_scheduler = function(bpy_data_array) {
         scheduler.make_idle_iteration = false;
         return;
     }
-    var i = 0;
     var time_start = 0;//performance.now();
     do {
-        i++
         // console.log("update_scheduler")
         var thread = scheduler.threads[scheduler.current_thread_index];
         var bpy_data = bpy_data_array[thread.id];
@@ -268,7 +265,7 @@ exports.update_scheduler = function(bpy_data_array) {
             // start new thread
             if (thread.status == THREAD_IDLE) {
                 thread.status = THREAD_LOADING;
-                thread.time_load_start = 0 //performance.now();
+                thread.time_load_start = now()/1000;
                 thread.stageload_cb(0, 0);
                 if (DEBUG_MODE)
                     m_print.log("%cTHREAD " + thread.id 
@@ -283,7 +280,6 @@ exports.update_scheduler = function(bpy_data_array) {
 
         // process secondary threads after main is loaded
         if (scheduler.start_secondary_threads)
-            console.log("=====13")
             scheduler.current_thread_index = (scheduler.current_thread_index + 1) 
                     % scheduler.threads.length;
 
@@ -293,7 +289,7 @@ exports.update_scheduler = function(bpy_data_array) {
             return;
         }
 
-    } while(i < 100);
+    } while(now() - time_start < MAX_LOAD_TIME_MS);
 }
 
 exports.abort_thread = function(thread) {
@@ -314,10 +310,10 @@ function finish_thread(scheduler, thread, bpy_data) {
     thread.status = THREAD_FINISHED;
     scheduler.active_threads--;
     if (DEBUG_MODE) {
-        var ms = Math.round(performance.now() 
+        var ms = Math.round(now()/1000
                 - thread.time_load_start);
-        m_print.log("%cTHREAD " + thread.id + ": 100% LOADING END " 
-                + ms + "ms", 
+        m_print.log("%cTHREAD " + thread.id + ": 100% LOADING END "
+                + ms + "ms",
                 DEBUG_COLOR);
     }
     release_thread(thread);
@@ -426,7 +422,7 @@ function process_stage(thread, stage, bpy_data) {
     if (DEBUG_MODE && stage.status == THREAD_STAGE_BEFORE) {
         var percents = get_load_percents(thread);
         var message = "LOADING START " +  stage.name;
-        var ms = 0// Math.round(performance.now() - thread.time_load_start);
+        var ms = Math.round(now()/1000 - thread.time_load_start);
         m_print.log("%cTHREAD " + thread.id + ": " + percents + "% " + message 
                 + " " + ms + "ms ", DEBUG_COLOR);
     }
@@ -493,7 +489,7 @@ function stage_finish_cb(thread, stage) {
     if (DEBUG_MODE) {
         var percents = get_load_percents(thread);
         var message = "LOADING END " +  stage.name;
-        var ms = 0// Math.round(performance.now() - thread.time_load_start);
+        var ms = Math.round(now()/1000 - thread.time_load_start);
         m_print.log("%cTHREAD " + thread.id + ": " + percents + "% " + message 
                 + " " + ms + "ms ", DEBUG_COLOR);
     }
@@ -630,7 +626,6 @@ exports.graph_to_dot = function(data_id) {
                     }
                 }, null);
     else {
-        console.log("111")
         return null;
     }
 }

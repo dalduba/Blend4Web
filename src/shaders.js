@@ -570,14 +570,13 @@ function set_shader_texts(shader_name, shadet_text) {
 }
 
 exports.load_shaders = function() {
-
+    console.log("load shaders")
     _shaders_loaded = false;
 
     if (!b4w.module_check("shader_texts")) {
-
+        console.log("load shaders 1")
         var shader_assets = [];
         var asset_type = m_assets.AT_TEXT;
-
         for (var i = 0; i < SHADERS.length; i++) {
             var shader_path = m_util.normpath_preserve_protocol(cfg_pth.shaders_dir
                     + SHADERS[i]);
@@ -585,11 +584,13 @@ exports.load_shaders = function() {
         }
 
         var asset_cb = function(shader_text, shader_name, type, path) {
+            // console.log(">>asset_cb")
             set_shader_texts(shader_name, shader_text);
         }
 
         var pack_cb = function() {
             _shaders_loaded = true;
+            // console.log(">>pack_cb")
         }
 
         if (shader_assets.length)

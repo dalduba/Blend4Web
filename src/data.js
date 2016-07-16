@@ -265,7 +265,6 @@ function load_binaries(bpy_data, thread, stage, cb_param, cb_finish,
             m_loader.abort_thread(thread);
             return;
         }
-        console.log("bin_data")
         m_print.log("%cLOAD BINARY", "color: #616", path);
 
         bpy_data["bin_data"] = bin_data;
@@ -283,7 +282,6 @@ function load_binaries(bpy_data, thread, stage, cb_param, cb_finish,
 
 function wait_for_shaders(bpy_data, thread, stage, cb_param, cb_finish,
         cb_set_rate) {
-    console.log("wait_for_shaders")
     if (m_shaders.check_shaders_loaded())
         cb_finish(thread, stage);
 }
@@ -3476,11 +3474,10 @@ exports.load = function(path, loaded_cb, stageload_cb, wait_complete_loading,
     }
 
     _bpy_data_array[scheduler.threads.length] = {};
-    console.log(path)
     var data_id = m_loader.create_thread(stages, path, loaded_cb, stageload_cb,
             free_load_data, wait_complete_loading || cfg_sfx.audio_loading_hack,
             cfg_def.do_not_load_resources, load_hidden);
-    console.log(m_loader.graph_to_dot(data_id))
+    // console.log(m_loader.graph_to_dot(data_id))
     return data_id;
 }
 
