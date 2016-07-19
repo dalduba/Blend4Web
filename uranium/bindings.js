@@ -246,7 +246,7 @@ function append_bounding_body(id, trans, quat, physics_type, is_ghost,
         var du_body = _du_create_ghost_bounding_body(du_shape, du_trans, du_quat);
     } else {
         var du_body = _du_create_dynamic_bounding_body(du_shape, mass,
-                du_trans, du_quat, damping, rotation_damping, size, 
+                du_trans, du_quat, damping, rotation_damping, size,
                 ang_fact_x, ang_fact_y, ang_fact_z, friction, restitution);
     }
 
@@ -393,7 +393,7 @@ function remove_body(body_id) {
 /**
  * Process rigid body joints constraints
  */
-function append_constraint(cons_id, pivot_type, limits, body_id_a, trans_in_a, quat_in_a, 
+function append_constraint(cons_id, pivot_type, limits, body_id_a, trans_in_a, quat_in_a,
         body_id_b, trans_in_b, quat_in_b, stiffness, damping) {
 
     var du_body_id_a = get_du_body_id(body_id_a);
@@ -406,8 +406,8 @@ function append_constraint(cons_id, pivot_type, limits, body_id_a, trans_in_a, q
 
     switch (pivot_type) {
     case "GENERIC_6_DOF":
-        var du_cons = _du_create_generic_6dof_constraint(du_body_id_a, 
-                du_trans_in_a, du_quat_in_a, du_body_id_b, du_trans_in_b, 
+        var du_cons = _du_create_generic_6dof_constraint(du_body_id_a,
+                du_trans_in_a, du_quat_in_a, du_body_id_b, du_trans_in_b,
                 du_quat_in_b);
         break;
     case "GENERIC_6_DOF_SPRING":
@@ -425,8 +425,8 @@ function append_constraint(cons_id, pivot_type, limits, body_id_a, trans_in_a, q
             // bullet defaults
             var du_damping_arr = _du_create_array6(1,1,1,1,1,1);
 
-        var du_cons = _du_create_generic_6dof_spring_constraint(du_body_id_a, 
-                du_trans_in_a, du_quat_in_a, du_body_id_b, du_trans_in_b, 
+        var du_cons = _du_create_generic_6dof_spring_constraint(du_body_id_a,
+                du_trans_in_a, du_quat_in_a, du_body_id_b, du_trans_in_b,
                 du_quat_in_b, du_stiffness_arr, du_damping_arr);
         break;
     case "HINGE":
@@ -452,20 +452,20 @@ function append_constraint(cons_id, pivot_type, limits, body_id_a, trans_in_a, q
 
         pivot_type = "GENERIC_6_DOF";
 
-        var du_cons = _du_create_generic_6dof_constraint(du_body_id_a, 
-                du_trans_in_a, du_quat_in_a, du_body_id_b, du_trans_in_b, 
+        var du_cons = _du_create_generic_6dof_constraint(du_body_id_a,
+                du_trans_in_a, du_quat_in_a, du_body_id_b, du_trans_in_b,
                 du_quat_in_b);
 
-        //var du_cons = new Ammo.btHingeConstraint(body_a, body_b, 
+        //var du_cons = new Ammo.btHingeConstraint(body_a, body_b,
         //        bt_frame_in_a, bt_frame_in_b);
         break;
     case "BALL":
-        var du_cons = _du_create_point2point_constraint(du_body_id_a, 
+        var du_cons = _du_create_point2point_constraint(du_body_id_a,
                 du_trans_in_a, du_body_id_b, du_trans_in_b);
         break;
     case "CONE_TWIST":
-        var du_cons = _du_create_cone_twist_constraint(du_body_id_a, 
-                du_trans_in_a, du_quat_in_a, du_body_id_b, du_trans_in_b, 
+        var du_cons = _du_create_cone_twist_constraint(du_body_id_a,
+                du_trans_in_a, du_quat_in_a, du_body_id_b, du_trans_in_b,
                 du_quat_in_b);
         break;
     default:
@@ -620,9 +620,9 @@ function append_car(chassis_body_id, susp_compress, susp_stiffness,
 
     var du_chassis_id = get_du_body_id(chassis_body_id);
 
-    var du_tuning = _du_create_vehicle_tuning(susp_compress, 
-                                              susp_stiffness, 
-                                              susp_damping, 
+    var du_tuning = _du_create_vehicle_tuning(susp_compress,
+                                              susp_stiffness,
+                                              susp_damping,
                                               wheel_friction,
                                               max_suspension_travel_cm);
     var du_vehicle = _du_create_vehicle(du_chassis_id, du_tuning);
@@ -716,14 +716,14 @@ function get_floater(floater_body_id) {
         throw "Wrong floater body ID";
 }
 
-function add_car_wheel(chassis_body_id, conn_point, susp_rest_len, 
+function add_car_wheel(chassis_body_id, conn_point, susp_rest_len,
                        roll_influence, radius, is_front) {
 
     var car = get_car(chassis_body_id);
 
     var du_conn_point = _du_create_vec3(conn_point[0], conn_point[1], conn_point[2]);
 
-    _du_vehicle_add_wheel(car.du_id, car.du_tuning_id, du_conn_point, 
+    _du_vehicle_add_wheel(car.du_id, car.du_tuning_id, du_conn_point,
             susp_rest_len, roll_influence, radius, is_front);
 
     var wheel_cache = {
@@ -981,7 +981,7 @@ function append_ray_test(id, body_id, from, to, collision_id, autoremove,
 
     if (_world.ray_tests[id])
         cleanup_ray_test(id, _world);
-    
+
     var test = {
         id: id,
 
@@ -1024,7 +1024,7 @@ function append_ray_test(id, body_id, from, to, collision_id, autoremove,
 }
 
 function cleanup_ray_test(id, world) {
-    
+
     var test = world.ray_tests[id];
 
     //_du_free(test.du_body_b_arr);
@@ -1041,7 +1041,7 @@ function remove_ray_test(id) {
 }
 
 function ray_test_id(body_id, from, to, local_coords, collision_id) {
-    var id = String(body_id) + array_stringify(from) + array_stringify(to) + 
+    var id = String(body_id) + array_stringify(from) + array_stringify(to) +
             String(local_coords) + String(collision_id);
     return id;
 }
@@ -1252,7 +1252,7 @@ function set_transform(body_id, trans, quat) {
 
     if (_world.characters[body_id]) {
         _du_set_trans(du_id, tx, ty, tz);
-        // activated in set_character_rotation() 
+        // activated in set_character_rotation()
         set_character_rotation_quat(body_id, quat);
     } else  {
         _du_activate(du_id);
@@ -1364,21 +1364,21 @@ function apply_torque(body_id, tx, ty, tz) {
     _du_activate(du_body_id);
 }
 
-function update_car_controls(chassis_body_id, engine_force, brake_force, 
+function update_car_controls(chassis_body_id, engine_force, brake_force,
         steering_value) {
     var car = get_car(chassis_body_id);
     var du_body_id = get_du_body_id(chassis_body_id);
     _du_activate(du_body_id);
-    _du_update_vehicle_controls(car.du_id, engine_force, brake_force, 
+    _du_update_vehicle_controls(car.du_id, engine_force, brake_force,
             steering_value);
 }
 
-function update_boat_controls(hull_body_id, engine_force, brake_force, 
+function update_boat_controls(hull_body_id, engine_force, brake_force,
         steering_value) {
     var boat = get_boat(hull_body_id);
     var du_body_id = get_du_body_id(hull_body_id);
     _du_activate(du_body_id);
-    _du_update_boat_controls(boat.du_id, engine_force, brake_force, 
+    _du_update_boat_controls(boat.du_id, engine_force, brake_force,
             steering_value);
 }
 
@@ -1521,7 +1521,7 @@ function init_world(max_fps, fps_measurement_interval) {
     _update_interval = 1/max_fps;
     _fps_measurement_interval = fps_measurement_interval;
 
-    _du_create_world(); 
+    _du_create_world();
 
     var world = {
         bodies: {},
@@ -1563,7 +1563,7 @@ function worker_frame() {
             _last_abs_time = abstime;
 
         var delta = abstime - _last_abs_time;
-        
+
         if (_do_simulation && _world) {
             if (delta && _fps_measurement_interval) {
                 _phy_fps_avg = smooth(1/delta, _phy_fps_avg, delta,
@@ -1882,7 +1882,7 @@ function send_ray_test_results(world, time) {
                 msg_cache.hit_fract   = hit_fract;
                 msg_cache.hit_time    = time;
 
-                var du_hit_pos = test.du_hit_pos; 
+                var du_hit_pos = test.du_hit_pos;
                 _du_get_ray_hit_position(du_results, j, du_hit_pos);
                 du_vec_to_vec(du_hit_pos, msg_cache.hit_pos);
 
@@ -1987,7 +1987,7 @@ function body_check_prepare_interp_data(body) {
             body.linvel[0] == du_linvel_x &&
             body.linvel[1] == du_linvel_y &&
             body.linvel[2] == du_linvel_z &&
-            body.angvel[0] == du_angvel_x && 
+            body.angvel[0] == du_angvel_x &&
             body.angvel[1] == du_angvel_y &&
             body.angvel[2] == du_angvel_z)
         return false;
@@ -2025,7 +2025,7 @@ function debug() {
         var body = world.bodies_arr[i];
 
         var shape = Pointer_stringify(_du_get_shape_name(body.du_id));
-        bodies_stat[shape] = bodies_stat[shape] || 0; 
+        bodies_stat[shape] = bodies_stat[shape] || 0;
         bodies_stat[shape]++;
 
         tri_num += body.num_triangles;
@@ -2250,13 +2250,17 @@ Module['locateFile'] = is_worker_env() ? null : function() {
 
     for (var i = 0; i < b4w.worker_namespaces.length; i+=2)
         if (b4w.worker_namespaces[i+1] == worker_namespace) {
+            console.log("worker_namespace", worker_namespace)
             var main_namespace = b4w.worker_namespaces[i];
             var m_cfg_main = b4w.require("config", main_namespace);
-            return m_cfg_main.get("physics_uranium_path") + ".mem";
+            console.log("main_namespace", main_namespace)
+            console.log(m_cfg_main)
+            return "../../uranium/build/uranium.js" + ".mem";
         }
 
     return "NOT_FOUND";
 }
 
-//}
+// }
+
 

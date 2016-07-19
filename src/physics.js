@@ -92,7 +92,8 @@ exports.init_scene_physics = function(scene) {
             "Using Separate Worker Thread," : "Using Same Thread,",
             "Max FPS: " + cfg_phy.max_fps);
     m_print.log("%cPHYSICS PATH", "color: #0a0", path);
-    var worker = m_ipc.create_worker(path, phy.use_workers);
+    console.log(m_ipc)
+    var worker = m_ipc.create_worker(path, cfg_phy.use_workers);
     m_ipc.attach_handler(worker, process_message);
 
     _workers.push(worker);
@@ -259,7 +260,7 @@ function has_batch(scene, batch) {
  * Process message incoming from worker
  */
 function process_message(worker, msg_id, msg) {
-
+    console.log(msg)
     // NOTE: silently ignore if something arrives after the worker's termination
     // NOTE: is it possible?
     if (!m_ipc.is_active(worker))

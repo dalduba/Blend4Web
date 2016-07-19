@@ -254,14 +254,11 @@ exports.create_worker = function(path, fallback) {
             _worker_listeners.push(null);
 
             worker.fb_worker_ns = worker_ns;
-
-            var uranium_js = m_cont.find_script(path);
+            var uranium_js = path.split("?")[0];
             if (uranium_js) {
                 // just register in the new namespace
                 if (_wait_for_loading)
-                    uranium_js.addEventListener("load", function() {
-                        b4w.require("__bindings", worker.fb_worker_ns);
-                    }, false);
+                    b4w.require("__bindings", worker.fb_worker_ns);
                 else {
                     b4w.cleanup("__bindings", worker.fb_worker_ns);
                     b4w.cleanup("__ipc", worker.fb_worker_ns);

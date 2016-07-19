@@ -18,7 +18,6 @@ var b4w_include = [
     "./../../src/math.js",
     "./../../src/data.js",
     "./../../src/print.js",
-    "./../../src/config.js",
     "./../../src/extensions.js",
     "./../../src/geometry.js",
     "./../../src/graph.js",
@@ -42,7 +41,6 @@ var b4w_include = [
     "./../../src/obj_util.js",
     "./../../src/particles.js",
     "./../../src/physics.js",
-    "./../../src/ipc.js",
     "./../../src/transform.js",
     "./../../src/sfx.js",
     "./../../src/version.js",
@@ -61,6 +59,9 @@ var b4w_include = [
     "./../../src/ext/main.js",
     "./../../src/debug.js",
     "./../../src/libs/gpp_parser.js",
+    "./../../uranium/build/uranium.js",
+    "./../../src/ipc.js",
+    "./../../src/config.js",
 ];
 for (var i in b4w_include) {
     includeInThisContext(__dirname + "/" + b4w_include[i]);
@@ -72,6 +73,19 @@ b4w.register("__fs",  function(exports, require) {
     exports.cwd = m_process.cwd
     exports.StringDecoder = require_orig('string_decoder').StringDecoder
 
+});
+
+b4w.register("fs",  function(exports, require) {
+    var m_fs = require_orig("fs")
+    exports = m_fs.exports
+});
+b4w.register("path",  function(exports, require) {
+    var m_fs = require_orig("path")
+    exports = m_fs.exports
+});
+b4w.register("config",  function(exports, require) {
+    var m_fs = require_orig("config")
+    exports = m_fs.exports
 });
 b4w.register("__gl",  function(exports, require) {
     var m_gl = require_orig("gl")
