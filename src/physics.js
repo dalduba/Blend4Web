@@ -37,6 +37,7 @@ var m_tsr      = require("__tsr");
 var m_util     = require("__util");
 var m_vec3     = require("__vec3");
 var m_version  = require("__version");
+var now = require("__performance_now").now;
 
 var cfg_phy = m_cfg.physics;
 var cfg_def = m_cfg.defaults;
@@ -92,7 +93,8 @@ exports.init_scene_physics = function(scene) {
             "Using Separate Worker Thread," : "Using Same Thread,",
             "Max FPS: " + cfg_phy.max_fps);
     m_print.log("%cPHYSICS PATH", "color: #0a0", path);
-    console.log(m_ipc)
+    // console.log(m_ipc)
+    path = "./../../uranium/build/uranium.js"
     var worker = m_ipc.create_worker(path, cfg_phy.use_workers);
     m_ipc.attach_handler(worker, process_message);
 
@@ -101,10 +103,12 @@ exports.init_scene_physics = function(scene) {
 
     if (cfg_phy.ping)
         setInterval(function() {m_ipc.post_msg(worker, m_ipc.OUT_PING,
-                    performance.now())}, 1000);
+                    now())}, 1000);
 }
 
 exports.check_worker_loaded = function(scene) {
+    // console.log("check_worker_loaded")
+    // console.log(scene._physics)
     if (scene._physics)
         return scene._physics.worker_loaded;
     else
@@ -260,7 +264,7 @@ function has_batch(scene, batch) {
  * Process message incoming from worker
  */
 function process_message(worker, msg_id, msg) {
-    console.log(msg)
+    console.log("process_message", msg)
     // NOTE: silently ignore if something arrives after the worker's termination
     // NOTE: is it possible?
     if (!m_ipc.is_active(worker))
@@ -268,11 +272,12 @@ function process_message(worker, msg_id, msg) {
 
     switch (msg_id) {
     case m_ipc.IN_LOADED:
+        console.log("IN_LOADED")
         var scene = find_scene_by_worker(worker);
         scene._physics.worker_loaded = true;
 
         // initialize world
-        var fallback_init_time = Date.now() - performance.now();
+        var fallback_init_time = Date.now() - now();
         m_ipc.post_msg(worker, m_ipc.OUT_INIT, fallback_init_time, cfg_phy.max_fps,
                 cfg_phy.calc_fps ? cfg_def.fps_measurement_interval : 0);
         break;
@@ -353,8 +358,8 @@ function process_message(worker, msg_id, msg) {
     case m_ipc.IN_PING:
         var idx = _workers.indexOf(worker);
         var out_time = (msg[2] - msg[1]).toFixed(3);
-        var in_time = (performance.now() - msg[2]).toFixed(3);
-        var all_time = (performance.now() - msg[1]).toFixed(3);
+        var in_time = (now() - msg[2]).toFixed(3);
+        var all_time = (now() - msg[1]).toFixed(3);
         console.log("Physics #" + idx + " Ping: OUT " + out_time +
                 " ms, IN " + in_time + " ms, ALL " + all_time + " ms");
         break;
@@ -529,7 +534,7 @@ function update_worker(worker, timeline, delta) {
             if (m_ipc.is_fallback(worker))
                 var d = timeline - phy.curr_time;
             else
-                var d = performance.now() / 1000 - phy.curr_time;
+                var d = now() / 1000 - phy.curr_time;
 
             // clamp to maximum 10 frames to prevent jitter of sleeping objects
             d = Math.min(d, 10 * 1/cfg_phy.max_fps);

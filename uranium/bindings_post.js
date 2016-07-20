@@ -2,4 +2,4 @@
 }
 
 if (typeof importScripts === "function")
-    b4w.require("__bindings");
+    b4w.orig_require("__bindings");

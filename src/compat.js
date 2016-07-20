@@ -320,6 +320,7 @@ exports.set_hardware_defaults = function(gl) {
         cfg_def.max_texture_size = 1024;
         cfg_def.max_cube_map_size = 1024;
     }
+    // cfg_phy.use_workers = false;
 }
 
 exports.check_user_agent = check_user_agent;

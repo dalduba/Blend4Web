@@ -24,6 +24,7 @@
  * @exports exports as ipc
  */
 b4w.module["__ipc"] = function(exports, require) {
+Worker=require("worker").Worker
 /*
  * Use Visual Incrementing script to simplify assignment of such numbers in VIM
  * http://www.drchip.org/astronaut/vim/index.html#VISINCR
@@ -195,7 +196,6 @@ var _msg_cache_list = [
 
 
 exports.create_worker = function(path, fallback) {
-
     var worker = {
         is_main: path ? true : false,
         web_worker: null,
@@ -223,7 +223,11 @@ exports.create_worker = function(path, fallback) {
             postMessage: function(msg, msg2) {
                 var listener = find_fallback_listener(worker.fb_worker_ns,
                         !worker.is_main);
-                listener({"data": msg});
+                console.log(listener)
+                if (!listener)
+                    setTimeout(this.postMessage, 0.1, [msg,msg2])
+                else
+                    listener({"data": msg});
             },
 
             terminate: function() {
@@ -254,7 +258,8 @@ exports.create_worker = function(path, fallback) {
             _worker_listeners.push(null);
 
             worker.fb_worker_ns = worker_ns;
-            var uranium_js = path.split("?")[0];
+            var uranium_js = path;
+            // console.log("uranium_js", uranium_js)
             if (uranium_js) {
                 // just register in the new namespace
                 if (_wait_for_loading)
@@ -282,6 +287,8 @@ exports.create_worker = function(path, fallback) {
             worker.fb_worker_ns = b4w.get_namespace(require);
         }
     } else {
+        // path = "./../../uranium/build/uranium.js"
+        // console.log(path)
         if (path)
             worker.web_worker = new Worker(path);
         else
@@ -292,15 +299,20 @@ exports.create_worker = function(path, fallback) {
 }
 
 function set_fallback_listener(worker_ns, is_main, listener) {
+    console.log(_worker_namespaces)
     for (var i = 0; i < _worker_namespaces.length; i+=2)
         if (_worker_namespaces[i+1] == worker_ns)
             _worker_listeners[i + Number(!is_main)] = listener;
+        else
+            console.log("-----", _worker_namespaces[i+1], worker_ns)
+    console.log(_worker_listeners)
 }
 
 function find_fallback_listener(worker_ns, is_main) {
-    for (var i = 0; i < _worker_namespaces.length; i+=2)
-        if (_worker_namespaces[i+1] == worker_ns)
+    for (var i = 0; i < _worker_namespaces.length; i+=2) {
+        if (_worker_namespaces[i + 1] == worker_ns)
             return _worker_listeners[i + Number(!is_main)];
+    }
 
     return null;
 }
@@ -586,6 +598,7 @@ exports.post_msg = function(worker, msg_id) {
         var msg = [];
         for (var i = 1; i < arguments.length; i++)
             msg.push(arguments[i]);
+        console.log("worker.web_worker.postMessage(msg);", msg)
         worker.web_worker.postMessage(msg);
         break;
     }

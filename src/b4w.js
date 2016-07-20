@@ -194,7 +194,7 @@ exports.register = function(module_id, fun) {
  * @returns {Object3D} Module object
  */
 exports.require = require;
-
+exports.orig_require = global.require
 function require(module_id, ns) {
     var mod = _module[module_id];
     if (!mod)

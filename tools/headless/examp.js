@@ -66,6 +66,7 @@ var b4w_include = [
 for (var i in b4w_include) {
     includeInThisContext(__dirname + "/" + b4w_include[i]);
 }
+
 b4w.register("__fs",  function(exports, require) {
     var m_fs = require_orig("fs")
     var m_process = require_orig("process")
@@ -77,12 +78,20 @@ b4w.register("__fs",  function(exports, require) {
 
 b4w.register("fs",  function(exports, require) {
     var m_fs = require_orig("fs")
-    exports = m_fs.exports
+    for (var p in m_fs) {
+        exports[p] = m_fs[p]
+    }
 });
 b4w.register("path",  function(exports, require) {
     var m_fs = require_orig("path")
-    exports = m_fs.exports
+    for (var p in m_fs) {
+        exports[p] = m_fs[p]
+    }
 });
+b4w.register("worker",  function(exports, require) {
+    exports.Worker = require_orig('webworker-threads').Worker
+});
+
 b4w.register("config",  function(exports, require) {
     var m_fs = require_orig("config")
     exports = m_fs.exports

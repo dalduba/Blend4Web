@@ -1395,6 +1395,7 @@ function set_damping(body_id, damping, rotation_damping) {
 function init_worker_environment() {
     var is_worker = is_worker_env();
 
+    console.log("init_worker_environment", is_worker)
     if (is_worker) {
 
         var console_old = self.console;
@@ -1441,7 +1442,9 @@ function init_worker_environment() {
 
     _worker = m_ipc.create_worker("", !is_worker);
     m_ipc.attach_handler(_worker, process_message);
+    console.log("m_ipc.post_msg(_worker, m_ipc.IN_LOADED);")
     m_ipc.post_msg(_worker, m_ipc.IN_LOADED);
+
 }
 
 function warm_up() {
@@ -2060,18 +2063,19 @@ function obj_len(obj) {
 }
 
 function process_message(worker, msg_id, msg) {
+    console.log("ura_process_message", msg)
     switch (msg_id) {
     case m_ipc.OUT_INIT:
 
-        if (!self["performance"])
-            self["performance"] = {};
-
-        if (!self["performance"]["now"]) {
-            var fallback_init_time = msg[1];
-            self["performance"]["now"] = function() {
-                return Date.now() - fallback_init_time;
-            }
-        }
+        // if (!self["performance"])
+        //     self["performance"] = {};
+        //
+        // if (!self["performance"]["now"]) {
+        //     var fallback_init_time = msg[1];
+        //     self["performance"]["now"] = function() {
+        //         return Date.now() - fallback_init_time;
+        //     }
+        // }
 
         init_world(msg[2], msg[3]);
 
@@ -2247,7 +2251,7 @@ Module['onRuntimeInitialized'] = function() {
 
 Module['locateFile'] = is_worker_env() ? null : function() {
     var worker_namespace = b4w.get_namespace(require);
-
+    console.log("locateFile")
     for (var i = 0; i < b4w.worker_namespaces.length; i+=2)
         if (b4w.worker_namespaces[i+1] == worker_namespace) {
             console.log("worker_namespace", worker_namespace)
