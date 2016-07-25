@@ -126,6 +126,7 @@ b4w.register("examp", function(exports, require) {
             log.info(__line, 'rendering ' + filename)
 
             utils.bufferToFile(_gl_ctx, _width, _height, filename)
+            setTimeout(write_to_file, 2000)
             // m_main.pause()
 
             // gl.destroy()
@@ -135,13 +136,14 @@ b4w.register("examp", function(exports, require) {
             loaded = true
             m_main.resume()
             setTimeout(m_main.resume, 5000)
-            setTimeout(write_to_file, 10000)
+            write_to_file()
         }
         function stage_load_callback(a,b) {
             log.info("stage_load_callback", a + " " + b)
         }
         log.info(__line, "start loading")
         m_data.load("headless/test.json",
+        // m_data.load("../deploy/assets/flight_over_island/flight_over_island.json",
             loaded_callback, stage_load_callback, true);
     }
 
@@ -155,11 +157,11 @@ b4w.register("examp", function(exports, require) {
         canvas.width = _width
         canvas.height = _height
         m_main.init_headless(canvas, _gl_ctx)
-        function do_nothing() {
-            console.log("do nothong")
-            setTimeout(do_nothing, 1000)
-        }
-        do_nothing()
+        // function do_nothing() {
+        //     console.log("do nothong")
+        //     setTimeout(do_nothing, 1000)
+        // }
+        // do_nothing()
     }
 })
 b4w.require("examp").main();
