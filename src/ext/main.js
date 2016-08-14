@@ -1,16 +1,16 @@
 /**
  * Copyright (C) 2014-2016 Triumph LLC
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -186,6 +186,10 @@ exports.init = function(elem_canvas_webgl, elem_canvas_hud) {
     return gl;
 }
 
+exports.get_context = function() {
+    return _gl;
+}
+
 function setup_clock() {
     if (!window.performance) {
         m_print.log("Apply performance workaround");
@@ -210,7 +214,7 @@ function setup_clock() {
 function get_context(canvas, init_webgl2) {
 
     var ctx = null;
-    
+
     var ctx_ids = init_webgl2 ? WEBGL2_CTX_IDS : WEBGL_CTX_IDS;
 
     for (var i = 0; i < ctx_ids.length; i++) {
@@ -281,7 +285,7 @@ function init_context(canvas, canvas_hud, gl) {
 exports.resize = resize;
 function resize(width, height, update_canvas_css) {
     m_print.error_deprecated("main.resize", "container.resize");
-    
+
     m_cont.resize(width, height, update_canvas_css);
 }
 
@@ -579,7 +583,7 @@ exports.detect_mobile = function() {
 }
 /**
  * Append a callback to be executed every frame
- * (even if the rendering is paused). Its purpose is to perform actions 
+ * (even if the rendering is paused). Its purpose is to perform actions
  * non-related to the actual rendering, e.g html/css manipulation.
  * This method allows registration of multiple callbacks.
  * @method module:main.append_loop_cb

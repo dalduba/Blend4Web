@@ -1,16 +1,16 @@
 /**
  * Copyright (C) 2014-2016 Triumph LLC
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -1503,15 +1503,17 @@ function hash_code(a, init_val) {
         if (a) {
             // NOTE: some additional props could be added to GL-type objs
             // so don't build hash code for them
-            switch (a.constructor) {
-            case WebGLUniformLocation:
-            case WebGLProgram:
-            case WebGLShader:
-            case WebGLFramebuffer:
-            case WebGLTexture:
-            case WebGLBuffer:
-                return hash_code_number(0, hash);
-            }
+
+            // FIXME: uncomment code below
+            // switch (a.constructor) {
+            // case WebGLUniformLocation:
+            // case WebGLProgram:
+            // case WebGLShader:
+            // case WebGLFramebuffer:
+            // case WebGLTexture:
+            // case WebGLBuffer:
+            //     return hash_code_number(0, hash);
+            // }
 
             var is_typed_arr = a.buffer instanceof ArrayBuffer
                     && a.byteLength !== "undefined";
@@ -1523,8 +1525,10 @@ function hash_code(a, init_val) {
                 for (var i = 0; i < a.length; i++)
                     hash = hash_code(a[i], hash);
             else
-                for (var prop in a)
-                    hash = hash_code(a[prop], hash);
+                hash = hash;
+                // FIXME: uncomment code below and remove hash = hash;
+                // for (var prop in a)
+                //     hash = hash_code(a[prop], hash);
         } else
             hash = hash_code_number(0, hash);
     }
