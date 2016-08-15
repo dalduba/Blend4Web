@@ -31,6 +31,7 @@ var init = function() {
         // show_fps: true,
         console_verbose: true,
         physics_enabled: false,
+
         // physics_uranium_path: "../../deploy/apps/common/uranium.js",
         // autoresize: true
     });
@@ -56,12 +57,37 @@ function load() {
     m_data.load("../apps_dev/nodejs/nodejs.json", load_cb);
 }
 
+function bufferToFile (gl, width, height, filename) {
+    var fs = require("fs")
+    var file = fs.createWriteStream(filename)
+
+          // Write output
+            var pixels = new Uint8Array(width * height * 4)
+          gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels)
+          file.write(['P3\n# gl.ppm\n', width, ' ', height, '\n255\n'].join(''))
+          for (var i = 0; i < pixels.length; i += 4) {
+            file.write(pixels[i] + ' ' + pixels[i + 1] + ' ' + pixels[i + 2] + ' ')
+          }
+    }
+var _gl_ctx = null
+var _width=800
+var _height=600
+function write_to_file() {
+    var filename = __filename + '.ppm'
+        bufferToFile(_gl_ctx, _width, _height, filename)
+        setTimeout(write_to_file, 2000)
+    }
 /**
  * callback executed when the scene is loaded
  */
 function load_cb(data_id) {
     // place your code here
+    var main = require("main")
+    var camera_anim = require("camera_anim")
+    camera_anim.auto_rotate(1);
+    _gl_ctx = main.get_context()
 
+    setTimeout(write_to_file, 2000)
 }
 
 init();
