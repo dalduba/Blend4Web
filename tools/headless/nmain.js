@@ -30,9 +30,12 @@ var init = function() {
         callback: init_cb,
         // show_fps: true,
         console_verbose: true,
-        physics_enabled: false,
 
-        // physics_uranium_path: "../../deploy/apps/common/uranium.js",
+        // used by physic
+        prevent_caching: false,
+        physics_enabled: true,
+        physics_uranium_path: "../../deploy/apps/common/uranium.js",
+
         // autoresize: true
     });
 }
