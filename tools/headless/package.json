@@ -1,8 +1,8 @@
 {
-  "name": "headless-gl-example",
+  "name": "node_b4w",
   "version": "0.0.1",
-  "description": "Creates a WebGL context without a window",
-  "main": "examp.js",
+  "description": "Run Blend4Web engine in nodejs.",
+  "main": "nmain.js",
   "directories": {
   },
   "engines": {
@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "gl": ">=0.0.0",
-    "log4js": ">=0.0.0",
     "webworker-threads": ">=0.0.0"
   },
   "devDependencies": {
@@ -27,5 +26,8 @@
     "server",
     "gpgpu"
   ],
-  "author": "dalduba"
+  "author": [
+    "dalduba",
+    "d504"
+  ]
 }
