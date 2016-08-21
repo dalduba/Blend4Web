@@ -1,10 +1,9 @@
-var is_nodejs = typeof window === "undefined";
-//==============================================================================
-//
-//==============================================================================
-if (is_nodejs) {
-  global.is_nodejs = is_nodejs;
+"use strict"
 
+if (typeof is_nodejs === "undefined")
+  global.is_nodejs = typeof window === "undefined";
+
+if (is_nodejs) {
   var fs = require("fs");
   var vm = require("vm");
   // add browser's global variables
@@ -118,15 +117,7 @@ if (is_nodejs) {
     includeInThisContext(B4W_SRC_FOLDER + B4W_SRC_FILES[i]);
   }
 
-  var b4w_require = b4w.require;
-  b4w.require = function(name) {
-    try {
-      return b4w_require(name);
-    } catch(e) {
-      return require(name);
-    }
-  }
   module.exports = b4w;
 } else {
-    // TODO: add code for browser
+  // TODO: add code for browser
 }
