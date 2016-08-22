@@ -6,7 +6,7 @@ var m_fs = require("fs");
 var m_pr = require("process");
 var m_str = require('string_decoder');
 var m_work = require("webworker-threads");
-global.Worker = m_work.Worker;
+var Worker = m_work.Worker;
 
 var style = {
   height: 1000,
@@ -76,15 +76,13 @@ var document = {
   // fullscreenElement: null,
   // pointerLockElement: null,
 };
-global.document = document;
-
 
 var screen = {
   height: 1000,
   width: 1000
 };
 
-global.window = {
+var window = {
   document: document,
   screen: screen,
   localStorage: {},
@@ -106,18 +104,18 @@ global.window = {
   orientation: 0
 };
 
-global.performance = {
+var performance = {
   now: function() {
     var now = process.hrtime();
     return now[0]*1000 + now[1] / 1000000;
   },
 }
 
-global.navigator = {
+var navigator = {
   userAgent: "",
 }
 
-global.XMLHttpRequest = function() {
+var XMLHttpRequest = function() {
   var req = {
     _source_url: null,
     _parse_response: function(source) {

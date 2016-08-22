@@ -4,13 +4,11 @@ if (typeof is_nodejs === "undefined")
   global.is_nodejs = typeof window === "undefined";
 
 if (is_nodejs) {
-  var fs = require("fs");
-  var vm = require("vm");
-  // add browser's global variables
-  require("./browserfy")
+  const m_fs = require("fs");
+  const m_vm = require("vm");
 
-  var B4W_SRC_FOLDER = "../../";
-  var B4W_SRC_FILES = [
+  const B4W_SRC_FOLDER = "../../";
+  const B4W_SRC_FILES = [
     "src/b4w.js",
     "src/anchors.js",
     "src/animation.js",
@@ -108,16 +106,24 @@ if (is_nodejs) {
     "src/addons/storage.js"
   ];
 
-  var includeInThisContext = function (path) {
-    var code = fs.readFileSync(path);
-    vm.runInThisContext(code, path);
-  }.bind(this);
+  const b4w_context = m_vm.createContext({
+    require: require,
+    setTimeout: setTimeout,
+    console: console,
+    process: process
+  });
+
+  // add browser's global variables
+  const browserfy_code = m_fs.readFileSync("./browserfy.js");
+  m_vm.runInContext(browserfy_code, b4w_context);
 
   for (var i = 0; i < B4W_SRC_FILES.length; ++i) {
-    includeInThisContext(B4W_SRC_FOLDER + B4W_SRC_FILES[i]);
+    const b4w_module_path = B4W_SRC_FOLDER + B4W_SRC_FILES[i];
+    const code = m_fs.readFileSync(b4w_module_path);
+    m_vm.runInContext(code, b4w_context);
   }
 
-  module.exports = b4w;
+  module.exports = b4w_context.b4w;
 } else {
   // TODO: add code for browser
 }
